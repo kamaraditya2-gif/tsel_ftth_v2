@@ -1,0 +1,213 @@
+Baik. Setup saat ini sudah siap digunakan:
+
+File yang aktif:
+
+docker-compose-infra.yml - PostgreSQL + Redis
+docker-compose-app.yml - Worker + Dashboard
+docker-compose-nginx.yml - Nginx
+Cara start aplikasi:
+
+bash
+# Start infrastructure
+docker compose -f docker-compose-infra.yml up -d
+
+> Network newsystem_mojojojo_network Creating
+> Network newsystem_mojojojo_network Created
+> Container mojojojo_redis Creating
+> Container mojojojo_postgres Creating
+> Container mojojojo_redis Created
+> Container mojojojo_postgres Created
+> Container mojojojo_postgres Starting
+> Container mojojojo_redis Starting
+> Container mojojojo_redis Started
+> Container mojojojo_postgres Started
+
+ 
+# Start application
+docker compose -f docker-compose-app.yml up -d
+ 
+# Start nginx (opsional)
+docker compose -f docker-compose-nginx.yml up -d
+Cara stop aplikasi:
+
+bash
+docker compose -f docker-compose-infra.yml down
+docker compose -f docker-compose-app.yml down
+docker compose -f docker-compose-nginx.yml down
+Dashboard dapat diakses di: http://localhost:3002
+
+------------------------------------------------------
+Develepoment
+Untuk development, ada 2 pendekatan:
+----
+Pendekatan 1: Development Mode (Recommended)
+
+>>Dashboard (Next.js)
+bash
+cd dashboard
+npm install
+npm run dev
+Dashboard akan berjalan di http://localhost:3000 dengan hot reload.
+
+>>Worker
+bash
+cd worker
+npm install
+npm start
+Worker akan berjalan secara terus-menerus.
+
+>>Infrastructure (PostgreSQL + Redis)
+Gunakan docker-compose untuk infrastructure:
+
+bash
+docker compose -f docker-compose-infra.yml up -d
+Environment Variables
+Dashboard (.env.local):
+
+bash
+NEXT_PUBLIC_API_URL=http://localhost:3000
+INTERNAL_API_URL=http://localhost:3001
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=mojojojo_user
+DB_PASSWORD=mojojojo_password
+DB_NAME=mojojojo_database
+REDIS_HOST=localhost
+REDIS_PORT=6379
+Worker (.env):
+
+bash
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=mojojojo_user
+DB_PASSWORD=mojojo_password
+DB_NAME=mojojojo_database
+REDIS_HOST=localhost
+REDIS_PORT=6379
+----
+Pendekatan 2: Docker dengan Development Config
+Gunakan docker-compose tapi dengan development config:
+
+bash
+# Start infrastructure
+docker compose -f docker-compose-infra.yml up -d
+ 
+# Start dashboard dengan volume mount untuk hot reload
+docker run -d --name mojojojo_dashboard \
+  -p 3002:3000 \
+  -v ./dashboard:/app \
+  -v /app/node_modules \
+  -v /app/.next \
+  --network mojojojo_network \
+  -e NEXT_PUBLIC_API_URL=http://localhost/api \
+  -e INTERNAL_API_URL=http://localhost:3000 \
+  -e DB_HOST=mojojojo_postgres \
+  -e DB_PORT=5432 \
+  -e DB_USER=mojojojo_user \
+  -e DB_PASSWORD=mojojojo_password \
+  -e DB_NAME=mojojojo_database \
+  -e REDIS_HOST=mojojojo_redis \
+  -e REDIS_PORT=6379 \
+  mojo-dashboard:latest \
+  npm run dev
+Rekomendasi: Gunakan Pendekatan 1 untuk development karena lebih mudah dengan hot reload native dari Next.js dan Node.js.
+
+
+------
+Perbedaan npm run dev vs npm start
+Dashboard (Next.js)
+npm run dev (Development Mode)
+
+Menjalankan next dev
+Hot reload otomatis saat ada perubahan kode
+Tidak perlu build sebelumnya
+Lebih lambat karena compile on-the-fly
+Port default: 3000
+Untuk development
+npm start (Production Mode)
+
+Menjalankan next start
+Perlu build dulu (npm run build)
+Tidak ada hot reload
+Lebih cepat karena sudah di-compile
+Port default: 3000
+Untuk production
+Worker (Node.js)
+npm start
+
+Menjalankan node worker.js
+Worker untuk memproses queue jobs dari Redis
+npm run dispatcher
+
+Menjalankan node dispatcher.js
+Dispatcher untuk cek task scheduled dan buat queue jobs
+Rekomendasi Development
+bash
+# Terminal 1 - Infrastructure
+docker compose -f docker-compose-infra.yml up -d
+ 
+# Terminal 2 - Dashboard (hot reload)
+cd dashboard
+npm run dev
+ 
+# Terminal 3 - Worker
+cd worker
+npm start
+ 
+# Terminal 4 - Dispatcher (opsional, jika ingin run terpisah)
+cd worker
+npm run dispatcher
+Rekomendasi Production
+bash
+# Build dulu
+cd dashboard
+npm run build
+ 
+# Jalankan di production
+npm start
+
+------
+saya ingin developtment juga dispatcher dan worker
+
+Untuk development worker dan dispatcher dengan hot reload, perlu tambahkan nodemon. Mari setup:
+
+Command cd, npm in …/Kama/NewSystem
+
+cd worker && npm install --save-dev nodemon
+PS D:\Projects\Wahyudi\Kama\NewSystem> cd worker && npm install --save-dev nodemon
+At line:1 char:11
++ cd worker && npm install --save-dev nodemon
++           ~~
+The token '&&' is not a valid statement separator in this version.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : InvalidEndOfLine
+
+Command npm in …/worker
+ 
+ 
+Selesai. Sekarang bisa development worker dan dispatcher dengan hot reload.
+
+Cara development dengan hot reload:
+
+bash
+# Terminal 1 - Infrastructure
+docker compose -f docker-compose-infra.yml up -d
+ 
+# Terminal 2 - Dashboard
+cd dashboard
+npm run dev
+ 
+# Terminal 3 - Worker (dengan hot reload)
+cd worker
+npm run dev
+ 
+# Terminal 4 - Dispatcher (dengan hot reload)
+cd worker
+npm run dev:dispatcher
+Perintah baru yang tersedia:
+
+npm run dev - Worker dengan hot reload (nodemon)
+npm run dev:dispatcher - Dispatcher dengan hot reload (nodemon)
+npm start - Worker production (tanpa hot reload)
+npm run dispatcher - Dispatcher production (tanpa hot reload)
+Setiap kali Anda save perubahan di worker.js atau dispatcher.js, nodemon akan otomatis restart.

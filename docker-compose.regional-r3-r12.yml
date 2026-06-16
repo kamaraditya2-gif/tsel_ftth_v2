@@ -1,0 +1,41 @@
+services:
+  fping_r03_jabotabek:
+    image: mojo-worker:latest
+    container_name: fping_r03_jabotabek
+    restart: always
+    cap_add:
+      - NET_RAW
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: mojojojo_postgres
+      DB_PORT: 5432
+      DB_USER: mojojojo_user
+      DB_PASSWORD: j^I>EeN(8h2k9tr|sNlg}F_;m_8X|{*J
+      DB_NAME: mojojojo_database
+      DOWNSTREAM_SERVER_ID: 3
+      DIRECT_PING_INTERVAL_MINUTES: 5
+    networks:
+      - mojojojo_network
+
+  fping_r12_jabodetabek:
+    image: mojo-worker:latest
+    container_name: fping_r12_jabodetabek
+    restart: always
+    cap_add:
+      - NET_RAW
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: mojojojo_postgres
+      DB_PORT: 5432
+      DB_USER: mojojojo_user
+      DB_PASSWORD: j^I>EeN(8h2k9tr|sNlg}F_;m_8X|{*J
+      DB_NAME: mojojojo_database
+      DOWNSTREAM_SERVER_ID: 12
+      DIRECT_PING_INTERVAL_MINUTES: 5
+    networks:
+      - mojojojo_network
+
+networks:
+  mojojojo_network:
+    external: true
+    name: mojojojomonitor_mojojojo_network

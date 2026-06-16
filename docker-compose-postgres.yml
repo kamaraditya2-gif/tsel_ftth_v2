@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mojojojo_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mojojojo_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mojojojo_password}
+      POSTGRES_DB: ${POSTGRES_DB:-mojojojo_database}
+      TZ: ${TZ:-Asia/Jakarta}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    command: postgres -c timezone=${TZ:-Asia/Jakarta}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mojojojo_user} -d ${POSTGRES_DB:-mojojojo_database}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mojojojo_network
+
+networks:
+  mojojojo_network:
+    external: true

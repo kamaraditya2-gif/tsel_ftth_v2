@@ -1,0 +1,54 @@
+# Deployment Steps: MojoJojoMonitor to 172.232.248.219 (Fresh VM)
+# Date: 2026-06-11
+
+## 0. Prerequisites (Local)
+- Ensure local project is committed and up-to-date
+- Ensure SSH outbound is not blocked (remove /etc/ssh/ssh_config.d/99-block-outbound.conf if exists)
+- Ensure iptables OUTPUT does not block port 22 to remote
+
+## 1. Prepare Remote VM
+- SSH into 172.232.248.219 as webapp
+- Update packages: sudo apt update && sudo apt upgrade -y
+- Install Docker and Docker Compose:
+  - echo 'webapp@123!' | sudo -S apt-get install -y docker.io docker-compose
+  - echo 'webapp@123!' | sudo -S usermod -aG docker $USER
+  - echo 'webapp@123!' | sudo -S systemctl enable --now docker
+- Verify docker: docker --version && docker-compose --version
+- Logout and login again (or newgrp docker) to apply group changes
+
+## 2. Copy Application to Remote
+- From local project root, run rsync to /home/webapp/MojoJojoMonitor on remote
+- Exclude: node_modules, .next, data, .git, .aider*, .env (copy separately)
+- Command: rsync -avz --exclude=node_modules --exclude=.next --exclude=data --exclude=.git --exclude=.env --exclude=.aider* . webapp@172.232.248.219:/home/webapp/MojoJojoMonitor/
+
+## 3. Setup Environment on Remote
+- Copy .env from local to remote project root
+- Ensure DB credentials and other env vars are correct
+- Example: scp .env webapp@172.232.248.219:/home/webapp/MojoJojoMonitor/
+
+## 4. Initialize Database
+- Run migrations in correct order:
+  - docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database < migrations/003_add_alarm_tables.sql
+  - docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database < migrations/004_integration_settings.sql
+- Fix FK: active_alarms and alarm_history must reference devices_ont(id)
+  - docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database -c "ALTER TABLE active_alarms DROP CONSTRAINT IF EXISTS active_alarms_device_id_fkey; ALTER TABLE active_alarms ADD CONSTRAINT active_alarms_device_id_fkey FOREIGN KEY (device_id) REFERENCES devices_ont(id) ON DELETE CASCADE; ALTER TABLE alarm_history DROP CONSTRAINT IF EXISTS alarm_history_device_id_fkey; ALTER TABLE alarm_history ADD CONSTRAINT alarm_history_device_id_fkey FOREIGN KEY (device_id) REFERENCES devices_ont(id) ON DELETE CASCADE;"
+- Backfill alarms from 6 AM: run /tmp/backfill_alarms.sql
+
+## 5. Build Docker Images
+- docker compose build mojo_dashboard mojo_dispatcher mojo_worker_fast mojo_worker_download mojo_worker_upload mojo_direct_ping_worker
+
+## 6. Start Services
+- docker compose up -d
+
+## 7. Verify
+- docker ps
+- docker logs mojo_dashboard
+- docker logs mojo_worker_fast
+- Test login and alarm page
+- Check active_alarms count: docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database -c "SELECT COUNT(*) FROM active_alarms;"
+
+## Notes
+- Do not copy local data/postgres and data/redis directories to fresh VM
+- Ensure .env contains correct passwords
+- Alarm thresholds are read from speed_group per device
+- If docker compose fails with permission denied, run: newgrp docker

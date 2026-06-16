@@ -1,0 +1,132 @@
+=============================================================================
+ PANDUAN DEPLOY REGIONAL FPING WORKER - MoJoJojoMonitor
+=============================================================================
+
+1. PERSYARATAN SERVER REGIONAL
+--------------------------------
+- OS: Linux (Ubuntu/Debian/CachyOS)
+- CPU: 1 vCPU (minimal)
+- RAM: 512 MB (minimal)
+- Docker sudah terinstall
+- Koneksi TCP ke VM pusat 103.143.12.115 port 5432
+- Firewall VM pusat harus allow IP server regional di port 5432
+
+
+2. CARA DEPLOY (Ada Internet)
+--------------------------------
+Jalankan di SERVER REGIONAL (bukan di VM pusat):
+
+  # Clone repo
+  git clone https://github.com/kamaraditya2-gif/tsel_ftth.git MojoJojoMonitor
+  cd MojoJojoMonitor
+
+  # Deploy (interaktif)
+  bash regional/deploy-regional.sh
+
+  # Atau langsung dengan parameter:
+  bash regional/deploy-regional.sh sumut 2
+  bash regional/deploy-regional.sh jateng 3
+  bash regional/deploy-regional.sh jatim 4
+
+
+3. CARA DEPLOY (Offline / Air-Gapped)
+----------------------------------------
+Tidak ada internet di server regional.
+
+  Langkah 1 - Di mesin yang ada internet:
+    docker save mojo-worker:latest -o mojo-worker.tar
+
+  Langkah 2 - Transfer file ke server regional:
+    scp mojo-worker.tar user@server-sumut:/tmp/
+
+  Langkah 3 - Di server regional:
+    docker load -i /tmp/mojo-worker.tar
+    bash regional/deploy-regional.sh sumut 2
+
+  Script akan otomatis mendeteksi image sudah ada.
+
+
+4. YANG DIBUAT OLEH SCRIPT
+----------------------------
+Setelah menjalankan deploy-regional.sh, akan terbuat:
+
+  docker-compose.yml   ← Konfigurasi container untuk region ini
+  Container berjalan:
+    fping_sumut         ← Container fping untuk SUMUT
+
+
+5. REGION ID
+--------------
+Setiap region punya ID unik:
+
+  ID 1 = VM Pusat (ping SEMUA device, jangan dipake di regional)
+  ID 2 = SUMUT
+  ID 3 = JATENG
+  ID 4 = JATIM
+  ID 5 = KALIMANTAN
+  ID 6 = SULAWESI
+  (tambah sesuai kebutuhan)
+
+Container dengan ID=2 cuma akan ping ONT yang punya
+downstream_server_id = 2 di database.
+
+
+6. VERIFIKASI
+--------------
+Di server regional:
+  docker logs -f fping_sumut    ← Lihat log real-time
+  docker ps                     ← Cek container running
+
+Di VM pusat (via browser):
+  http://gandooz.cloud:8803/devices
+  → klik device → lihat diagram status
+
+  http://gandooz.cloud:8803/admin/worker
+  → tab FPING → lihat log dari regional worker
+
+Di database langsung:
+  SELECT device_id, avg_latency_ms, packet_loss_percent
+  FROM test_results_direct_ping
+  WHERE downstream_server_id = 2
+  ORDER BY created_at DESC LIMIT 10;
+
+
+7. TROUBLESHOOTING
+--------------------
+
+Container restart terus:
+  docker logs fping_sumut
+  → Lihat error message
+
+Koneksi DB gagal:
+  telnet 103.143.12.115 5432
+  → Pastikan firewall VM pusat allow IP regional
+
+Tidak ada data masuk:
+  Cek DOWNSTREAM_SERVER_ID di environment container
+  Cek apakah ONT punya downstream_server_id yang sesuai di database
+
+ICMP ping gagal:
+  Pastikan container punya cap_add: NET_RAW
+  Di host: sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"
+
+
+8. COMMAND PENTING
+--------------------
+
+Start container:
+  docker compose up -d
+
+Stop container:
+  docker compose down
+
+Lihat log:
+  docker logs -f fping_sumut
+
+Restart:
+  docker compose restart
+
+Scale (tambah container dalam 1 region):
+  docker compose up -d --scale fping_sumut=2
+
+=============================================================================

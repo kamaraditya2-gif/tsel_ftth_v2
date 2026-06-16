@@ -1,0 +1,316 @@
+================================================================================
+RENCANA ARSITEKTUR WORKER MOJOJOJO MONITOR UNTUK 26.000 ONT
+================================================================================
+
+Ringkasan Arsitektur Saat Ini
+-----------------------------
+Saat ini ada 4 worker yang berjalan:
+
+1. mojojojo_worker_fast      -> Queue acs-fast      -> Test: ping, traceroute, ont-status
+2. mojojojo_worker_download  -> Queue acs-download  -> Test: download speed
+3. mojojojo_worker_upload    -> Queue acs-upload    -> Test: upload speed
+4. mojojojo_direct_ping_worker -> Loop mandiri      -> Direct ICMP ping
+
+Semua ACS worker pakai concurrency = 5 hardcoded dan 1 container per queue.
+Effective parallelism ACS: 3 queue x 1 container x 5 concurrency = 15 job concurrent.
+
+
+Analisis Throughput 26.000 ONT
+------------------------------
+Asumsi waktu eksekusi per test (realistis, termasuk timeout/retry):
+
+- Ping (IGW + EBR)     : 60-120 detik    (2 RPC sequential ke ACS)
+- Traceroute           : 90-180 detik    (1 RPC, timeout 200 detik)
+- ONT Status           : 20-40 detik     (1 RPC GetONTStatus)
+- Download Speed       : 300-480 detik   (long polling)
+- Upload Speed         : 300-480 detik   (long polling)
+
+Hitungan untuk full cycle 26.000 ONT (semua test type setiap 1 jam):
+
+- Ping      : 26.000 job x 90 detik  / 5 = 468.000 detik  ~= 130 jam  (GAGAL)
+- Traceroute: 26.000 job x 120 detik / 5 = 624.000 detik  ~= 173 jam  (GAGAL)
+- Download  : 26.000 job x 360 detik / 5 = 1.872.000 detik ~= 520 jam (GAGAL)
+- Upload    : 26.000 job x 360 detik / 5 = 1.872.000 detik ~= 520 jam (GAGAL)
+
+Kesimpulan: Dengan arsitektur sekarang, 1 container per queue TIDAK BISA
+menyelesaikan 1 cycle per jam. Butuh horizontal scaling.
+
+
+Rencana Pengelompokan 3 Worker ACS untuk 26.000 ONT
+----------------------------------------------------
+Strategi: Queue Sharding + Horizontal Pod Scaling
+
+BullMQ mendukung banyak consumer pada queue yang sama. Jadi kita bisa jalankan
+N container per queue untuk meningkatkan throughput.
+
+Target: cycle 1 jam untuk fast tests, cycle 6 jam untuk speed tests.
+
+| Queue         | Target Cycle | Waktu/job | Job total | Container @ concurrency 10 |
+|---------------|--------------|-----------|-----------|----------------------------|
+| acs-fast      | 60 menit     | 90 detik  | 78.000    | 13 container               |
+| acs-download  | 360 menit    | 360 detik | 26.000    | 6 container                |
+| acs-upload    | 360 menit    | 360 detik | 26.000    | 6 container                |
+
+Total worker container ACS: 25 container.
+Ini membutuhkan VM yang cukup besar atau multiple VM.
+
+Contoh konfigurasi docker-compose scale untuk 26k:
+
+  mojo_worker_fast:
+    image: mojo-worker:latest
+    deploy:
+      replicas: 13
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    environment:
+      - QUEUE_NAME=acs-fast
+      - WORKER_CONCURRENCY=10
+
+  mojo_worker_download:
+    image: mojo-worker:latest
+    deploy:
+      replicas: 6
+    environment:
+      - QUEUE_NAME=acs-download
+      - WORKER_CONCURRENCY=10
+
+  mojo_worker_upload:
+    image: mojo-worker:latest
+    deploy:
+      replicas: 6
+    environment:
+      - QUEUE_NAME=acs-upload
+      - WORKER_CONCURRENCY=10
+
+
+Perubahan Kode yang Diperlukan
+------------------------------
+1. WORKER_CONCURRENCY environment variable di worker.js
+   (sekarang hardcoded 5).
+
+2. Naikkan MAX_PENDING_JOBS di dispatcher.js dari 1.500
+   menjadi 50.000 - 100.000 (atau dinamis berdasarkan worker aktif).
+
+3. Naikkan CHUNK_SIZE dari 50 menjadi 500 - 1.000.
+   Saat ini chunk sleep 500ms x 520 chunk = 260 detik idle untuk 26k device.
+   Dengan chunk size 1000, hanya 26 chunk x 500ms = 13 detik.
+
+4. Tambahkan Global ACS Rate Limiter via Redis.
+   Scaling container tanpa batas bisa overload ACS upstream.
+   Contoh: acs:rpm:global max 300 RPM.
+   Atau gunakan BullMQ rateLimiter per queue.
+
+5. Worker Pool / Connection Pool DB: worker/db.js max 10.
+   Dengan 25 container x 10 = 250 koneksi PostgreSQL.
+   Perlu PgBouncer atau naikkan max_connections Postgres.
+
+6. Redis scaling: maxmemory 512mb + noeviction tidak cukup.
+   Naikkan ke 2-4 GB, pertimbangkan Redis Cluster.
+
+
+Optimasi Dispatcher untuk 26k
+------------------------------
+1. Hapus atau ganti DELETE FROM queue_jobs WHERE task_id = $1 sebelum dispatch.
+   Ini menghapus history. Lebih baik insert baru tanpa delete, atau soft delete.
+
+2. Batch enqueue ke BullMQ menggunakan queue.addBulk() untuk mengurangi
+   round-trip Redis.
+
+3. Shard dispatch by group. Jika 26k ONT dibagi ke beberapa group,
+   dispatcher bisa diparalelkan per group.
+
+
+Rekomendasi Hardware untuk ACS Workers
+--------------------------------------
+| Komponen        | Estimasi                                  |
+|-----------------|-------------------------------------------|
+| VM/Worker Nodes | 3-5 VM dengan total 32-64 vCPU            |
+| RAM total       | 32-64 GB                                  |
+| PostgreSQL      | Dedicated VM, 16 vCPU, 32 GB RAM, NVMe    |
+|                 | max_connections > 500                     |
+| Redis           | Dedicated VM atau managed Redis, 4 GB RAM |
+| PgBouncer       | 1-2 vCPU, 2 GB RAM                        |
+
+
+Rencana Direct Ping Worker (Offline Ping)
+------------------------------------------
+Masalah Saat Ini:
+- 1 proses, tidak ada sharding.
+- Query SEMUA devices_ont WHERE ip_address IS NOT NULL.
+- Passing semua IP ke fping dalam satu command line -> risiko E2BIG
+  (argument list too long) untuk 26k IP.
+- Insert sequential satu per satu -> lambat.
+- Tidak memanfaatkan downstream_server_id.
+- Tidak ada offline detection otomatis.
+
+
+Rencana: Sharded Direct Ping Workers
+-------------------------------------
+Opsi A: Shard by downstream_server_id (REKOMENDASI)
+Jika ONT sudah punya downstream_server_id, jalankan 1 direct-ping worker
+per downstream server. Setiap worker berjalan di VM/region berbeda.
+
+  mojo_direct_ping_worker_1:
+    image: mojo-worker:latest
+    environment:
+      - DOWNSTREAM_SERVER_ID=1
+      - DIRECT_PING_INTERVAL_MINUTES=10
+      - PING_BATCH_SIZE=500
+
+Query di direct-ping-worker.js jadi:
+  SELECT id, device_name, serial_number, ip_address
+  FROM devices_ont
+  WHERE ip_address IS NOT NULL
+    AND downstream_server_id = $1
+
+
+Opsi B: Shard by Device ID Range
+Jika downstream_server_id belum reliable, shard by device ID modulo:
+
+  const SHARD_INDEX = parseInt(process.env.SHARD_INDEX) || 0;
+  const SHARD_COUNT = parseInt(process.env.SHARD_COUNT) || 1;
+
+  SELECT id, device_name, serial_number, ip_address
+  FROM devices_ont
+  WHERE ip_address IS NOT NULL
+    AND id % $1 = $2
+
+Dengan SHARD_COUNT=10, masing-masing worker handle ~2.600 ONT.
+
+
+Batch Processing untuk 26k
+---------------------------
+Batasi jumlah IP per fping command:
+
+  const FPING_BATCH_SIZE = parseInt(process.env.PING_BATCH_SIZE) || 500;
+  for (let i = 0; i < ipList.length; i += FPING_BATCH_SIZE) {
+    const batch = ipList.slice(i, i + FPING_BATCH_SIZE);
+    const result = await runFping(batch);
+    await saveResultsBatch(result);
+  }
+
+Ini menghindari E2BIG dan membuat progress lebih predictable.
+
+Batch Insert ke PostgreSQL:
+Ubah dari insert satu per satu menjadi multi-row insert:
+
+  const values = results.map((r, idx) =>
+    `($${idx*5+1}, $${idx*5+2}, $${idx*5+3}, $${idx*5+4}, $${idx*5+5})`
+  ).join(',');
+
+  INSERT INTO test_results_direct_ping
+  (device_id, ip_address, avg_latency, packet_loss, downstream_server_id)
+  VALUES ${values}
+
+
+Offline Detection Berbasis Direct Ping
+---------------------------------------
+Tambahkan cron/job yang mark device offline jika tidak ada direct ping
+success dalam X menit:
+
+  UPDATE devices_ont
+  SET status = 'offline', updated_at = NOW()
+  WHERE last_seen < NOW() - INTERVAL '15 minutes'
+    AND status != 'offline';
+
+Atau lebih baik, setelah direct ping cycle, update last_seen hanya untuk
+yang reachable, lalu jalankan offline marker.
+
+
+Direct Ping Hardware Plan
+--------------------------
+| Skala     | Workers | Batch Size | IPs per Worker | Interval  |
+|-----------|---------|------------|----------------|-----------|
+| 26.000 ONT| 10      | 500        | ~2.600         | 10 menit  |
+| 26.000 ONT| 5       | 1000       | ~5.200         | 10 menit  |
+
+Setiap worker direct ping butuh:
+- cap_net_raw capability untuk ICMP
+- Network proximity ke ONT (idealnya 1 worker per downstream/PoP)
+- Minimal 1 vCPU, 512 MB RAM per worker
+
+
+Arsitektur Direct Ping yang Diusulkan
+--------------------------------------
+                         PostgreSQL
+                         devices_ont
+                              |
+        ----------------------|----------------------
+        |                     |                     |
+   DPW-1               DPW-2               DPW-N
+   shard 1             shard 2             shard N
+   fping               fping               fping
+        |                     |                     |
+        ----------------------|----------------------
+                              |
+                    INSERT batch ke
+                    test_results_direct_ping
+
+
+Roadmap Implementasi (Prioritas)
+---------------------------------
+Phase 1: Foundation (Wajib sebelum 26k)
+1. Buat WORKER_CONCURRENCY env var dan naikkan default ke 10.
+2. Naikkan MAX_PENDING_JOBS ke 50.000+.
+3. Naikkan CHUNK_SIZE ke 500-1000.
+4. Implement batch insert di direct-ping-worker.js.
+5. Tambah PING_BATCH_SIZE dan sharding DOWNSTREAM_SERVER_ID untuk direct ping.
+6. Naikkan Redis maxmemory ke 2-4 GB.
+7. Setup PgBouncer untuk PostgreSQL connection pooling.
+
+Phase 2: Scale Out
+8. Docker Swarm / Docker Compose replicas untuk worker ACS.
+9. Global ACS rate limiter via Redis.
+10. Redis Cluster atau managed Redis.
+11. Dedicated PostgreSQL VM dengan partitioning test_results_* by time.
+12. Multiple direct-ping workers by downstream server / shard.
+
+Phase 3: Observability & Reliability
+13. Worker heartbeat + queue depth monitoring.
+14. Auto-scaling worker berdasarkan queue depth.
+15. Retention policy untuk test results (TimescaleDB atau partitioning + archive).
+16. Circuit breaker tuning untuk ACS API.
+
+
+Estimasi Resource Total untuk 26.000 ONT
+-----------------------------------------
+| Komponen              | Jumlah/Spesifikasi          |
+|-----------------------|-----------------------------|
+| Dashboard             | 2-4 vCPU, 4 GB RAM          |
+| Dispatcher            | 2 vCPU, 2 GB RAM            |
+| ACS Fast Workers      | 13 container x 1 vCPU x 512MB |
+| ACS Download Workers  | 6 container x 1 vCPU x 512MB  |
+| ACS Upload Workers    | 6 container x 1 vCPU x 512MB  |
+| Direct Ping Workers   | 5-10 container x 1 vCPU x 512MB |
+| PostgreSQL            | 16 vCPU, 32 GB RAM, NVMe    |
+| PgBouncer             | 2 vCPU, 2 GB RAM            |
+| Redis                 | 4 vCPU, 4-8 GB RAM          |
+| TOTAL MINIMUM         | ~50 vCPU, 60 GB RAM         |
+
+Catatan: Bisa dibagi ke beberapa VM.
+
+
+Catatan Penting
+----------------
+1. ACS API adalah bottleneck utama, bukan worker.
+   Scaling worker harus disertai rate limiting ke ACS.
+
+2. Direct ping bukan pengganti ACS ping.
+   Direct ping untuk monitoring ketersediaan IP/ONT.
+   ACS ping untuk mengukur kualitas link melalui TR-069.
+
+3. 26k ONT dengan interval 10 menit direct ping = 2.600 ping/menit.
+   Butuh sharding agar tidak overload network dan CPU.
+
+4. Sekarang tidak ada auto offline detection.
+   Perlu job tambahan.
+
+5. Data retention akan jadi masalah besar:
+   26k x 5 test types x per jam = 3,1 juta rows/hari.
+   Perlu partitioning dari awal.
+
+================================================================================
+Generated: 2026-06-11
+================================================================================

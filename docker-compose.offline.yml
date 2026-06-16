@@ -1,0 +1,291 @@
+# Offline / air-gapped variant of docker-compose.yml
+# - Uses pre-built images loaded via `docker load` (NO build sections -> no internet needed)
+# - Does NOT auto-run migrations as initdb scripts (schema/data restored explicitly)
+#
+# Run on the target (offline) server:
+#   docker compose -f docker-compose.offline.yml up -d
+#
+# Images required (loaded from images.tar):
+#   mojo-worker:latest, mojo-dashboard:latest, postgres:15-alpine, redis:7-alpine
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mojojojo_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mojojojo_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mojojojo_password}
+      POSTGRES_DB: ${POSTGRES_DB:-mojojojo_database}
+      TZ: ${TZ:-Asia/Jakarta}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    command: postgres -c timezone=${TZ:-Asia/Jakarta}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mojojojo_user} -d ${POSTGRES_DB:-mojojojo_database}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mojojojo_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: mojojojo_redis
+    restart: always
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    volumes:
+      - ./data/redis:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-mojojojo_redis_password}
+    ports:
+      - "${REDIS_PORT:-127.0.0.1:6379}:6379"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-mojojojo_redis_password}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mojojojo_network
+    security_opt:
+      - no-new-privileges:true
+
+  mojo_dashboard:
+    image: mojo-dashboard:latest
+    container_name: mojojojo_dashboard
+    restart: always
+    ports:
+      - "${DASHBOARD_PORT:-3002}:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost/api}
+      INTERNAL_API_URL: ${INTERNAL_API_URL:-http://localhost:3000}
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
+      REDIS_PORT: ${REDIS_PORT_INTERNAL:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
+      SESSION_SECRET: ${SESSION_SECRET:-mojojojo_session_secret_2024}
+      AI_INTEGRATIONS_GEMINI_API_KEY: ${AI_INTEGRATIONS_GEMINI_API_KEY:-}
+      AI_INTEGRATIONS_GEMINI_BASE_URL: ${AI_INTEGRATIONS_GEMINI_BASE_URL:-}
+      TZ: ${TZ:-Asia/Jakarta}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+    networks:
+      - mojojojo_network
+
+  mojo_dispatcher:
+    image: mojo-worker:latest
+    container_name: mojojojo_dispatcher
+    restart: always
+    command: ["node", "dispatcher.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
+      REDIS_PORT: ${REDIS_PORT_INTERNAL:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
+      TZ: ${TZ:-Asia/Jakarta}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_worker_fast:
+    image: mojo-worker:latest
+    container_name: mojojojo_worker_fast
+    restart: always
+    command: ["node", "worker.js"]
+    environment:
+      QUEUE_NAME: acs-fast
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
+      REDIS_PORT: ${REDIS_PORT_INTERNAL:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
+      API_BASE_URL: ${API_BASE_URL:-http://mojojojo_dashboard:3000}
+      PING_RATE_LIMIT_SECONDS: ${PING_RATE_LIMIT_SECONDS:-10}
+      SPEED_RATE_LIMIT_SECONDS: ${SPEED_RATE_LIMIT_SECONDS:-10}
+      AXIROS_CONFIG_TTL_MS: ${AXIROS_CONFIG_TTL_MS:-60000}
+      TZ: ${TZ:-Asia/Jakarta}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mojo_dashboard:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_worker_download:
+    image: mojo-worker:latest
+    container_name: mojojojo_worker_download
+    restart: always
+    command: ["node", "worker.js"]
+    environment:
+      QUEUE_NAME: acs-download
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
+      REDIS_PORT: ${REDIS_PORT_INTERNAL:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
+      API_BASE_URL: ${API_BASE_URL:-http://mojojojo_dashboard:3000}
+      PING_RATE_LIMIT_SECONDS: ${PING_RATE_LIMIT_SECONDS:-10}
+      SPEED_RATE_LIMIT_SECONDS: ${SPEED_RATE_LIMIT_SECONDS:-10}
+      AXIROS_CONFIG_TTL_MS: ${AXIROS_CONFIG_TTL_MS:-60000}
+      TZ: ${TZ:-Asia/Jakarta}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mojo_dashboard:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_worker_upload:
+    image: mojo-worker:latest
+    container_name: mojojojo_worker_upload
+    restart: always
+    command: ["node", "worker.js"]
+    environment:
+      QUEUE_NAME: acs-upload
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
+      REDIS_PORT: ${REDIS_PORT_INTERNAL:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
+      API_BASE_URL: ${API_BASE_URL:-http://mojojojo_dashboard:3000}
+      PING_RATE_LIMIT_SECONDS: ${PING_RATE_LIMIT_SECONDS:-10}
+      SPEED_RATE_LIMIT_SECONDS: ${SPEED_RATE_LIMIT_SECONDS:-10}
+      AXIROS_CONFIG_TTL_MS: ${AXIROS_CONFIG_TTL_MS:-60000}
+      TZ: ${TZ:-Asia/Jakarta}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mojo_dashboard:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker:
+    image: mojo-worker:latest
+    container_name: mojojojo_direct_ping_worker
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+networks:
+  mojojojo_network:
+    name: mojojojo_network
+    driver: bridge

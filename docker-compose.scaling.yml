@@ -1,0 +1,1209 @@
+# Scaling-only compose file used by the dashboard container.
+# It mirrors the worker service definitions from the main compose file
+# (without depends_on/build context issues) so scaling actions do not
+# touch postgres, redis, or dashboard containers.
+#
+# Usage from inside the dashboard container:
+#   COMPOSE_PROJECT_NAME=mojojojomonitor docker-compose -f /app/docker-compose.scaling.yml up -d --scale mojo_worker_fast=2 mojo_worker_fast
+
+services:
+  mojo_worker_fast:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "worker.js"]
+    environment:
+      QUEUE_NAME: acs-fast
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
+      REDIS_PORT: ${REDIS_PORT_INTERNAL:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
+      API_BASE_URL: ${API_BASE_URL:-http://mojojojo_dashboard:3000}
+      PING_RATE_LIMIT_SECONDS: ${PING_RATE_LIMIT_SECONDS:-10}
+      SPEED_RATE_LIMIT_SECONDS: ${SPEED_RATE_LIMIT_SECONDS:-10}
+      AXIROS_CONFIG_TTL_MS: ${AXIROS_CONFIG_TTL_MS:-60000}
+      TZ: ${TZ:-Asia/Jakarta}
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_worker_download:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "worker.js"]
+    environment:
+      QUEUE_NAME: acs-download
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
+      REDIS_PORT: ${REDIS_PORT_INTERNAL:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
+      API_BASE_URL: ${API_BASE_URL:-http://mojojojo_dashboard:3000}
+      PING_RATE_LIMIT_SECONDS: ${PING_RATE_LIMIT_SECONDS:-10}
+      SPEED_RATE_LIMIT_SECONDS: ${SPEED_RATE_LIMIT_SECONDS:-10}
+      AXIROS_CONFIG_TTL_MS: ${AXIROS_CONFIG_TTL_MS:-60000}
+      TZ: ${TZ:-Asia/Jakarta}
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_worker_upload:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "worker.js"]
+    environment:
+      QUEUE_NAME: acs-upload
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
+      REDIS_PORT: ${REDIS_PORT_INTERNAL:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
+      API_BASE_URL: ${API_BASE_URL:-http://mojojojo_dashboard:3000}
+      PING_RATE_LIMIT_SECONDS: ${PING_RATE_LIMIT_SECONDS:-10}
+      SPEED_RATE_LIMIT_SECONDS: ${SPEED_RATE_LIMIT_SECONDS:-10}
+      AXIROS_CONFIG_TTL_MS: ${AXIROS_CONFIG_TTL_MS:-60000}
+      TZ: ${TZ:-Asia/Jakarta}
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "1"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_sumut:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "2"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_sumbar:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "3"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_riau:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "4"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_jambi:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "5"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_sumsel:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "6"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_bengkulu:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "7"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_lampung:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "8"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_babel:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "9"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_kepri:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "10"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_dki_jakarta:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "11"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_jabar:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "12"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_jateng:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "13"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_diy:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "14"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_jatim:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "15"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_banten:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "16"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_bali:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "17"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_ntb:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "18"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_ntt:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "19"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_kalbar:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "20"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_kalteng:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "21"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_kalsel:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "22"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_kaltim:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "23"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_kaltara:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "24"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_sulut:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "25"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_sulteng:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "26"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_sulsel:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "27"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_sultra:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "28"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_gorontalo:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "29"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_sulbar:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "30"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_maluku:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "31"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_malut:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "32"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_papua:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "33"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+  mojo_direct_ping_worker_papua_barat:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: mojo-worker:latest
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      DOWNSTREAM_SERVER_ID: "34"
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojo_network
+
+networks:
+  mojojojo_network:
+    name: mojojojomonitor_mojojojo_network
+    driver: bridge

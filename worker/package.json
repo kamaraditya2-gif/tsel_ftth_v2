@@ -1,0 +1,25 @@
+{
+  "name": "acs-worker",
+  "version": "1.0.0",
+  "description": "ACS Worker for processing queue jobs",
+  "main": "worker.js",
+  "scripts": {
+    "start": "node worker.js",
+    "dispatcher": "node dispatcher.js",
+    "dev": "nodemon worker.js",
+    "dev:dispatcher": "nodemon dispatcher.js"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "bullmq": "^5.1.0",
+    "dotenv": "^16.3.1",
+    "ioredis": "^5.3.2",
+    "node-cron": "^3.0.3",
+    "pg": "^8.11.3",
+    "pino": "^9.0.0",
+    "pino-pretty": "^11.0.0"
+  }
+}

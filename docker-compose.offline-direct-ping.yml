@@ -1,0 +1,42 @@
+# Offline compose untuk Direct Ping Worker saja (terpisah dari bundle utama)
+# Dijalankan di mesin terpisah yang tetap bisa reach PostgreSQL via IP.
+#
+# Prasyarat:
+#   - PostgreSQL (dari bundle utama) sudah expose port 5432
+#   - .env berisi DB_HOST=<IP server postgres>, DB_PASSWORD, dll
+#
+# Jalankan:
+#   docker compose -f docker-compose.offline-direct-ping.yml up -d
+
+services:
+  mojo_direct_ping_worker:
+    image: mojo-worker:latest
+    container_name: mojojojo_direct_ping_worker
+    restart: always
+    command: ["node", "start-direct-ping-worker.js"]
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
+      TZ: ${TZ:-Asia/Jakarta}
+    cap_add:
+      - NET_RAW
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - mojojojomonitor_mojojojo_network
+
+networks:
+  mojojojomonitor_mojojojo_network:
+    external: true

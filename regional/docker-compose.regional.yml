@@ -1,0 +1,36 @@
+# =============================================================================
+# Regional Direct Ping Worker — docker-compose template
+# =============================================================================
+# Cara pakai:
+#   1. Copy file ini ke server regional
+#   2. Edit environment variables di bawah (DB_HOST, DB_PASSWORD, REGION_ID)
+#   3. docker compose up -d
+# =============================================================================
+
+services:
+  fping-regional:
+    image: mojo-worker:latest
+    container_name: fping_regional
+    restart: always
+    cap_add:
+      - NET_RAW                    # Wajib untuk ICMP ping di dalam container
+    environment:
+      # ── Koneksi ke Database Pusat ──
+      DB_HOST: 103.143.12.115      # IP VM PUSAT (GANTI sesuai IP server pusat)
+      DB_PORT: 5432
+      DB_USER: mojojojo_user
+      DB_PASSWORD: QG4CXVN4jbTKrjvdiiEjihOO   # Password database pusat
+      DB_NAME: mojojojo_database
+
+      # ── Regional Identity ──
+      DOWNSTREAM_SERVER_ID: 2      # ID regional (1=Pusat, 2=SUMUT, 3=JATENG, 4=JATIM, dll)
+
+      # ── Ping Configuration ──
+      DIRECT_PING_INTERVAL_MINUTES: 10     # Interval fping (default 10 menit)
+      PING_BATCH_SIZE: 500                 # Jumlah device per batch fping
+    command: ["node", "start-direct-ping-worker.js"]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M

@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mojojojo_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mojojojo_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mojojojo_password}
+      POSTGRES_DB: ${POSTGRES_DB:-mojojojo_database}
+      TZ: ${TZ:-Asia/Jakarta}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    command: postgres -c timezone=${TZ:-Asia/Jakarta}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mojojojo_user} -d ${POSTGRES_DB:-mojojojo_database}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mojojojo_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: mojojojo_redis
+    restart: always
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "${REDIS_PASSWORD:-mojojojo_redis_password}"]
+    volumes:
+      - ./data/redis:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-mojojojo_redis_password}
+    ports:
+      - "${REDIS_PORT:-127.0.0.1:6379}:6379"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-mojojojo_redis_password}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mojojojo_network
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+networks:
+  mojojojo_network:
+    external: true

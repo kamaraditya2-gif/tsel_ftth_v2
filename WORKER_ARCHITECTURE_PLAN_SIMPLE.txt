@@ -1,0 +1,340 @@
+================================================================================
+RENCANA SIMPLIFY ARSITEKTUR WORKER MOJOJOJO MONITOR UNTUK 26.000 ONT
+================================================================================
+
+Prinsip Dasar
+-------------
+- Container worker sudah disiapkan di VM utama sejak awal.
+- Admin tinggal START container tambahan dan RESIZE flavor VM sesuai beban.
+- Tidak perlu ubah kode besar-besaran.
+- Fping offline worker ada di VM utama dan juga di-deploy per regional.
+- Regional worker hanya ping ONT di wilayahnya, lalu kirim hasil ke DB pusat.
+
+
+1. VM UTAMA: Container yang Sudah Disiapkan
+---------------------------------------------
+Semua container sudah ada di docker-compose.yml. Admin tinggal scale up
+replicas atau start container yang sementara di-stop.
+
+Contoh container yang standby:
+
+| Container                  | Queue / Mode   | Default State | Scale Action |
+|----------------------------|----------------|---------------|--------------|
+| mojo_dashboard             | Next.js app    | Running       | Resize VM    |
+| mojo_dispatcher            | Scheduler      | Running       | 1 cukup      |
+| mojo_worker_fast           | acs-fast       | Running 1x    | +N replicas  |
+| mojo_worker_download       | acs-download   | Running 1x    | +N replicas  |
+| mojo_worker_upload         | acs-upload     | Running 1x    | +N replicas  |
+| mojo_direct_ping_worker    | Offline ping   | Running 1x    | +N replicas  |
+| mojojojo_postgres          | Database       | Running       | Resize VM    |
+| mojojojo_redis             | BullMQ         | Running       | Resize VM    |
+
+
+1.1 Langkah Scale Up di VM Utama
+----------------------------------
+Ketika jumlah ONT naik:
+
+1. Admin resize VM (CPU + RAM) via cloud panel.
+2. Admin ubah docker-compose.yml replicas atau scale via command:
+
+   docker-compose up -d --scale mojo_worker_fast=5 \
+                         --scale mojo_worker_download=3 \
+                         --scale mojo_worker_upload=3 \
+                         --scale mojo_direct_ping_worker=2
+
+3. Semua worker baru otomatis consume queue yang sama (acs-fast, dll).
+
+
+1.2 Estimasi Worker vs Jumlah ONT
+----------------------------------
+Asumsi: setiap worker container handle ~5.000 ONT dengan nyaman.
+
+| Jumlah ONT | Fast Workers | Download Workers | Upload Workers | Direct Ping VM Utama |
+|------------|--------------|------------------|----------------|----------------------|
+| 5.000      | 1            | 1                | 1              | 1                    |
+| 10.000     | 2            | 1                | 1              | 2                    |
+| 20.000     | 4            | 2                | 2              | 4                    |
+| 26.000     | 6            | 3                | 3              | 5                    |
+| 50.000     | 10           | 5                | 5              | 8                    |
+
+VM utama minimal per tier:
+- 5k ONT  : 2 vCPU, 4 GB RAM
+- 10k ONT : 4 vCPU, 8 GB RAM
+- 20k ONT : 8 vCPU, 16 GB RAM
+- 26k ONT : 12 vCPU, 24 GB RAM
+- 50k ONT : 20 vCPU, 40 GB RAM
+
+Catatan: Angka di atas sangat bergantung pada interval test dan timeout ACS.
+Jika interval ping 1 jam dan download/upload 6 jam, estimasi di atas aman.
+
+
+1.3 Konfigurasi Replicas via docker-compose
+--------------------------------------------
+Contoh docker-compose.yml untuk 26k ONT:
+
+  mojo_worker_fast:
+    image: mojo-worker:latest
+    deploy:
+      replicas: 6
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    environment:
+      - QUEUE_NAME=acs-fast
+
+  mojo_worker_download:
+    image: mojo-worker:latest
+    deploy:
+      replicas: 3
+    environment:
+      - QUEUE_NAME=acs-download
+
+  mojo_worker_upload:
+    image: mojo-worker:latest
+    deploy:
+      replicas: 3
+    environment:
+      - QUEUE_NAME=acs-upload
+
+  mojo_direct_ping_worker:
+    image: mojo-worker:latest
+    deploy:
+      replicas: 5
+    environment:
+      - QUEUE_NAME=direct-ping-vm-main
+      - SHARD_COUNT=5
+
+
+1.4 Yang Perlu Diubah Kecil di Kode
+------------------------------------
+Agar scale semudah ini, perlu sedikit perubahan:
+
+1. WORKER_CONCURRENCY jadi env var (opsional tapi direkomendasikan).
+   Default tetap 5, tapi bisa override lewat environment.
+
+   worker.js:
+     const concurrency = parseInt(process.env.WORKER_CONCURRENCY) || 5;
+
+2. MAX_PENDING_JOBS di dispatcher.js naik dari 1.500 menjadi 10.000+.
+   Agar task besar tidak di-skip.
+
+3. CHUNK_SIZE dispatcher naik dari 50 menjadi 200-500.
+   Agar dispatch 26k ONT tidak terlalu lama.
+
+4. Direct ping worker support sharding (lihat bagian 2).
+
+Sisanya: admin tinggal resize VM + scale replicas.
+
+
+2. FPING OFFLINE REGIONAL WORKER
+---------------------------------
+Konsep:
+- Ada fping worker di VM utama (untuk monitoring central).
+- Ada fping worker di tiap regional / POP.
+- Setiap regional worker hanya ping ONT yang masuk wilayahnya.
+- Regional worker tetap kirim hasil ke DB PostgreSQL pusat.
+
+
+2.1 Cara Korelasi ONT dengan Regional
+--------------------------------------
+Gunakan kolom yang sudah ada atau tambah kolom sederhana:
+
+Opsi A: Pakai downstream_server_id (jika sudah terisi)
+  WHERE downstream_server_id = <REGION_ID>
+
+Opsi B: Tambah kolom region_id di devices_ont
+  ALTER TABLE devices_ont ADD COLUMN region_id INTEGER;
+  UPDATE devices_ont SET region_id = <region> WHERE ...;
+
+Opsi C: Pakai group_id dari group_devices
+  Jika setiap group sudah merepresentasikan regional.
+
+Rekomendasi: Opsi A jika downstream_server_id sudah reliable.
+Jika belum, Opsi B paling fleksibel.
+
+
+2.2 Container Regional Worker
+------------------------------
+Setiap regional worker adalah container Docker yang sama (mojo-worker).
+Bedanya hanya env var REGION_ID atau SHARD_INDEX.
+
+Contoh docker-compose di regional server:
+
+  mojo_fping_regional_jakarta:
+    image: mojo-worker:latest
+    environment:
+      - DB_HOST=<IP_VM_PUSAT>
+      - DB_PORT=5432
+      - DB_PASSWORD=<password>
+      - REDIS_HOST=<IP_VM_PUSAT>
+      - REDIS_PASSWORD=<password>
+      - REGION_ID=1
+      - WORKER_TYPE=fping_regional
+      - DIRECT_PING_INTERVAL_MINUTES=10
+      - PING_BATCH_SIZE=500
+    cap_add:
+      - NET_RAW
+
+Regional worker tidak butuh Redis BullMQ, hanya butuh koneksi DB pusat
+untuk baca devices_ont dan tulis test_results_direct_ping.
+
+
+2.3 Query Regional Worker
+--------------------------
+Regional worker hanya baca ONT di regionnya:
+
+  SELECT id, device_name, serial_number, ip_address, cpe_type
+  FROM devices_ont
+  WHERE ip_address IS NOT NULL
+    AND region_id = $REGION_ID
+
+Kemudian jalankan fping per batch 500 IP, lalu insert batch ke:
+  test_results_direct_ping(device_id, ip_address, avg_latency, packet_loss,
+                           downstream_server_id, created_at)
+
+
+2.4 Arsitektur Regional
+------------------------
+
+          VM PUSAT
+    +---------------------+
+    | PostgreSQL          |<--------------------+
+    | Redis               |                     |
+    | Dashboard           |                     |
+    | Dispatcher          |                     |
+    | ACS Workers         |                     |
+    | Direct Ping Worker  |                     |
+    +---------------------+                     |
+            ^                                   |
+            |                                   |
+    +-------+---------+   +---------+   +-------+---------+
+    | Regional Server |   | Regional|   | Regional Server |
+    | Jakarta         |   | Bandung |   | Surabaya        |
+    | fping worker    |   |fping wkr|   | fping worker    |
+    +-----------------+   +---------+   +-----------------+
+
+Setiap regional server hanya butuh:
+- 1 vCPU, 512 MB - 1 GB RAM
+- Docker + container fping worker
+- Network ke VM pusat (DB port 5432)
+- cap_net_raw untuk ICMP
+
+
+2.5 Skema Tabel Hasil Direct Ping
+----------------------------------
+Tabel test_results_direct_ping sudah ada. Pastikan ada kolom
+regional identity agar bisa difilter:
+
+  device_id
+  ip_address
+  avg_latency
+  packet_loss
+  downstream_server_id  (atau region_id)
+  created_at
+
+Jika belum ada region_id, bisa pakai downstream_server_id sebagai
+identitas regional.
+
+
+3. FLOW KERJA REGIONAL OFFLINE PING
+------------------------------------
+1. Regional worker start.
+2. Query devices_ont WHERE region_id = <REGION_ID> AND ip_address IS NOT NULL.
+3. Bagi IP jadi batch 500.
+4. Jalankan fping per batch.
+5. Parse hasil.
+6. Insert batch ke test_results_direct_ping.
+7. Sleep sesuai DIRECT_PING_INTERVAL_MINUTES.
+8. Ulangi dari langkah 2.
+
+
+4. KAPAN ADMIN PERLU SCALE
+---------------------------
+Metric utama:
+- Queue depth BullMQ (acs-fast, acs-download, acs-upload) tinggi terus.
+- Task terlambat jalan (next_run sudah lewat tapi belum diproses).
+- Direct ping cycle > interval (contoh: interval 10 menit tapi cycle 15 menit).
+- CPU/RAM VM utama sering > 80%.
+
+Jika metric di atas terjadi:
+1. Resize VM utama (CPU/RAM).
+2. Scale replicas worker:
+   docker-compose up -d --scale mojo_worker_fast=N \
+                             --scale mojo_worker_download=M \
+                             --scale mojo_worker_upload=M \
+                             --scale mojo_direct_ping_worker=P
+
+
+5. OFFLINE DETECTION SEDERHANA
+-------------------------------
+Tambahkan 1 cron/container kecil di VM utama:
+
+  UPDATE devices_ont
+  SET status = 'offline', updated_at = NOW()
+  WHERE last_seen < NOW() - INTERVAL '15 minutes'
+    AND status != 'offline';
+
+Atau lebih baik: regional worker update last_seen hanya untuk ONT yang
+reachable. Lalu cron di atas yang mark offline.
+
+
+6. SUMMARY PERUBAHAN KODE MINIMAL
+----------------------------------
+File yang perlu diubah:
+
+1. worker.js
+   - WORKER_CONCURRENCY env var (opsional, recommended).
+
+2. dispatcher.js
+   - MAX_PENDING_JOBS: 1.500 -> 10.000
+   - CHUNK_SIZE: 50 -> 200-500
+
+3. direct-ping-worker.js
+   - Support REGION_ID filter.
+   - Support PING_BATCH_SIZE.
+   - Batch insert multi-row.
+
+4. docker-compose.yml
+   - Gunakan deploy.replicas agar mudah scale.
+
+5. Schema (opsional)
+   - Tambah region_id di devices_ont jika downstream_server_id belum reliable.
+
+
+7. CHECKLIST DEPLOYMENT REGIONAL
+---------------------------------
+- [ ] Siapkan VM/edge device di tiap regional (1 vCPU, 512 MB - 1 GB RAM).
+- [ ] Install Docker di regional server.
+- [ ] Pull/copy image mojo-worker ke regional.
+- [ ] Buat docker-compose regional dengan env REGION_ID dan DB_HOST pusat.
+- [ ] Pastikan network regional -> VM pusat port 5432 terbuka.
+- [ ] Jalankan container regional fping worker.
+- [ ] Verifikasi data masuk ke test_results_direct_ping.
+
+
+8. CATATAN PENTING
+-------------------
+- ACS API masih bottleneck utama. Scale worker ACS harus hati-hati.
+  Jika ACS lambat/respon error, tambah worker tidak akan membantu.
+  Solusi: monitor queue depth dan response time ACS.
+
+- Regional fping worker tidak perlu Redis, hanya butuh DB pusat.
+  Ini membuat deployment regional sangat ringan.
+
+- VM utama tetap perlu resize untuk:
+  PostgreSQL (RAM untuk cache dan connection)
+  Redis (RAM untuk BullMQ metadata)
+  Dashboard (CPU untuk request)
+
+- Untuk 26k ONT, rekomendasi awal:
+  - VM utama: 12 vCPU, 24 GB RAM
+  - mojo_worker_fast: 6 replicas
+  - mojo_worker_download: 3 replicas
+  - mojo_worker_upload: 3 replicas
+  - mojo_direct_ping_worker VM utama: 2-5 replicas
+  - Regional fping: 1 worker per regional/POP
+
+================================================================================
+Generated: 2026-06-11
+================================================================================
