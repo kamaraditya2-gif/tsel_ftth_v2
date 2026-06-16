@@ -10,7 +10,7 @@ services:
       DB_HOST: mojojojo_postgres
       DB_PORT: 5432
       DB_USER: mojojojo_user
-      DB_PASSWORD: j^I>EeN(8h2k9tr|sNlg}F_;m_8X|{*J
+      DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: mojojojo_database
       DOWNSTREAM_SERVER_ID: 3
       DIRECT_PING_INTERVAL_MINUTES: 60
@@ -28,7 +28,7 @@ services:
       DB_HOST: mojojojo_postgres
       DB_PORT: 5432
       DB_USER: mojojojo_user
-      DB_PASSWORD: j^I>EeN(8h2k9tr|sNlg}F_;m_8X|{*J
+      DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: mojojojo_database
       DOWNSTREAM_SERVER_ID: 12
       DIRECT_PING_INTERVAL_MINUTES: 60

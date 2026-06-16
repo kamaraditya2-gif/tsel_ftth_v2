@@ -5,7 +5,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public paths that don't require authentication
-  const publicPaths = ['/login', '/api/auth/login', '/api/auth/logout', '/api/app-settings', '/api/axiros-server', '/api/test-server', '/api/nop-cities', '/api/health']
+  const publicPaths = ['/login', '/api/auth/login', '/api/auth/logout', '/api/app-settings', '/api/axiros-server', '/api/test-server', '/api/nop-cities', '/api/health', '/api/system/status', '/api/debug']
   
   if (publicPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next()
@@ -35,6 +35,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder
      */
-     '/((?!api/auth|api/app-settings|api/axiros-server|api/test-server|api/nop-cities|api/health|_next/static|_next/image|favicon.ico|public).*)',
+     '/((?!api/auth|api/app-settings|api/axiros-server|api/test-server|api/nop-cities|api/health|api/system|api/debug|_next/static|_next/image|favicon.ico|public).*)',
   ],
 }
