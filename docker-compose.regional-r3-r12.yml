@@ -13,7 +13,7 @@ services:
       DB_PASSWORD: j^I>EeN(8h2k9tr|sNlg}F_;m_8X|{*J
       DB_NAME: mojojojo_database
       DOWNSTREAM_SERVER_ID: 3
-      DIRECT_PING_INTERVAL_MINUTES: 5
+      DIRECT_PING_INTERVAL_MINUTES: 60
     networks:
       - mojojojo_network
 
@@ -31,7 +31,7 @@ services:
       DB_PASSWORD: j^I>EeN(8h2k9tr|sNlg}F_;m_8X|{*J
       DB_NAME: mojojojo_database
       DOWNSTREAM_SERVER_ID: 12
-      DIRECT_PING_INTERVAL_MINUTES: 5
+      DIRECT_PING_INTERVAL_MINUTES: 60
     networks:
       - mojojojo_network
 
