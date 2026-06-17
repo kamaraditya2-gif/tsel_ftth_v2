@@ -85,7 +85,7 @@ export async function GET() {
       health.workers = { status: 'error', note: 'Failed to read worker heartbeats' }
     }
 
-    // 5. Regional workers check — test_results_direct_ping dalam 30 menit terakhir
+    // 5. Regional workers check — test_results_direct_ping dalam 90 menit terakhir
     const regionalRes = await client.query(`
       SELECT
         ds.id,
@@ -95,7 +95,7 @@ export async function GET() {
       FROM downstream_servers ds
       LEFT JOIN test_results_direct_ping drp
         ON drp.downstream_server_id = ds.id
-        AND drp.created_at > NOW() - INTERVAL '30 minutes'
+        AND drp.created_at > NOW() - INTERVAL '90 minutes'
       GROUP BY ds.id, ds.name
       ORDER BY ds.id
     `)

@@ -120,7 +120,7 @@ services:
       DB_NAME: ${DB_NAME:-mojojojo_database}
       REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_PASSWORD: mojojojo_redis_password
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
       TZ: ${TZ:-Asia/Jakarta}
     depends_on:
       postgres:

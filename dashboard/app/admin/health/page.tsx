@@ -327,7 +327,7 @@ export default function HealthPage() {
                     {statusBadge(r.status === 'ok' ? 'ok' : 'offline')}
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                    <p>Pings (30m): <span className="font-medium text-gray-700 dark:text-gray-300">{r.pings_30min}</span></p>
+                    <p>Pings (90m): <span className="font-medium text-gray-700 dark:text-gray-300">{r.pings_30min}</span></p>
                     <p>Last ping: <span className="font-medium text-gray-700 dark:text-gray-300">{r.last_ping ? new Date(r.last_ping).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : '-'}</span></p>
                   </div>
                 </div>

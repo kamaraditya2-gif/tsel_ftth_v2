@@ -50,3 +50,4 @@ nginx/ssl/
 # TypeScript build info
 *.tsbuildinfo
 
+keys.txt
