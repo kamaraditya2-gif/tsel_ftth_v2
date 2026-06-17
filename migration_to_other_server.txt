@@ -1,0 +1,101 @@
+# MojoJojoMonitor - Migration to gandooz.cloud (DEV Server)
+# ============================================================
+# Server: webapp@gandooz.cloud (103.143.12.115) port 6022
+# Source: cachyos-x8664 (local)
+
+# ⚠️  PRASYARAT DI SERVER TUJUAN (gandooz.cloud):
+#    - Docker & Docker Compose plugin terinstall
+#    - Port 3002 (dashboard), 5432 (postgres), 6379 (redis) tidak conflict
+#    - User punya akses sudo/root
+#    - SSH key dari source server sudah ditambahkan
+#    - Minimal HDD kosong: 10 GB
+
+# ============================================================
+# LANGKAH 1: Export data dari server sumber (cachyos-x8664)
+# ============================================================
+
+# 1a. Dump database PostgreSQL
+docker exec mojojojo_postgres pg_dump -U mojojojo_user -d mojojojo_database \
+  --no-owner --no-privileges > mojo_dump.sql
+
+# 1b. Export Docker images
+docker save mojo-worker:latest mojo-dashboard:latest -o mojo_images.tar
+
+# 1c. Export konfigurasi
+tar -czf mojo_configs.tar.gz \
+  docker-compose.yml docker-compose*.yml \
+  .env .env.example schema.sql migrations/ config/ nginx/ worker/ \
+  dashboard/Dockerfile dashboard/package.json dashboard/postcss.config.js \
+  dashboard/tailwind.config.js dashboard/next.config.js dashboard/tsconfig.json \
+  --exclude='data' --exclude='node_modules'
+
+# ============================================================
+# LANGKAH 2: Transfer ke server tujuan
+# ============================================================
+
+scp -P 6022 mojo_dump.sql mojo_images.tar mojo_configs.tar.gz \
+  webapp@gandooz.cloud:/home/webapp/
+
+# ============================================================
+# LANGKAH 3: Di server tujuan (gandooz.cloud)
+# ============================================================
+
+# 3a. Extract konfigurasi
+cd /home/webapp
+tar -xzf mojo_configs.tar.gz
+
+# 3b. Load Docker images
+docker load -i mojo_images.tar
+
+# 3c. Pastikan network ada
+docker network create mojojojo_network 2>/dev/null || true
+
+# 3d. Setup .env (bawa dari sumber atau edit manual)
+# Pastikan password DB_USER, DB_PASSWORD, POSTGRES_PASSWORD, REDIS_PASSWORD benar
+cp .env.example .env
+nano .env  # EDIT PASSWORD!
+
+# 3e. Start infrastruktur
+docker compose -f docker-compose-postgres.yml up -d
+docker compose -f docker-compose-redis.yml up -d
+
+# 3f. Tunggu sehat
+until docker exec mojojojo_postgres pg_isready -U mojojojo_user; do sleep 2; done
+
+# 3g. Import database
+docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database < mojo_dump.sql
+
+# 3h. Import schema jika perlu (fresh DB)
+# docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database < schema.sql
+
+# 3i. Start aplikasi
+docker compose up -d --build
+
+# ============================================================
+# LANGKAH 4: Verifikasi
+# ============================================================
+
+# 4a. Cek semua container
+docker ps --format 'table {{.Names}}\t{{.Status}}'
+
+# 4b. Cek dashboard
+curl -s http://localhost:3002/api/health | python3 -m json.tool
+
+# 4c. Cek koneksi database
+docker exec mojojojo_postgres psql -U mojojojo_user -d mojojojo_database -c "
+  SELECT (SELECT COUNT(*) FROM devices_ont) as devices,
+         (SELECT COUNT(*) FROM test_results_direct_ping) as ping_results,
+         (SELECT COUNT(*) FROM queue_jobs) as queue_jobs;
+"
+
+# 4d. Cek regional workers (jika dibutuhkan)
+docker compose -f docker-compose.regional-r3-r12.yml up -d
+
+# ============================================================
+# CATATAN
+# ============================================================
+# - Port yg dipakai: 5432 (postgres), 6379 (redis), 3002 (dashboard)
+# - Container naming: mojojojo_* prefix
+# - Network: mojojojo_network (external)
+# - DB username: mojojojo_user, DB name: mojojojo_database
+# - REGENERATE token GitHub yg lama (sudah expire di publik)
