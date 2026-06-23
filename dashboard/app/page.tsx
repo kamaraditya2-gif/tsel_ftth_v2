@@ -81,6 +81,7 @@ export default function DashboardPage() {
   const [selectedServer, setSelectedServer] = useState<number>(1)
   const [nopCities, setNopCities] = useState<any[]>([])
   const [ontTypeData, setOntTypeData] = useState<OntTypeComparison[]>([])
+  const [ontBrandData, setOntBrandData] = useState<OntTypeComparison[]>([])
 
   useEffect(() => {
     fetchSystemStatus()
@@ -93,6 +94,7 @@ export default function DashboardPage() {
     fetchDownstreamServers()
     fetchNopCities()
     fetchOntTypeComparison()
+    fetchOntBrandComparison()
 
     // Refresh data every 30 seconds
     const interval = setInterval(() => {
@@ -100,6 +102,7 @@ export default function DashboardPage() {
       fetchDashboardData()
       fetchDownstreamTrendData()
       fetchOntTypeComparison()
+      fetchOntBrandComparison()
     }, 30000)
 
     return () => clearInterval(interval)
@@ -244,6 +247,18 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Failed to fetch ONT type comparison:', error)
+    }
+  }
+
+  const fetchOntBrandComparison = async () => {
+    try {
+      const res = await fetch(`/api/dashboard/ont-brand-comparison?timeRange=${timeRange}`)
+      const data = await res.json()
+      if (data.data && Array.isArray(data.data)) {
+        setOntBrandData(data.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch ONT brand comparison:', error)
     }
   }
 
@@ -1106,6 +1121,127 @@ export default function DashboardPage() {
                       <span className="text-green-400">↑{ont.avg_upload || 0}</span>
                       <span className="text-orange-400">P{ont.avg_igw_latency || 0}ms</span>
                       <span className="text-teal-400">PL{ont.avg_packet_loss_igw || 0}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ONT per Brand Comparison */}
+      {ontBrandData.length > 0 && (
+        <div className="mb-8">
+          <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-md p-5 shadow-lg shadow-emerald-500/10 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">ONT per Brand Comparison</h2>
+                  <p className="text-xs text-emerald-300/70">Speed & latency per manufacturer — {getTimeRangeLabel()}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Speed by Brand */}
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={ontBrandData} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="gradBRNDDL" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/>
+                        <stop offset="100%" stopColor="#059669" stopOpacity={0.4}/>
+                      </linearGradient>
+                      <linearGradient id="gradBRNDUL" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.9}/>
+                        <stop offset="100%" stopColor="#0d9488" stopOpacity={0.4}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={{ stroke: 'rgba(148,163,184,0.2)' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={{ stroke: 'rgba(148,163,184,0.2)' }} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '12px', backdropFilter: 'blur(12px)' }}
+                      itemStyle={{ color: '#e2e8f0', fontSize: '12px' }}
+                      labelStyle={{ color: '#6ee7b7', fontWeight: 600, marginBottom: '4px' }}
+                    />
+                    <Legend wrapperStyle={{ color: '#94a3b8', fontSize: '12px', paddingTop: '10px' }} />
+                    <Bar dataKey="avg_download" name="Avg Download (Mbps)" fill="url(#gradBRNDDL)" radius={[6,6,0,0]} barSize={20} animationDuration={1200} />
+                    <Bar dataKey="avg_upload" name="Avg Upload (Mbps)" fill="url(#gradBRNDUL)" radius={[6,6,0,0]} barSize={20} animationDuration={1200} />
+                  </BarChart>
+                </ResponsiveContainer>
+
+                {/* Latency by Brand */}
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={ontBrandData} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="gradBRNDIGW" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.9}/>
+                        <stop offset="100%" stopColor="#d97706" stopOpacity={0.4}/>
+                      </linearGradient>
+                      <linearGradient id="gradBRNDEBR" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#ef4444" stopOpacity={0.9}/>
+                        <stop offset="100%" stopColor="#dc2626" stopOpacity={0.4}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={{ stroke: 'rgba(148,163,184,0.2)' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={{ stroke: 'rgba(148,163,184,0.2)' }} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '12px', backdropFilter: 'blur(12px)' }}
+                      itemStyle={{ color: '#e2e8f0', fontSize: '12px' }}
+                      labelStyle={{ color: '#fcd34d', fontWeight: 600, marginBottom: '4px' }}
+                    />
+                    <Legend wrapperStyle={{ color: '#94a3b8', fontSize: '12px', paddingTop: '10px' }} />
+                    <Bar dataKey="avg_igw_latency" name="near IGW Latency (ms)" fill="url(#gradBRNDIGW)" radius={[6,6,0,0]} barSize={20} animationDuration={1200} />
+                    <Bar dataKey="avg_ebr_latency" name="near EBR Latency (ms)" fill="url(#gradBRNDEBR)" radius={[6,6,0,0]} barSize={20} animationDuration={1200} />
+                  </BarChart>
+                </ResponsiveContainer>
+
+                {/* Packet Loss by Brand */}
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={ontBrandData} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="gradBRNDPLIGW" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.9}/>
+                        <stop offset="100%" stopColor="#6d28d9" stopOpacity={0.4}/>
+                      </linearGradient>
+                      <linearGradient id="gradBRNDPLEBR" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#ec4899" stopOpacity={0.9}/>
+                        <stop offset="100%" stopColor="#be185d" stopOpacity={0.4}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={{ stroke: 'rgba(148,163,184,0.2)' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={{ stroke: 'rgba(148,163,184,0.2)' }} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '12px', backdropFilter: 'blur(12px)' }}
+                      itemStyle={{ color: '#e2e8f0', fontSize: '12px' }}
+                      labelStyle={{ color: '#c4b5fd', fontWeight: 600, marginBottom: '4px' }}
+                    />
+                    <Legend wrapperStyle={{ color: '#94a3b8', fontSize: '12px', paddingTop: '10px' }} />
+                    <Bar dataKey="avg_packet_loss_igw" name="Packet Loss near IGW (%)" fill="url(#gradBRNDPLIGW)" radius={[6,6,0,0]} barSize={20} animationDuration={1200} />
+                    <Bar dataKey="avg_packet_loss_ebr" name="Packet Loss near EBR (%)" fill="url(#gradBRNDPLEBR)" radius={[6,6,0,0]} barSize={20} animationDuration={1200} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Brand Summary Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-4">
+                {ontBrandData.map((brand, idx) => (
+                  <div key={idx} className="bg-white/5 rounded-xl p-3 border border-white/10 hover:bg-white/10 transition-colors">
+                    <p className="text-xs font-medium text-emerald-300 truncate">{brand.name}</p>
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <span className="text-lg font-bold text-white">{brand.total_devices}</span>
+                      <span className="text-[10px] text-gray-400">devices</span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 text-[10px]">
+                      <span className="text-cyan-400">↓{brand.avg_download || 0}</span>
+                      <span className="text-green-400">↑{brand.avg_upload || 0}</span>
+                      <span className="text-orange-400">P{brand.avg_igw_latency || 0}ms</span>
+                      <span className="text-teal-400">PL{brand.avg_packet_loss_igw || 0}%</span>
                     </div>
                   </div>
                 ))}
