@@ -2,6 +2,7 @@ require('dotenv').config();
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const pool = require('./db');
+const redis = require('./lib/redis');
 const { logger } = require('./lib/logger');
 
 const execAsync = promisify(exec);
@@ -11,6 +12,8 @@ const PING_INTERVAL_MINUTES = parseInt(process.env.DIRECT_PING_INTERVAL_MINUTES)
 const PING_COUNT = 4; // Number of ping packets to send
 const PING_TIMEOUT_MS = 5000; // Timeout for each ping in milliseconds
 const DOWNSTREAM_SERVER_ID = parseInt(process.env.DOWNSTREAM_SERVER_ID) || 1; // Which downstream server this worker belongs to
+const WORKER_ID = `mojo-direct-ping-${DOWNSTREAM_SERVER_ID}-${Date.now()}`;
+const QUEUE_NAME = 'direct-ping';
 
 logger.info('Direct Ping Worker Configuration:', {
   interval: `${PING_INTERVAL_MINUTES} minutes`,
@@ -324,9 +327,41 @@ async function startWorker() {
   }, intervalMs);
 }
 
+// Heartbeat mechanism - register this worker in Redis for dashboard visibility.
+// Gracefully skip if Redis is not configured (e.g. regional workers without local Redis).
+const HEARTBEAT_ENABLED = !!(process.env.REDIS_HOST || process.env.REDIS_URL);
+
+const updateHeartbeat = async () => {
+  if (!HEARTBEAT_ENABLED) return;
+  try {
+    await redis.hset('acs-workers', WORKER_ID, JSON.stringify({
+      id: WORKER_ID,
+      status: 'running',
+      lastHeartbeat: new Date().toISOString(),
+      concurrency: 1,
+      queue: QUEUE_NAME,
+      downstreamServerId: DOWNSTREAM_SERVER_ID
+    }));
+    await redis.expire('acs-workers', 120);
+  } catch (error) {
+    logger.error('Failed to update heartbeat:', error.message);
+  }
+};
+
+if (HEARTBEAT_ENABLED) {
+  setInterval(updateHeartbeat, 60000);
+  updateHeartbeat();
+} else {
+  logger.info('Redis not configured — heartbeat disabled (worker will not appear in dashboard worker menu)');
+}
+
 // Graceful shutdown
 const gracefulShutdown = async (signal) => {
   logger.warn({ signal }, 'Received shutdown signal, stopping worker...');
+  if (HEARTBEAT_ENABLED) {
+    await redis.hdel('acs-workers', WORKER_ID).catch(() => {});
+    await redis.quit();
+  }
   await pool.end();
   logger.info('Worker stopped gracefully');
   process.exit(0);

@@ -12,8 +12,11 @@ services:
       DB_USER: mojojojo_user
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: mojojojo_database
+      REDIS_HOST: mojojojo_redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       DOWNSTREAM_SERVER_ID: 3
-      DIRECT_PING_INTERVAL_MINUTES: 60
+      DIRECT_PING_INTERVAL_MINUTES: 5
     networks:
       - mojojojo_network
 
@@ -30,8 +33,11 @@ services:
       DB_USER: mojojojo_user
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: mojojojo_database
+      REDIS_HOST: mojojojo_redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       DOWNSTREAM_SERVER_ID: 12
-      DIRECT_PING_INTERVAL_MINUTES: 60
+      DIRECT_PING_INTERVAL_MINUTES: 5
     networks:
       - mojojojo_network
 

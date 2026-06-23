@@ -31,7 +31,7 @@ async function getWorkerContainers(): Promise<WorkerContainer[]> {
         const [id, name, service] = line.split('\t')
         return { id: id || '', name: name || '', service: service || '' }
       })
-      .filter(c => c.id && c.name.toLowerCase().includes('worker'))
+      .filter(c => c.id && (c.name.toLowerCase().includes('worker') || c.name.toLowerCase().includes('fping')))
   } catch (err) {
     console.error('Error listing worker containers:', err)
     return []
