@@ -14,6 +14,7 @@ const menuItems = [
     { name: 'Regionals', href: '/regional', icon: MapPin },
     { name: 'Speeds', href: '/speeds', icon: Gauge },
     { name: 'Alarms', href: '/alarms', icon: Bell },
+    { name: 'Alarm v2', href: '/alarms/v2', icon: AlertTriangle },
     { name: 'Reports', href: '/reports', icon: BarChart3 },
   ]},
   { section: 'Testing', items: [
