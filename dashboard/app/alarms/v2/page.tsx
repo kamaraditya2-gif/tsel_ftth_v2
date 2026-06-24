@@ -79,11 +79,17 @@ export default function AlarmsV2Page() {
   const runRetest = async () => {
     if (!expandedId) return; setRetesting(true)
     try {
-      const res = await fetch('/api/tasks', {
+      const device = list.find(d => d.device_id === expandedId)
+      const title = `Retest ${device?.serial_number || expandedId}`
+      const createRes = await fetch('/api/tasks', {
         method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ title: `Retest ${expandedId}`, task_type: 'ondemand', device_id: expandedId, test_types: ['ping','download','upload'] })
+        body: JSON.stringify({ title, task_type: 'ondemand', device_id: expandedId, test_type: 'ping,download,upload' })
       })
-      if (res.ok) alert('Retest submitted - check queueing page')
+      if (createRes.ok) {
+        const task = await createRes.json()
+        await fetch(`/api/tasks/${task.id}/run`, { method: 'POST' })
+        alert('Retest submitted! Check queueing page.')
+      }
     } catch (e) { console.error(e) }
     finally { setRetesting(false) }
   }
