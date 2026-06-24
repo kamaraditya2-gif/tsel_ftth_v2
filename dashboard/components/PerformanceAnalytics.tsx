@@ -11,26 +11,30 @@ interface PerformanceAnalyticsProps {
   data: PerformanceData
 }
 
-function formatValue(value: number, unit: string): string {
-  if (value == null || isNaN(value)) return `-- ${unit}`
-  return `${value.toFixed(2)} ${unit}`
+function formatValue(value: any, unit: string): string {
+  const num = Number(value)
+  if (value == null || isNaN(num)) return `-- ${unit}`
+  return `${num.toFixed(2)} ${unit}`
 }
 
-function latencyColor(value: number): string {
-  if (value < 50) return 'text-emerald-400'
-  if (value < 100) return 'text-amber-400'
+function latencyColor(value: any): string {
+  const num = Number(value)
+  if (num < 50) return 'text-emerald-400'
+  if (num < 100) return 'text-amber-400'
   return 'text-red-400'
 }
 
-function packetLossColor(value: number): string {
-  if (value < 1) return 'text-emerald-400'
-  if (value < 5) return 'text-amber-400'
+function packetLossColor(value: any): string {
+  const num = Number(value)
+  if (num < 1) return 'text-emerald-400'
+  if (num < 5) return 'text-amber-400'
   return 'text-red-400'
 }
 
-function availabilityColor(value: number): string {
-  if (value >= 99.9) return 'text-emerald-400'
-  if (value >= 99) return 'text-amber-400'
+function availabilityColor(value: any): string {
+  const num = Number(value)
+  if (num >= 99.9) return 'text-emerald-400'
+  if (num >= 99) return 'text-amber-400'
   return 'text-red-400'
 }
 

@@ -24,7 +24,8 @@ export async function PUT(
       status,
       lat,
       lng,
-      downstream_server_id
+      downstream_server_id,
+      cluster_nop_id
     } = body
 
     const deviceId = parseInt(params.id)
@@ -64,17 +65,19 @@ export async function PUT(
     const lngVal = lng !== undefined ? (lng === '' ? null : parseFloat(lng)) : null
 
     const dsId = downstream_server_id !== undefined ? downstream_server_id : null
+    const nopId = cluster_nop_id !== undefined ? cluster_nop_id : null
 
     const res = await client.query(
       `UPDATE devices_ont
        SET device_name = $1, serial_number = $2, mac_address = $3, ip_address = $4,
            group_id = $5, speed_id = $6, indihome_id = $7, cpe_type = $8, manufacturer = $9,
-           model = $10, status = $11, lat = $12, lng = $13, downstream_server_id = $14, updated_at = NOW()
-       WHERE id = $15
+           model = $10, status = $11, lat = $12, lng = $13, downstream_server_id = $14,
+           cluster_nop_id = $15, updated_at = NOW()
+       WHERE id = $16
        RETURNING id, device_name, serial_number, mac_address, ip_address,
                 group_id, speed_id, indihome_id, cpe_type, manufacturer, model, status, lat, lng`,
       [device_name, serial_number, macAddress, ipAddress, groupId, speedId, indihomeId,
-       cpeType, manufacturerVal, modelVal, status, latVal, lngVal, dsId, deviceId]
+       cpeType, manufacturerVal, modelVal, status, latVal, lngVal, dsId, nopId, deviceId]
     )
 
     if (res.rows.length === 0) {

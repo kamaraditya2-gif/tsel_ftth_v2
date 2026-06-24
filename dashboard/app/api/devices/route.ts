@@ -106,7 +106,8 @@ export async function POST(request: Request) {
       status,
       lat,
       lng,
-      downstream_server_id
+      downstream_server_id,
+      cluster_nop_id
     } = body
 
     client = await pool.connect()
@@ -135,13 +136,14 @@ export async function POST(request: Request) {
       }
     }
 
-    const dsId = downstream_server_id !== undefined ? downstream_server_id : null
+const dsId = downstream_server_id !== undefined ? downstream_server_id : null
+    const nopId = cluster_nop_id !== undefined ? cluster_nop_id : null
 
     const res = await client.query(
       `INSERT INTO devices_ont 
         (device_name, serial_number, mac_address, ip_address, group_id, speed_id, 
-         indihome_id, cpe_type, manufacturer, model, status, lat, lng, downstream_server_id, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+         indihome_id, cpe_type, manufacturer, model, status, lat, lng, downstream_server_id, cluster_nop_id, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
        RETURNING *`,
       [
         device_name,
@@ -155,9 +157,10 @@ export async function POST(request: Request) {
         manufacturer,
         model,
         status || 'offline',
-        lat || null,
-        lng || null,
-        dsId
+        lat !== undefined ? (lat === '' ? null : parseFloat(lat)) : null,
+        lng !== undefined ? (lng === '' ? null : parseFloat(lng)) : null,
+        dsId,
+        nopId
       ]
     )
 

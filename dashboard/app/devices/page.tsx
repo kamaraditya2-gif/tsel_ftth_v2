@@ -54,6 +54,8 @@ interface Device {
   downstream_server_id: number | null
   region_name: string | null
   region_province: string | null
+  area_id: number | null
+  cluster_nop_id: number | null
   avg_ping: number | null
   success_rate: number | null
 }
@@ -67,6 +69,8 @@ function DevicesPageContent() {
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([])
   const [downstreamServers, setDownstreamServers] = useState<any[]>([])
   const [ontModels, setOntModels] = useState<OntModel[]>([])
+  const [areas, setAreas] = useState<any[]>([])
+  const [nopClusters, setNopClusters] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -74,6 +78,8 @@ function DevicesPageContent() {
   const [selectedSpeed, setSelectedSpeed] = useState<number | 'none' | null>(null)
   const [selectedRegion, setSelectedRegion] = useState<number | 'none' | null>(null)
   const [selectedManufacturer, setSelectedManufacturer] = useState<string | null>(null)
+  const [selectedArea, setSelectedArea] = useState<number | null>(null)
+  const [selectedNopCity, setSelectedNopCity] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
   const [showDetailModal, setShowDetailModal] = useState(false)
@@ -94,7 +100,9 @@ function DevicesPageContent() {
     status: '',
     lat: '' as string,
     lng: '' as string,
-    downstream_server_id: null as number | null
+    downstream_server_id: null as number | null,
+    area_id: null as number | null,
+    cluster_nop_id: null as number | null,
   })
   const [addFormData, setAddFormData] = useState({
     device_name: '',
@@ -110,7 +118,9 @@ function DevicesPageContent() {
     status: 'online',
     lat: '' as string,
     lng: '' as string,
-    downstream_server_id: null as number | null
+    downstream_server_id: null as number | null,
+    area_id: null as number | null,
+    cluster_nop_id: null as number | null,
   })
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deviceToDelete, setDeviceToDelete] = useState<Device | null>(null)
@@ -160,6 +170,8 @@ function DevicesPageContent() {
     fetchOntModels()
     fetchUserRole()
     fetchDownstreamServers()
+    fetchAreas()
+    fetchAllNopClusters()
     
     // Read group from URL query parameter
     const groupParam = searchParams.get('group')
@@ -255,6 +267,54 @@ function DevicesPageContent() {
     }
   }
 
+  const fetchAreas = async () => {
+    try {
+      const res = await fetch('/api/master-area')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setAreas(data)
+      } else {
+        console.error('Unexpected areas response:', data)
+        setAreas([])
+      }
+    } catch (error) {
+      console.error('Failed to fetch areas:', error)
+      setAreas([])
+    }
+  }
+
+  const fetchNopClusters = async (areaId: number | null, regionalId: number | null) => {
+    try {
+      if (!areaId || !regionalId) {
+        setNopClusters([])
+        return
+      }
+      const res = await fetch(`/api/master-cluster-nop?area_id=${areaId}&regional_id=${regionalId}`)
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setNopClusters(data)
+      } else {
+        console.error('Unexpected nop clusters response:', data)
+        setNopClusters([])
+      }
+    } catch (error) {
+      console.error('Failed to fetch nop clusters:', error)
+      setNopClusters([])
+    }
+  }
+
+  const fetchAllNopClusters = async () => {
+    try {
+      const res = await fetch('/api/master-cluster-nop')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setNopClusters(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch all nop clusters:', error)
+    }
+  }
+
   const fetchDevices = async () => {
     try {
       const res = await fetch('/api/devices')
@@ -315,9 +375,18 @@ function DevicesPageContent() {
       filtered = filtered.filter(device => device.manufacturer === selectedManufacturer)
     }
 
+    if (selectedArea !== null) {
+      const areaNopIds = nopClusters.filter(n => n.area_id === selectedArea).map(n => n.id)
+      filtered = filtered.filter(device => device.cluster_nop_id === null || areaNopIds.includes(device.cluster_nop_id))
+    }
+
+    if (selectedNopCity !== null) {
+      filtered = filtered.filter(device => device.cluster_nop_id === selectedNopCity)
+    }
+
     setFilteredDevices(filtered)
     setCurrentPage(1)
-  }, [searchTerm, selectedGroup, selectedSpeed, selectedRegion, selectedManufacturer, devices])
+  }, [searchTerm, selectedGroup, selectedSpeed, selectedRegion, selectedManufacturer, selectedArea, selectedNopCity, devices, nopClusters])
 
   const formatDate = (date: string | null) => {
     if (!date) return '-'
@@ -412,7 +481,9 @@ function DevicesPageContent() {
         status: 'online',
         lat: '',
         lng: '',
-        downstream_server_id: null
+        downstream_server_id: null,
+        area_id: null,
+        cluster_nop_id: null
       })
     } catch (error) {
       console.error('Error adding device:', error)
@@ -693,26 +764,49 @@ function DevicesPageContent() {
               />
             </div>
             <select
-              value={selectedGroup === 'none' ? 'none' : (selectedGroup || '')}
+              value={selectedArea || ''}
               onChange={(e) => {
-                const value = e.target.value
-                if (value === 'none') {
-                  setSelectedGroup('none')
-                } else if (value === '') {
-                  setSelectedGroup(null)
-                } else {
-                  setSelectedGroup(parseInt(value))
+                const v = e.target.value
+                setSelectedArea(v ? parseInt(v) : null)
+                setSelectedRegion(null)
+                setSelectedNopCity(null)
+                setNopClusters([])
+              }}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              <option value="">All Areas</option>
+              {areas.map((a: any) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+            <select
+              value={selectedRegion === 'none' ? 'none' : (selectedRegion || '')}
+              onChange={(e) => {
+                const v = e.target.value
+                if (v === 'none') setSelectedRegion('none')
+                else if (v === '') setSelectedRegion(null)
+                else {
+                  setSelectedRegion(parseInt(v))
+                  setSelectedNopCity(null)
+                  fetchNopClusters(selectedArea, parseInt(v))
                 }
               }}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
-              <option value="">All Groups</option>
-              {groups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
+              <option value="">All Regionals</option>
+              {downstreamServers.map((ds) => (
+                <option key={ds.id} value={ds.id}>{ds.name}</option>
               ))}
-              <option value="none">No Group</option>
+            </select>
+            <select
+              value={selectedNopCity || ''}
+              onChange={(e) => setSelectedNopCity(e.target.value ? parseInt(e.target.value) : null)}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              <option value="">All NOP Cities</option>
+              {nopClusters.map((n: any) => (
+                <option key={n.id} value={n.id}>{n.name}</option>
+              ))}
             </select>
             <select
               value={selectedSpeed === 'none' ? 'none' : (selectedSpeed || '')}
@@ -735,22 +829,6 @@ function DevicesPageContent() {
                 </option>
               ))}
               <option value="none">No Speed</option>
-            </select>
-            <select
-              value={selectedRegion === 'none' ? 'none' : (selectedRegion || '')}
-              onChange={(e) => {
-                const v = e.target.value
-                if (v === 'none') setSelectedRegion('none')
-                else if (v === '') setSelectedRegion(null)
-                else setSelectedRegion(parseInt(v))
-              }}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="">All Regions</option>
-              {downstreamServers.map((ds) => (
-                <option key={ds.id} value={ds.id}>{ds.name}</option>
-              ))}
-              <option value="none">No Region</option>
             </select>
             <select
               value={selectedManufacturer || ''}
@@ -914,8 +992,13 @@ function DevicesPageContent() {
                                     status: device.status,
                                     lat: device.lat !== null ? String(device.lat) : '',
                                     lng: device.lng !== null ? String(device.lng) : '',
-                                    downstream_server_id: device.downstream_server_id
+                                    downstream_server_id: device.downstream_server_id,
+                                    area_id: (device as any).area_id ?? null,
+                                    cluster_nop_id: (device as any).cluster_nop_id ?? null
                                   })
+                                  if ((device as any).area_id && device.downstream_server_id) {
+                                    fetchNopClusters((device as any).area_id, device.downstream_server_id)
+                                  }
                                   setShowEditModal(true)
                                 }}
                                 className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -1427,21 +1510,6 @@ function DevicesPageContent() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Regional</label>
-                    <select
-                      value={editFormData.group_id === null ? '' : editFormData.group_id}
-                      onChange={(e) => setEditFormData({ ...editFormData, group_id: e.target.value ? parseInt(e.target.value) : null })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    >
-                      <option value="">No Group</option>
-                      {groups.map((group) => (
-                        <option key={group.id} value={group.id}>
-                          {group.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Speed</label>
                     <select
                       value={editFormData.speed_id === null ? '' : editFormData.speed_id}
@@ -1460,16 +1528,61 @@ function DevicesPageContent() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Region (Downstream Server)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Area</label>
                     <select
-                      value={editFormData.downstream_server_id === null ? '' : editFormData.downstream_server_id}
-                      onChange={(e) => setEditFormData({ ...editFormData, downstream_server_id: e.target.value ? parseInt(e.target.value) : null })}
+                      value={editFormData.area_id === null ? '' : editFormData.area_id}
+                      onChange={(e) => {
+                        const areaId = e.target.value ? parseInt(e.target.value) : null
+                        setEditFormData({ ...editFormData, area_id: areaId, downstream_server_id: null, cluster_nop_id: null })
+                        setNopClusters([])
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
-                      <option value="">No Region</option>
+                      <option value="">No Area</option>
+                      {areas.map((area) => (
+                        <option key={area.id} value={area.id}>
+                          {area.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Regional</label>
+                    <select
+                      value={editFormData.downstream_server_id === null ? '' : editFormData.downstream_server_id}
+                      onChange={(e) => {
+                        const regionalId = e.target.value ? parseInt(e.target.value) : null
+                        setEditFormData({ ...editFormData, downstream_server_id: regionalId, cluster_nop_id: null })
+                        if (editFormData.area_id && regionalId) {
+                          fetchNopClusters(editFormData.area_id, regionalId)
+                        } else {
+                          setNopClusters([])
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="">No Regional</option>
                       {downstreamServers.map((ds) => (
-                        <option key={ds.id} value={ds.id}>
-                          {ds.name} ({ds.province})
+                          <option key={ds.id} value={ds.id}>
+                            {ds.name} ({ds.province})
+                          </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NOP City</label>
+                    <select
+                      value={editFormData.cluster_nop_id === null ? '' : editFormData.cluster_nop_id}
+                      onChange={(e) => setEditFormData({ ...editFormData, cluster_nop_id: e.target.value ? parseInt(e.target.value) : null })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="">No NOP City</option>
+                      {nopClusters.map((nc) => (
+                        <option key={nc.id} value={nc.id}>
+                          {nc.name}
                         </option>
                       ))}
                     </select>
@@ -1658,21 +1771,6 @@ function DevicesPageContent() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Regional</label>
-                    <select
-                      value={addFormData.group_id === null ? '' : addFormData.group_id}
-                      onChange={(e) => setAddFormData({ ...addFormData, group_id: e.target.value ? parseInt(e.target.value) : null })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    >
-                      <option value="">No Group</option>
-                      {groups.map((group) => (
-                        <option key={group.id} value={group.id}>
-                          {group.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Speed</label>
                     <select
                       value={addFormData.speed_id === null ? '' : addFormData.speed_id}
@@ -1691,16 +1789,61 @@ function DevicesPageContent() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Region (Downstream Server)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Area</label>
                     <select
-                      value={addFormData.downstream_server_id === null ? '' : addFormData.downstream_server_id}
-                      onChange={(e) => setAddFormData({ ...addFormData, downstream_server_id: e.target.value ? parseInt(e.target.value) : null })}
+                      value={addFormData.area_id === null ? '' : addFormData.area_id}
+                      onChange={(e) => {
+                        const areaId = e.target.value ? parseInt(e.target.value) : null
+                        setAddFormData({ ...addFormData, area_id: areaId, downstream_server_id: null, cluster_nop_id: null })
+                        setNopClusters([])
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
-                      <option value="">No Region</option>
+                      <option value="">No Area</option>
+                      {areas.map((area) => (
+                        <option key={area.id} value={area.id}>
+                          {area.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Regional</label>
+                    <select
+                      value={addFormData.downstream_server_id === null ? '' : addFormData.downstream_server_id}
+                      onChange={(e) => {
+                        const regionalId = e.target.value ? parseInt(e.target.value) : null
+                        setAddFormData({ ...addFormData, downstream_server_id: regionalId, cluster_nop_id: null })
+                        if (addFormData.area_id && regionalId) {
+                          fetchNopClusters(addFormData.area_id, regionalId)
+                        } else {
+                          setNopClusters([])
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="">No Regional</option>
                       {downstreamServers.map((ds) => (
-                        <option key={ds.id} value={ds.id}>
-                          {ds.name} ({ds.province})
+                          <option key={ds.id} value={ds.id}>
+                            {ds.name} ({ds.province})
+                          </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NOP City</label>
+                    <select
+                      value={addFormData.cluster_nop_id === null ? '' : addFormData.cluster_nop_id}
+                      onChange={(e) => setAddFormData({ ...addFormData, cluster_nop_id: e.target.value ? parseInt(e.target.value) : null })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="">No NOP City</option>
+                      {nopClusters.map((nc) => (
+                        <option key={nc.id} value={nc.id}>
+                          {nc.name}
                         </option>
                       ))}
                     </select>

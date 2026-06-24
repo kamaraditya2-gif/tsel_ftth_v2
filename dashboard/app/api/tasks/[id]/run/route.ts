@@ -41,10 +41,11 @@ export async function POST(
       `
       values = [id]
     } else if (taskType === 'ondemand') {
-      // For on-demand tasks, update both started_at and next_run to NOW()
+      // For on-demand tasks, set is_active=true so dispatcher picks it up
       query = `
         UPDATE tasks 
-        SET started_at = NOW(),
+        SET is_active = true,
+            started_at = NOW(),
             next_run = NOW(),
             updated_at = NOW()
         WHERE id = $1

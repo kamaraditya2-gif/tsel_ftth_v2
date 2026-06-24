@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     let paramIndex = 1
 
     if (regionalId) {
-      filterConditions.push(`d.group_id = $${paramIndex}`)
+      filterConditions.push(`d.downstream_server_id = $${paramIndex}`)
       filterParams.push(parseInt(regionalId))
       paramIndex++
     }
