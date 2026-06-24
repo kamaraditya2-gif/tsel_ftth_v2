@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Server, Cpu, Settings, UserCircle, Users, Workflow, Moon, Sun, FileCode, LogOut, MapPin, FlaskConical, ListChecks, Clock, Zap, Gauge, Database, Building2, Box, BarChart3, Menu, X, Bell, Layers, Activity } from 'lucide-react'
+import { LayoutDashboard, Server, Cpu, Settings, UserCircle, Users, Workflow, Moon, Sun, FileCode, LogOut, MapPin, FlaskConical, ListChecks, Clock, Zap, Gauge, Database, Building2, Box, BarChart3, Menu, X, Bell, Layers, Activity, Globe, Network, AlertTriangle } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 
 const menuItems = [
@@ -23,9 +23,12 @@ const menuItems = [
   ]},
   { section: 'Administrator', items: [
     { name: 'Setting', href: '/admin/setting', icon: Settings },
+    { name: 'Threshold', href: '/admin/threshold', icon: AlertTriangle },
     { name: 'Scaling', href: '/admin/scaling', icon: Layers },
     { name: 'Manufacturer', href: '/admin/manufacturer', icon: Building2 },
     { name: 'ONT Model', href: '/admin/ont-model', icon: Box },
+    { name: 'Master Area', href: '/admin/master-area', icon: Globe },
+    { name: 'Master Cluster NOP', href: '/admin/master-cluster-nop', icon: Network },
     { name: 'Redis', href: '/admin/redis', icon: Database },
     { name: 'Regional Servers', href: '/admin/downstream-servers', icon: MapPin },
     { name: 'Bulk Assign Region', href: '/bulk-assign', icon: Users },

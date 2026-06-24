@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Activity, Server, Database, Network, Clock, ChevronDown, MapPin, Gauge as GaugeIcon, Download, CheckCircle, XCircle, AlertCircle, Building2, Box } from 'lucide-react'
+import { Activity, Server, Database, Network, Clock, ChevronDown, MapPin, Gauge as GaugeIcon, Download, CheckCircle, XCircle, AlertCircle, Building2, Box, Globe, Bell, AlertTriangle, BarChart3, Thermometer, ZapOff, Wifi, Cpu, HardDrive, TrendingUp } from 'lucide-react'
 import KPICard from '@/components/KPICard'
 import PingChart from '@/components/PingChart'
 import DeviceTable from '@/components/DeviceTable'
@@ -9,6 +9,11 @@ import SkeletonCard from '@/components/SkeletonCard'
 import Gauge from '@/components/Gauge'
 import ThresholdChart from '@/components/ThresholdChart'
 import TopDevicesCard from '@/components/TopDevicesCard'
+import KPIBigCard from '@/components/KPIBigCard'
+import AlarmPieChart from '@/components/AlarmPieChart'
+import L1AvailabilityCard from '@/components/L1AvailabilityCard'
+import TopAlarmCard from '@/components/TopAlarmCard'
+import PerformanceAnalytics from '@/components/PerformanceAnalytics'
 import dynamic from 'next/dynamic'
 
 const DeviceHeatmap = dynamic(() => import('@/components/DeviceHeatmap'), { ssr: false })
@@ -82,6 +87,7 @@ export default function DashboardPage() {
   const [nopCities, setNopCities] = useState<any[]>([])
   const [ontTypeData, setOntTypeData] = useState<OntTypeComparison[]>([])
   const [ontBrandData, setOntBrandData] = useState<OntTypeComparison[]>([])
+  const [dashboardV2, setDashboardV2] = useState<any>(null)
 
   useEffect(() => {
     fetchSystemStatus()
@@ -95,6 +101,7 @@ export default function DashboardPage() {
     fetchNopCities()
     fetchOntTypeComparison()
     fetchOntBrandComparison()
+    fetchDashboardV2()
 
     // Refresh data every 30 seconds
     const interval = setInterval(() => {
@@ -103,6 +110,7 @@ export default function DashboardPage() {
       fetchDownstreamTrendData()
       fetchOntTypeComparison()
       fetchOntBrandComparison()
+      fetchDashboardV2()
     }, 30000)
 
     return () => clearInterval(interval)
@@ -259,6 +267,16 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Failed to fetch ONT brand comparison:', error)
+    }
+  }
+
+  const fetchDashboardV2 = async () => {
+    try {
+      const res = await fetch('/api/dashboard/v2')
+      const data = await res.json()
+      if (data && data.kpi) setDashboardV2(data)
+    } catch (error) {
+      console.error('Failed to fetch dashboard v2 data:', error)
     }
   }
 
@@ -1554,6 +1572,65 @@ export default function DashboardPage() {
           )}
         </div>
       )}
+
+      {/* ================================================================= */}
+      {/* PHASE 3: DASHBOARD V2 — 7 Row Analytics                               */}
+      {/* ================================================================= */}
+      {dashboardV2 && (
+        <div className="space-y-6 mb-8">
+          {/* Row 1: KPI Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <KPIBigCard title="Total Device" value={dashboardV2.kpi.total_device} icon={Server} color="from-blue-500 to-blue-700" />
+            <KPIBigCard title="Active Alarm" value={dashboardV2.kpi.active_alarm} icon={Bell} color="from-red-500 to-red-700" />
+            <KPIBigCard title="L1 Alarm" value={dashboardV2.kpi.l1_alarm} icon={AlertTriangle} color="from-rose-600 to-red-800" />
+            <KPIBigCard title="L2 Alarm" value={dashboardV2.kpi.l2_alarm} icon={AlertCircle} color="from-amber-500 to-orange-700" />
+            <KPIBigCard title="Availability" value={`${dashboardV2.kpi.availability || 0}%`} icon={Activity} color="from-green-500 to-emerald-700" />
+            <KPIBigCard title="Last Check" value={dashboardV2.kpi.last_check ? new Date(dashboardV2.kpi.last_check).toLocaleTimeString('id-ID') : '-'} icon={Clock} color="from-purple-500 to-violet-700" />
+          </div>
+
+          {/* Row 2: Threshold Summary */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <KPIBigCard title="Under Threshold" value={dashboardV2.threshold.under_threshold} icon={TrendingUp} color="from-cyan-500 to-teal-700" subtitle="Lower type" />
+            <KPIBigCard title="Upper Threshold" value={dashboardV2.threshold.upper_threshold} icon={TrendingUp} color="from-orange-500 to-red-700" subtitle="Upper type" />
+            <KPIBigCard title="Critical" value={dashboardV2.kpi.l1_alarm} icon={AlertTriangle} color="from-red-600 to-rose-900" subtitle="Severity critical" />
+            <KPIBigCard title="Warning" value={dashboardV2.kpi.l2_alarm} icon={AlertCircle} color="from-amber-500 to-yellow-800" subtitle="Severity warning" />
+          </div>
+
+          {/* Row 3: Root Cause Analysis */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <AlarmPieChart data={dashboardV2.rootCause} />
+            <div className="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-md p-5 shadow-lg shadow-amber-500/10">
+              <h3 className="text-lg font-bold text-white mb-4">Root Cause Summary</h3>
+              <div className="space-y-3">
+                {dashboardV2.rootCause.slice(0, 8).map((item: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-300 capitalize">{item.alarm_type.replace(/_/g, ' ')}</span>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${item.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'}`} />
+                      <span className="text-sm font-bold text-white">{item.count}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 4: L1 Availability Card */}
+          <L1AvailabilityCard data={dashboardV2.l1l2} />
+
+          {/* Row 5: Top Alarm Analytics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <TopAlarmCard title="Top Region Alarm" data={dashboardV2.topAlarms.regions} icon={MapPin} />
+            <TopAlarmCard title="Top NOP Alarm" data={dashboardV2.topAlarms.nops} icon={Building2} />
+            <TopAlarmCard title="Top Brand Alarm" data={dashboardV2.topAlarms.brands} icon={Box} />
+            <TopAlarmCard title="Top ONT Type Alarm" data={dashboardV2.topAlarms.ontTypes} icon={Cpu} />
+          </div>
+
+          {/* Row 6: Performance Analytics */}
+          <PerformanceAnalytics data={dashboardV2.performance} />
+        </div>
+      )}
+
       </div>
     </div>
   )
