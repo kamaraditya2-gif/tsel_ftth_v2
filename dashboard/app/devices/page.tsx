@@ -73,6 +73,7 @@ function DevicesPageContent() {
   const [selectedGroup, setSelectedGroup] = useState<number | 'none' | null>(null)
   const [selectedSpeed, setSelectedSpeed] = useState<number | 'none' | null>(null)
   const [selectedRegion, setSelectedRegion] = useState<number | 'none' | null>(null)
+  const [selectedManufacturer, setSelectedManufacturer] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
   const [showDetailModal, setShowDetailModal] = useState(false)
@@ -310,9 +311,13 @@ function DevicesPageContent() {
       }
     }
 
+    if (selectedManufacturer !== null) {
+      filtered = filtered.filter(device => device.manufacturer === selectedManufacturer)
+    }
+
     setFilteredDevices(filtered)
     setCurrentPage(1)
-  }, [searchTerm, selectedGroup, selectedSpeed, selectedRegion, devices])
+  }, [searchTerm, selectedGroup, selectedSpeed, selectedRegion, selectedManufacturer, devices])
 
   const formatDate = (date: string | null) => {
     if (!date) return '-'
@@ -746,6 +751,19 @@ function DevicesPageContent() {
                 <option key={ds.id} value={ds.id}>{ds.name}</option>
               ))}
               <option value="none">No Region</option>
+            </select>
+            <select
+              value={selectedManufacturer || ''}
+              onChange={(e) => setSelectedManufacturer(e.target.value || null)}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              <option value="">All Brands</option>
+              {devices.reduce<string[]>((acc, d) => {
+                if (d.manufacturer && !acc.includes(d.manufacturer)) acc.push(d.manufacturer)
+                return acc
+              }, []).sort().map(brand => (
+                <option key={brand} value={brand}>{brand}</option>
+              ))}
             </select>
             <button
               onClick={exportToCSV}
