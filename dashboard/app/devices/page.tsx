@@ -6,6 +6,7 @@ import { MoreVertical, Eye, Edit, Trash2, Search, Download, Zap, Plus } from 'lu
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import OntArchitectureDiagram from '@/components/OntArchitectureDiagram'
 import NetworkOverviewHeader from '@/components/NetworkOverviewHeader'
+import InlineAlias from '@/components/InlineAlias'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,6 +48,7 @@ interface Device {
   cpe_type: string | null
   manufacturer: string | null
   model: string | null
+  alias_device: string | null
   lat: number | null
   lng: number | null
   group_name: string | null
@@ -862,6 +864,9 @@ function DevicesPageContent() {
                   Device Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Alias
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Serial Number
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -904,6 +909,9 @@ function DevicesPageContent() {
                     >
                       {device.device_name}
                     </button>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <InlineAlias deviceId={device.id} value={device.alias_device || ''} onSave={() => fetchDevices()} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {device.serial_number}

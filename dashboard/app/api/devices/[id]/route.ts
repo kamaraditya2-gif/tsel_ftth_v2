@@ -1,123 +1,103 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   let client
   try {
     client = await pool.connect()
-
     const body = await request.json()
-    const {
-      device_name,
-      serial_number,
-      mac_address,
-      ip_address,
-      group_id,
-      speed_id,
-      indihome_id,
-      cpe_type,
-      manufacturer_id,
-      ont_model_id,
-      status,
-      lat,
-      lng,
-      downstream_server_id,
-      cluster_nop_id
-    } = body
-
     const deviceId = parseInt(params.id)
 
-    // Get manufacturer name if manufacturer_id is provided
-    let manufacturerVal = null
-    if (manufacturer_id) {
-      const manufacturerRes = await client.query(
-        'SELECT name FROM manufacturer WHERE id = $1',
-        [manufacturer_id]
-      )
-      if (manufacturerRes.rows.length > 0) {
-        manufacturerVal = manufacturerRes.rows[0].name
+    // Dynamic UPDATE — only set fields that are provided
+    const fields: string[] = []
+    const values: any[] = []
+    let idx = 1
+
+    const fieldMap: Record<string, string> = {
+      device_name: 'device_name',
+      serial_number: 'serial_number',
+      mac_address: 'mac_address',
+      ip_address: 'ip_address',
+      group_id: 'group_id',
+      speed_id: 'speed_id',
+      indihome_id: 'indihome_id',
+      cpe_type: 'cpe_type',
+      manufacturer: 'manufacturer',
+      model: 'model',
+      status: 'status',
+      lat: 'lat',
+      lng: 'lng',
+      downstream_server_id: 'downstream_server_id',
+      cluster_nop_id: 'cluster_nop_id',
+      alias_device: 'alias_device',
+    }
+
+    // Resolve manufacturer name if manufacturer_id provided
+    if (body.manufacturer_id) {
+      const mRes = await client.query('SELECT name FROM manufacturer WHERE id = $1', [body.manufacturer_id])
+      if (mRes.rows.length > 0) body.manufacturer = mRes.rows[0].name
+    }
+    // Resolve ont model name if ont_model_id provided
+    if (body.ont_model_id) {
+      const oRes = await client.query('SELECT name FROM ont_model WHERE id = $1', [body.ont_model_id])
+      if (oRes.rows.length > 0) body.model = oRes.rows[0].name
+    }
+
+    for (const [key, col] of Object.entries(fieldMap)) {
+      if (body[key] !== undefined) {
+        let val = body[key]
+        if (key === 'lat' || key === 'lng') val = val === '' ? null : parseFloat(val)
+        if (['mac_address', 'ip_address', 'group_id', 'speed_id', 'indihome_id', 'cpe_type'].includes(key)) val = val || null
+        if (key === 'alias_device') val = val || null
+        fields.push(`${col} = $${idx++}`)
+        values.push(val)
       }
     }
 
-    // Get ont model name if ont_model_id is provided
-    let modelVal = null
-    if (ont_model_id) {
-      const ontModelRes = await client.query(
-        'SELECT name FROM ont_model WHERE id = $1',
-        [ont_model_id]
-      )
-      if (ontModelRes.rows.length > 0) {
-        modelVal = ontModelRes.rows[0].name
-      }
+    if (fields.length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
     }
 
-    // Handle empty strings as null for optional fields
-    const macAddress = mac_address || null
-    const ipAddress = ip_address || null
-    const groupId = group_id || null
-    const speedId = speed_id || null
-    const indihomeId = indihome_id || null
-    const cpeType = cpe_type || null
-    const latVal = lat !== undefined ? (lat === '' ? null : parseFloat(lat)) : null
-    const lngVal = lng !== undefined ? (lng === '' ? null : parseFloat(lng)) : null
+    fields.push('updated_at = NOW()')
+    values.push(deviceId)
 
-    const dsId = downstream_server_id !== undefined ? downstream_server_id : null
-    const nopId = cluster_nop_id !== undefined ? cluster_nop_id : null
+    const query = `UPDATE devices_ont SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`
+    const res = await client.query(query, values)
 
-    const res = await client.query(
-      `UPDATE devices_ont
-       SET device_name = $1, serial_number = $2, mac_address = $3, ip_address = $4,
-           group_id = $5, speed_id = $6, indihome_id = $7, cpe_type = $8, manufacturer = $9,
-           model = $10, status = $11, lat = $12, lng = $13, downstream_server_id = $14,
-           cluster_nop_id = $15, updated_at = NOW()
-       WHERE id = $16
-       RETURNING id, device_name, serial_number, mac_address, ip_address,
-                group_id, speed_id, indihome_id, cpe_type, manufacturer, model, status, lat, lng`,
-      [device_name, serial_number, macAddress, ipAddress, groupId, speedId, indihomeId,
-       cpeType, manufacturerVal, modelVal, status, latVal, lngVal, dsId, nopId, deviceId]
-    )
+    client.release()
 
     if (res.rows.length === 0) {
       return NextResponse.json({ error: 'Device not found' }, { status: 404 })
     }
 
     return NextResponse.json(res.rows[0])
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating device:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    return NextResponse.json({ error: 'Failed to update device', details: errorMessage }, { status: 500 })
+    return NextResponse.json({ error: error.message }, { status: 500 })
   } finally {
     if (client) client.release()
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  let client
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    client = await pool.connect()
+    const client = await pool.connect()
+    const res = await client.query('SELECT * FROM devices_ont WHERE id = $1', [parseInt(params.id)])
+    client.release()
+    if (res.rows.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return NextResponse.json(res.rows[0])
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
 
-    const deviceId = parseInt(params.id)
-
-    const res = await client.query(
-      'DELETE FROM devices_ont WHERE id = $1 RETURNING id',
-      [deviceId]
-    )
-
-    if (res.rows.length === 0) {
-      return NextResponse.json({ error: 'Device not found' }, { status: 404 })
-    }
-
-    return NextResponse.json({ message: 'Device deleted successfully' })
-  } catch (error) {
-    console.error('Error deleting device:', error)
-    return NextResponse.json({ error: 'Failed to delete device' }, { status: 500 })
-  } finally {
-    if (client) client.release()
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const client = await pool.connect()
+    await client.query('DELETE FROM devices_ont WHERE id = $1', [parseInt(params.id)])
+    client.release()
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

@@ -56,8 +56,16 @@ export default function ThresholdPage() {
 
   const fetchItems = async () => {
     try {
-      const res = await fetch('/api/threshold')
+      const res = await fetch('/api/admin/threshold')
       const data = await res.json()
+      if (Array.isArray(data)) {
+        setItems(data)
+      } else if (data.data) {
+        setItems(data.data)
+      } else {
+        console.error('Unexpected response:', data)
+        setItems([])
+      }
       setItems(data)
     } catch {
       console.error('Failed to fetch thresholds')
@@ -93,7 +101,7 @@ export default function ThresholdPage() {
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this threshold?')) return
     try {
-      const res = await fetch(`/api/threshold/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/admin/threshold/${id}`, { method: 'DELETE' })
       if (res.ok) {
         setItems(items.filter(i => i.id !== id))
       } else {
@@ -125,7 +133,7 @@ export default function ThresholdPage() {
 
     try {
       const method = editingItem ? 'PUT' : 'POST'
-      const url = editingItem ? `/api/threshold/${editingItem.id}` : '/api/threshold'
+      const url = editingItem ? `/api/admin/threshold/${editingItem.id}` : '/api/admin/threshold'
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
