@@ -125,6 +125,7 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
         const params = new URLSearchParams({ timeRange, dataSource })
         if (areaId) params.append("areaId", areaId)
         if (regionalId) params.append('regionalId', regionalId)
+        if (nopId) params.append('nopId', nopId)
         if (speedGroupId) params.append('speedGroupId', speedGroupId)
         if (manufacturerId) params.append('manufacturerId', manufacturerId)
         if (ontModelId) params.append('ontModelId', ontModelId)

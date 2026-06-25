@@ -7,7 +7,7 @@ import {
   Download, Upload, Zap, AlertTriangle
 } from 'lucide-react'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Area, AreaChart
 } from 'recharts'
 

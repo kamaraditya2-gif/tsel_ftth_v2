@@ -50,7 +50,7 @@ export default function ThresholdChart({ timeRange = '24h', areaId, regionalId, 
     }
 
     fetchData()
-  }, [timeRange, regionalId, speedGroupId])
+  }, [timeRange, areaId, regionalId, nopId, speedGroupId])
 
   if (loading) {
     return (

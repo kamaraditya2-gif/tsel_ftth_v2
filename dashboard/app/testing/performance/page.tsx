@@ -128,12 +128,10 @@ export default function PerformanceTestPage() {
               avgUpload: Number(results.reduce((s:number,r:any)=>s+Number(r.upload||0),0)/Math.max(results.filter((r:any)=>r.upload).length,1)).toFixed(2),
               avgLatency: Number(results.reduce((s:number,r:any)=>s+Number(r.latency||0),0)/Math.max(results.filter((r:any)=>r.latency).length,1)).toFixed(2),
               avgEbrLatency: Number(results.reduce((s:number,r:any)=>s+Number(r.latency_ebr||0),0)/Math.max(results.filter((r:any)=>r.latency_ebr).length,1)).toFixed(2),
-              avgPacketLoss: Number(results.reduce((s:number,r:any)=>s+Number(r.packet_loss||0),0)/Math.max(results.filter((r:any)=>r.packet_loss).length,1)).toFixed(2),
             }}
             downstream={{
               avgLatency: Number(results.filter((r:any)=>r.latency).length > 0 ? results.reduce((s:number,r:any)=>s+Number(r.latency||0),0)/results.filter((r:any)=>r.latency).length : 0).toFixed(2),
               avgPacketLoss: Number(results.filter((r:any)=>r.packet_loss).length > 0 ? results.reduce((s:number,r:any)=>s+Number(r.packet_loss||0),0)/results.filter((r:any)=>r.packet_loss).length : 0).toFixed(2),
-              totalDevices: results.length,
             }}
           />
         )}

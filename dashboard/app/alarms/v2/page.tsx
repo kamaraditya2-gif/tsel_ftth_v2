@@ -150,8 +150,8 @@ export default function AlarmsV2Page() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
-                {loading ? <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">Checking alarms...</td></tr>
-                : list.length === 0 ? <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">{tab === 'active' ? 'No threshold violations' : 'No cleared devices'}</td></tr>
+                {loading ? <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">Checking alarms...</td></tr>
+                : list.length === 0 ? <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">{tab === 'active' ? 'No threshold violations' : 'No cleared devices'}</td></tr>
                 : list.map((d: DeviceAlarm) => (
                   <><tr key={d.device_id} className="hover:bg-slate-700/30 transition-colors">
                     <td className="px-4 py-3"><span className="text-[11px] font-mono text-gray-400 font-semibold tracking-wider">{d.alarms[0]?.alarm_code || '-'}</span></td>
@@ -167,7 +167,7 @@ export default function AlarmsV2Page() {
                     <td className="px-4 py-3">{d.ticket ? <span className="text-xs text-blue-400">{d.ticket.number}</span> : <span className="text-xs text-gray-500">—</span>}</td>
                     <td className="px-4 py-3"><button onClick={() => toggleExpand(d)} className="p-1 rounded-lg hover:bg-slate-600 text-gray-400">{expandedId === d.device_id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}</button></td>
                   </tr>
-                  {expandedId === d.device_id && <tr key={`${d.device_id}-detail`}><td colSpan={11} className="px-6 py-4 bg-slate-800/30">
+                  {expandedId === d.device_id && <tr key={`${d.device_id}-detail`}><td colSpan={12} className="px-6 py-4 bg-slate-800/30">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Left: Root Cause + Retest */}
                       <div className="space-y-4">

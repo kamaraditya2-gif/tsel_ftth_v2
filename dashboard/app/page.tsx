@@ -2,11 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { Activity, Server, Database, Network, Clock, ChevronDown, MapPin, Gauge as GaugeIcon, Download, CheckCircle, XCircle, AlertCircle, Building2, Box, Globe, Bell, AlertTriangle, BarChart3, Thermometer, ZapOff, Wifi, Cpu, HardDrive, TrendingUp } from 'lucide-react'
-import KPICard from '@/components/KPICard'
 import PingChart from '@/components/PingChart'
-import DeviceTable from '@/components/DeviceTable'
 import SkeletonCard from '@/components/SkeletonCard'
-import Gauge from '@/components/Gauge'
 import ThresholdChart from '@/components/ThresholdChart'
 import TopDevicesCard from '@/components/TopDevicesCard'
 import KPIBigCard from '@/components/KPIBigCard'
@@ -21,12 +18,6 @@ import dynamic from 'next/dynamic'
 
 const DeviceHeatmap = dynamic(() => import('@/components/DeviceHeatmap'), { ssr: false })
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-
-interface GroupDevice {
-  id: number
-  name: string
-  code: string | null
-}
 
 interface SpeedGroup {
   id: number
@@ -66,29 +57,20 @@ interface OntTypeComparison {
 export default function DashboardPage() {
   const [systemStatus, setSystemStatus] = useState<any>(null)
   const [dashboardData, setDashboardData] = useState<any>(null)
-  const [downstreamTrendData, setDownstreamTrendData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [timeRange, setTimeRange] = useState('24h')
-  const [dataSource, setDataSource] = useState<'upstream' | 'downstream'>('upstream')
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [regionalDropdownOpen, setRegionalDropdownOpen] = useState(false)
   const [speedGroupDropdownOpen, setSpeedGroupDropdownOpen] = useState(false)
   const [manufacturerDropdownOpen, setManufacturerDropdownOpen] = useState(false)
   const [ontModelDropdownOpen, setOntModelDropdownOpen] = useState(false)
   const [selectedRegional, setSelectedRegional] = useState<number | null>(null)
   const [selectedNopCity, setSelectedNopCity] = useState<number | null>(null)
-  const [nopDropdownOpen, setNopDropdownOpen] = useState(false)
   const [selectedSpeedGroup, setSelectedSpeedGroup] = useState<number | null>(null)
   const [selectedManufacturer, setSelectedManufacturer] = useState<number | null>(null)
   const [selectedOntModel, setSelectedOntModel] = useState<number | null>(null)
-  const [regionals, setRegionals] = useState<GroupDevice[]>([])
   const [speedGroups, setSpeedGroups] = useState<SpeedGroup[]>([])
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([])
   const [ontModels, setOntModels] = useState<OntModel[]>([])
-  const [downstreamServers, setDownstreamServers] = useState<any[]>([])
-  const [selectedServer, setSelectedServer] = useState<number>(1)
-  const [nopCities, setNopCities] = useState<any[]>([])
-  const [areas, setAreas] = useState<any[]>([])
   const [selectedArea, setSelectedArea] = useState<number | null>(null)
   const [ontTypeData, setOntTypeData] = useState<OntTypeComparison[]>([])
   const [ontBrandData, setOntBrandData] = useState<OntTypeComparison[]>([])
@@ -97,14 +79,9 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchSystemStatus()
     fetchDashboardData()
-    fetchDownstreamTrendData()
-    fetchRegionals()
     fetchSpeedGroups()
     fetchManufacturers()
     fetchOntModels()
-    fetchDownstreamServers()
-    fetchNopCities()
-    fetchAreas()
     fetchOntTypeComparison()
     fetchOntBrandComparison()
     fetchDashboardV2()
@@ -113,14 +90,13 @@ export default function DashboardPage() {
     const interval = setInterval(() => {
       fetchSystemStatus()
       fetchDashboardData()
-      fetchDownstreamTrendData()
       fetchOntTypeComparison()
       fetchOntBrandComparison()
       fetchDashboardV2()
     }, 30000)
 
     return () => clearInterval(interval)
-  }, [timeRange, selectedArea, selectedRegional, selectedNopCity, selectedSpeedGroup, selectedManufacturer, selectedOntModel, selectedServer])
+  }, [timeRange, selectedArea, selectedRegional, selectedNopCity, selectedSpeedGroup, selectedManufacturer, selectedOntModel])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -131,14 +107,6 @@ export default function DashboardPage() {
         const dropdown = document.getElementById('time-range-dropdown')
         if (dropdown && !dropdown.contains(target)) {
           setIsDropdownOpen(false)
-        }
-      }
-      
-      // Close regional dropdown if click is outside
-      if (regionalDropdownOpen) {
-        const dropdown = document.getElementById('regional-dropdown')
-        if (dropdown && !dropdown.contains(target)) {
-          setRegionalDropdownOpen(false)
         }
       }
       
@@ -169,7 +137,7 @@ export default function DashboardPage() {
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isDropdownOpen, regionalDropdownOpen, speedGroupDropdownOpen, manufacturerDropdownOpen, ontModelDropdownOpen])
+  }, [isDropdownOpen, speedGroupDropdownOpen, manufacturerDropdownOpen, ontModelDropdownOpen])
 
   const fetchSystemStatus = async () => {
     try {
@@ -212,56 +180,6 @@ export default function DashboardPage() {
     }
   }
 
-  const fetchDownstreamTrendData = async () => {
-    try {
-      const params = new URLSearchParams({ timeRange })
-      if (selectedArea) params.append('areaId', selectedArea.toString())
-      if (selectedRegional) params.append('regionalId', selectedRegional.toString())
-      if (selectedNopCity) params.append('nopId', selectedNopCity.toString())
-      if (selectedSpeedGroup) params.append('speedGroupId', selectedSpeedGroup.toString())
-      if (selectedManufacturer) params.append('manufacturerId', selectedManufacturer.toString())
-      if (selectedOntModel) params.append('ontModelId', selectedOntModel.toString())
-      params.append('serverId', selectedServer.toString())
-      const res = await fetch(`/api/dashboard/downstream-trend?${params.toString()}`)
-      const data = await res.json()
-      setDownstreamTrendData(data)
-    } catch (error) {
-      console.error('Failed to fetch downstream trend data:', error)
-    }
-  }
-
-  const fetchDownstreamServers = async () => {
-    try {
-      const res = await fetch('/api/downstream-servers')
-      const data = await res.json()
-      if (data.servers && Array.isArray(data.servers)) {
-        setDownstreamServers(data.servers)
-      }
-    } catch (error) {
-      console.error('Failed to fetch downstream servers:', error)
-    }
-  }
-
-  const fetchNopCities = async () => {
-    try {
-      const res = await fetch('/api/nop-cities')
-      const data = await res.json()
-      if (data.cities) setNopCities(data.cities)
-    } catch (error) {
-      console.error('Failed to fetch NOP cities:', error)
-    }
-  }
-
-  const fetchAreas = async () => {
-    try {
-      const res = await fetch('/api/master-area')
-      const data = await res.json()
-      if (Array.isArray(data)) setAreas(data)
-    } catch (error) {
-      console.error('Failed to fetch areas:', error)
-    }
-  }
-
   const fetchOntTypeComparison = async () => {
     try {
       const p = new URLSearchParams({ timeRange })
@@ -301,22 +219,6 @@ export default function DashboardPage() {
       if (data && data.kpi && data.threshold && data.rootCause && data.topAlarms) setDashboardV2(data)
     } catch (error) {
       console.error('Failed to fetch dashboard v2 data:', error)
-    }
-  }
-
-  const fetchRegionals = async () => {
-    try {
-      const res = await fetch('/api/group-devices')
-      const data = await res.json()
-      if (Array.isArray(data)) {
-        setRegionals(data)
-      } else {
-        console.error('Unexpected regionals response:', data)
-        setRegionals([])
-      }
-    } catch (error) {
-      console.error('Failed to fetch regionals:', error)
-      setRegionals([])
     }
   }
 
@@ -377,12 +279,6 @@ export default function DashboardPage() {
       case '30d': return 'Last 30 Days'
       default: return 'Last 24 Hours'
     }
-  }
-
-  const getRegionalLabel = () => {
-    if (selectedRegional === null) return 'All Regions (R)'
-    const r = downstreamServers.find((s: any) => s.id === selectedRegional)
-    return r ? r.name : 'All Regions (R)'
   }
 
   const getSpeedGroupLabel = () => {
@@ -501,20 +397,6 @@ export default function DashboardPage() {
           threshold: item.threshold
         })) || []
         filename = 'below-upload-threshold-report.csv'
-        break
-      case 'downstream-latency':
-        data = downstreamTrendData?.latencyData?.map((item: any) => ({
-          time: item.hour,
-          avg_latency_ms: item.avg_ping
-        })) || []
-        filename = 'downstream-latency-report.csv'
-        break
-      case 'downstream-packet-loss':
-        data = downstreamTrendData?.packetLossData?.map((item: any) => ({
-          time: item.hour,
-          avg_packet_loss_percent: item.avg_ping
-        })) || []
-        filename = 'downstream-packet-loss-report.csv'
         break
       default:
         return
@@ -747,24 +629,6 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-4 flex-wrap">
-          {/* Downstream Server Selector - only visible in downstream mode */}
-          {dataSource === 'downstream' && downstreamServers.length > 0 && (
-            <div className="relative">
-              <select
-                value={selectedServer}
-                onChange={(e) => setSelectedServer(Number(e.target.value))}
-                className="appearance-none bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-white text-xs font-medium rounded-lg px-3 py-2 pr-8 cursor-pointer hover:bg-slate-800/80 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-              >
-                {downstreamServers.map((server) => (
-                  <option key={server.id} value={server.id}>
-                    {server.status === 'active' ? '🟢' : '⚪'} {server.name} — {server.province}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3 h-3 text-purple-300 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-          )}
-
           <div className="text-sm text-gray-300">
             Last updated: {new Date().toLocaleString('en-US', {
               month: 'short',
@@ -813,12 +677,10 @@ export default function DashboardPage() {
               avgUpload: Number(dashboardData.avgUpload) || 0,
               avgLatency: Number(dashboardData.avgPingIgw) || 0,
               avgEbrLatency: Number(dashboardData.avgPingEbr) || 0,
-              avgPacketLoss: Number(dashboardData.avgPacketLoss) || 0,
             }}
             downstream={{
               avgLatency: Number(dashboardV2.downstream?.avg_latency) || 0,
               avgPacketLoss: Number(dashboardV2.downstream?.avg_packet_loss) || 0,
-              totalDevices: Number(dashboardV2.downstream?.total_pings) || 0,
             }}
           />
         </div>
@@ -829,14 +691,12 @@ export default function DashboardPage() {
         <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-purple-500/10 border border-purple-500/20 p-6 hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
           <DeviceHeatmap
             timeRange={timeRange}
-            dataSource={dataSource}
             areaId={selectedArea ? selectedArea.toString() : undefined}
             regionalId={selectedRegional ? selectedRegional.toString() : undefined}
             nopId={selectedNopCity ? selectedNopCity.toString() : undefined}
             speedGroupId={selectedSpeedGroup ? selectedSpeedGroup.toString() : undefined}
             manufacturerId={selectedManufacturer ? selectedManufacturer.toString() : undefined}
             ontModelId={selectedOntModel ? selectedOntModel.toString() : undefined}
-            serverId={selectedServer.toString()}
           />
         </div>
       </div>
@@ -1083,109 +943,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Downstream Charts Section - Only show for downstream */}
-      {dataSource === 'downstream' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Shared Analysis Status Banner */}
-          {downstreamTrendData?.lastUpdated && (
-            <div className="lg:col-span-2 flex items-center gap-3 px-4 py-2 rounded-xl bg-green-500/10 border border-green-500/20 backdrop-blur-md">
-              <Activity className="w-4 h-4 text-green-400 animate-pulse" />
-              <span className="text-sm text-green-300 font-medium">Analysis running</span>
-              <span className="text-xs text-gray-400">
-                Last ping: {new Date(downstreamTrendData.lastUpdated).toLocaleString('id-ID', {
-                  timeZone: 'Asia/Jakarta',
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit'
-                })} WIB
-              </span>
-            </div>
-          )}
-
-          {/* Latency Trend Chart */}
-          {downstreamTrendData?.latencyData && (
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-purple-500/10 border border-purple-500/20 p-6 hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-white">Latency Trend ({getTimeRangeLabel()})</h2>
-                <button
-                  onClick={() => downloadReport('downstream-latency')}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-purple-300 hover:text-white hover:bg-purple-500/20 rounded-lg transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  Download
-                </button>
-              </div>
-              <div className="mb-6">
-                <PingChart data={downstreamTrendData.latencyData} type="ping" />
-              </div>
-              {downstreamTrendData?.latencyStats && (
-                <div className="bg-purple-500/20 rounded-lg p-4 border border-purple-500/30">
-                  <h3 className="text-sm font-semibold text-purple-300 mb-3">Direct Ping Latency</h3>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <p className="text-xs text-gray-400">MIN</p>
-                      <p className="text-sm font-semibold text-white">{downstreamTrendData.latencyStats.min} ms</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">MAX</p>
-                      <p className="text-sm font-semibold text-white">{downstreamTrendData.latencyStats.max} ms</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">AVG</p>
-                      <p className="text-sm font-semibold text-white">{downstreamTrendData.latencyStats.avg} ms</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Packet Loss Trend Chart */}
-          {downstreamTrendData?.packetLossData && (
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-pink-500/10 border border-pink-500/20 p-6 hover:shadow-2xl hover:shadow-pink-500/20 transition-all duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-white">Packet Loss Trend ({getTimeRangeLabel()})</h2>
-                <button
-                  onClick={() => downloadReport('downstream-packet-loss')}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-pink-300 hover:text-white hover:bg-pink-500/20 rounded-lg transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  Download
-                </button>
-              </div>
-              <div className="mb-6">
-                <PingChart data={downstreamTrendData.packetLossData} type="ping" unit="%" />
-              </div>
-              {downstreamTrendData?.packetLossStats && (
-                <div className="bg-pink-500/20 rounded-lg p-4 border border-pink-500/30">
-                  <h3 className="text-sm font-semibold text-pink-300 mb-3">Packet Loss</h3>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <p className="text-xs text-gray-400">MIN</p>
-                      <p className="text-sm font-semibold text-white">{downstreamTrendData.packetLossStats.min}%</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">MAX</p>
-                      <p className="text-sm font-semibold text-white">{downstreamTrendData.packetLossStats.max}%</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">AVG</p>
-                      <p className="text-sm font-semibold text-white">{downstreamTrendData.packetLossStats.avg}%</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Charts Section - Only show for upstream */}
-      {dataSource === 'upstream' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Latency Chart */}
           {dashboardData?.pingData && (
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-blue-500/10 border border-blue-500/20 p-6 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-300">
@@ -1300,11 +1059,9 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-      )}
 
-      {/* Top Devices Section - Only show for upstream */}
-      {dataSource === 'upstream' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+      {/* Top Devices Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
           {dashboardData?.topDevices?.slowestLatencyIgw && (
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-red-500/10 border border-red-500/20 p-6 hover:shadow-2xl hover:shadow-red-500/20 transition-all duration-300">
               <TopDevicesCard
@@ -1341,11 +1098,9 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-      )}
 
-      {/* Below Threshold Devices Section - Only show for upstream */}
-      {dataSource === 'upstream' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      {/* Below Threshold Devices Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {dashboardData?.topDevices?.belowDownloadThreshold && (
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-rose-500/10 border border-rose-500/20 p-6 hover:shadow-2xl hover:shadow-rose-500/20 transition-all duration-300">
               <TopDevicesCard
@@ -1372,7 +1127,6 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-      )}
 
       {/* ================================================================= */}
       {/* PHASE 3: DASHBOARD V2 — 7 Row Analytics                               */}
