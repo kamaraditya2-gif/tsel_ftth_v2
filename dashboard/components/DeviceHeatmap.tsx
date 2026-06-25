@@ -165,6 +165,12 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
               tileSize: 256,
               attribution: '&copy; CARTO Dark',
             },
+            buildings: {
+              type: 'vector',
+              tiles: ['https://tiles.openfreemap.org/{z}/{x}/{y}.pbf'],
+              maxzoom: 16,
+              attribution: '&copy; OpenStreetMap contributors',
+            },
           },
           layers: [
             {
@@ -174,10 +180,24 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
               minzoom: 0,
               maxzoom: 18,
             },
+            {
+              id: '3d-buildings',
+              type: 'fill-extrusion',
+              source: 'buildings',
+              'source-layer': 'building',
+              minzoom: 14,
+              paint: {
+                'fill-extrusion-color': 'hsl(35, 10%, 82%)',
+                'fill-extrusion-height': ['get', 'render_height'],
+                'fill-extrusion-base': ['get', 'render_min_height'],
+                'fill-extrusion-opacity': 0.6,
+              },
+            },
           ],
         },
         center: [118, -2.5],
         zoom: 5,
+        pitch: 55,
         attributionControl: false,
       })
 
@@ -210,7 +230,7 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
       if (nopId) {
         const avgLat = validDevices.reduce((s, d) => s + Number(d.lat), 0) / validDevices.length
         const avgLng = validDevices.reduce((s, d) => s + Number(d.lng), 0) / validDevices.length
-        map.setCenter([avgLng, avgLat], 17)
+        map.jumpTo({ center: [avgLng, avgLat], zoom: 17, pitch: 55 })
       } else {
         const lngs = validDevices.map(d => Number(d.lng))
         const lats = validDevices.map(d => Number(d.lat))
