@@ -9,15 +9,12 @@ import { useTheme } from './ThemeProvider'
 const menuItems = [
   { section: 'Main Menu', items: [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Performance Test', href: '/test-result', icon: ListChecks },
-    { name: 'Performance v2', href: '/testing/performance', icon: BarChart3 },
+    { name: 'Performance Test', href: '/testing/performance', icon: BarChart3 },
     { name: 'Devices', href: '/devices', icon: Server },
     { name: 'Regionals', href: '/regional', icon: MapPin },
     { name: 'Speeds', href: '/speeds', icon: Gauge },
-    { name: 'Alarms', href: '/alarms', icon: Bell },
-    { name: 'Alarm v2', href: '/alarms/v2', icon: AlertTriangle },
-    { name: 'Reports', href: '/reports', icon: BarChart3 },
-    { name: 'Reports v2', href: '/reports/v2', icon: FileCode },
+    { name: 'Alarms', href: '/alarms/v2', icon: AlertTriangle },
+    { name: 'Reports', href: '/reports/v2', icon: FileCode },
   ]},
   { section: 'Testing', items: [
     { name: 'Scheduled Test', href: '/testing/scheduled', icon: Clock },

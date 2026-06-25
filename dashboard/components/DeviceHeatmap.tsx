@@ -40,6 +40,8 @@ interface DeviceHeatmapProps {
   timeRange?: string
   dataSource?: 'upstream' | 'downstream'
   regionalId?: string
+  areaId?: string
+  nopId?: string
   speedGroupId?: string
   manufacturerId?: string
   ontModelId?: string
@@ -106,7 +108,7 @@ function getRadius(status: string): number {
   return status === 'offline' ? 14 : 10
 }
 
-export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataSource = 'upstream', regionalId, speedGroupId, manufacturerId, ontModelId, serverId }: DeviceHeatmapProps) {
+export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataSource = 'upstream', areaId, regionalId, nopId, speedGroupId, manufacturerId, ontModelId, serverId }: DeviceHeatmapProps) {
   const [devices, setDevices] = useState<MapDevice[]>([])
   const [servers, setServers] = useState<DownstreamServer[]>([])
   const [loading, setLoading] = useState(true)
@@ -121,6 +123,7 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
     async function fetchDevices() {
       try {
         const params = new URLSearchParams({ timeRange, dataSource })
+        if (areaId) params.append("areaId", areaId)
         if (regionalId) params.append('regionalId', regionalId)
         if (speedGroupId) params.append('speedGroupId', speedGroupId)
         if (manufacturerId) params.append('manufacturerId', manufacturerId)
@@ -145,7 +148,7 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
     }
 
     fetchDevices()
-  }, [timeRange, regionalId, speedGroupId, manufacturerId, ontModelId, dataSource, serverId])
+  }, [timeRange, areaId, regionalId, nopId, speedGroupId, manufacturerId, ontModelId, dataSource, serverId])
 
   useEffect(() => {
     if (!mapRef.current) return

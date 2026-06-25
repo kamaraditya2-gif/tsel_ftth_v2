@@ -59,7 +59,7 @@ export default function DownstreamServersPage() {
     setForm({ name: s.name, location: s.location || '', province: s.province || '', lat: s.lat?.toString() || '', lng: s.lng?.toString() || '', status: s.status })
   }
 
-  if (loading) return <div className="min-h-screen p-8 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center"><div className="text-gray-400">Loading...</div></div>
+  if (loading) return <div className="min-h-screen p-8 flex items-center justify-center"><div className="text-gray-400">Loading...</div></div>
 
   return (
     <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">

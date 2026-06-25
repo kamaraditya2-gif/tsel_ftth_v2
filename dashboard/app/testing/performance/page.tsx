@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Activity, RefreshCw, Network } from 'lucide-react'
 import GlobalFilter from '@/components/GlobalFilter'
+import NetworkDiagram from '@/components/NetworkDiagram'
 
 function countHops(raw: any): number {
   if (!raw) return 0
@@ -71,7 +72,7 @@ export default function PerformanceTestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-950 p-6">
+    <div className="min-h-screen p-6 bg-transparent">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -93,6 +94,24 @@ export default function PerformanceTestPage() {
         <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-md p-4">
           <GlobalFilter onFilterChange={handleFilterChange} showProfile={false} />
         </div>
+
+        {/* Network Diagram */}
+        {results.length > 0 && (
+          <NetworkDiagram
+            upstream={{
+              avgDownload: Number(results.reduce((s:number,r:any)=>s+Number(r.download||0),0)/Math.max(results.filter((r:any)=>r.download).length,1)).toFixed(2),
+              avgUpload: Number(results.reduce((s:number,r:any)=>s+Number(r.upload||0),0)/Math.max(results.filter((r:any)=>r.upload).length,1)).toFixed(2),
+              avgLatency: Number(results.reduce((s:number,r:any)=>s+Number(r.latency||0),0)/Math.max(results.filter((r:any)=>r.latency).length,1)).toFixed(2),
+              avgEbrLatency: Number(results.reduce((s:number,r:any)=>s+Number(r.latency_ebr||0),0)/Math.max(results.filter((r:any)=>r.latency_ebr).length,1)).toFixed(2),
+              avgPacketLoss: Number(results.reduce((s:number,r:any)=>s+Number(r.packet_loss||0),0)/Math.max(results.filter((r:any)=>r.packet_loss).length,1)).toFixed(2),
+            }}
+            downstream={{
+              avgLatency: Number(results.filter((r:any)=>r.latency).length > 0 ? results.reduce((s:number,r:any)=>s+Number(r.latency||0),0)/results.filter((r:any)=>r.latency).length : 0).toFixed(2),
+              avgPacketLoss: Number(results.filter((r:any)=>r.packet_loss).length > 0 ? results.reduce((s:number,r:any)=>s+Number(r.packet_loss||0),0)/results.filter((r:any)=>r.packet_loss).length : 0).toFixed(2),
+              totalDevices: results.length,
+            }}
+          />
+        )}
 
         {/* Table */}
         <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-md overflow-hidden">

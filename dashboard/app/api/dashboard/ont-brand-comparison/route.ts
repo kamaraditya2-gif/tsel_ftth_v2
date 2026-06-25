@@ -4,6 +4,9 @@ import pool from '@/lib/db'
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const timeRange = searchParams.get('timeRange') || '24h'
+  const areaId = searchParams.get('areaId')
+  const regionalId = searchParams.get('regionalId')
+  const nopId = searchParams.get('nopId')
 
   let interval: string
   switch (timeRange) {
@@ -15,11 +18,24 @@ export async function GET(request: Request) {
     default: interval = '24 hours'; break
   }
 
+  const filterWhere = []
+  const filterParams: any[] = []
+  let pIdx = 1
+  if (areaId) { filterWhere.push(`n.area_id = $${pIdx++}`); filterParams.push(parseInt(areaId)) }
+  if (regionalId) { filterWhere.push(`d.downstream_server_id = $${pIdx++}`); filterParams.push(parseInt(regionalId)) }
+  if (nopId) { filterWhere.push(`d.cluster_nop_id = $${pIdx++}`); filterParams.push(parseInt(nopId)) }
+  const filterSQL = filterWhere.length > 0 ? 'AND ' + filterWhere.join(' AND ') : ''
+
   try {
     const client = await pool.connect()
 
     const result = await client.query(`
       WITH 
+      device_filter AS (
+        SELECT d.id FROM devices_ont d
+        LEFT JOIN master_cluster_nop n ON n.id = d.cluster_nop_id
+        WHERE d.manufacturer IS NOT NULL AND d.manufacturer != '' ${filterSQL}
+      ),
       download_stats AS (
         SELECT 
           d.manufacturer,
@@ -29,6 +45,10 @@ export async function GET(request: Request) {
         JOIN test_results_speed_download t ON t.device_id = d.id
         WHERE t.executed_at >= NOW() - INTERVAL '${interval}'
           AND d.manufacturer IS NOT NULL AND d.manufacturer != ''
+          AND d.id IN (SELECT id FROM device_filter)
+          AND d.id IN (SELECT id FROM device_filter)
+          AND d.id IN (SELECT id FROM device_filter)
+          AND d.id IN (SELECT id FROM device_filter)
         GROUP BY d.manufacturer
       ),
       upload_stats AS (
@@ -40,6 +60,10 @@ export async function GET(request: Request) {
         JOIN test_results_speed_upload t ON t.device_id = d.id
         WHERE t.executed_at >= NOW() - INTERVAL '${interval}'
           AND d.manufacturer IS NOT NULL AND d.manufacturer != ''
+          AND d.id IN (SELECT id FROM device_filter)
+          AND d.id IN (SELECT id FROM device_filter)
+          AND d.id IN (SELECT id FROM device_filter)
+          AND d.id IN (SELECT id FROM device_filter)
         GROUP BY d.manufacturer
       ),
       ping_stats AS (
@@ -52,6 +76,10 @@ export async function GET(request: Request) {
         JOIN test_results_ping t ON t.device_id = d.id
         WHERE t.executed_at >= NOW() - INTERVAL '${interval}'
           AND d.manufacturer IS NOT NULL AND d.manufacturer != ''
+          AND d.id IN (SELECT id FROM device_filter)
+          AND d.id IN (SELECT id FROM device_filter)
+          AND d.id IN (SELECT id FROM device_filter)
+          AND d.id IN (SELECT id FROM device_filter)
         GROUP BY d.manufacturer
       ),
       packet_loss_stats AS (
@@ -64,16 +92,21 @@ export async function GET(request: Request) {
         JOIN test_results_ping t ON t.device_id = d.id
         WHERE t.executed_at >= NOW() - INTERVAL '${interval}'
           AND d.manufacturer IS NOT NULL AND d.manufacturer != ''
+          AND d.id IN (SELECT id FROM device_filter)
+          AND d.id IN (SELECT id FROM device_filter)
+          AND d.id IN (SELECT id FROM device_filter)
+          AND d.id IN (SELECT id FROM device_filter)
         GROUP BY d.manufacturer
       ),
       device_counts AS (
         SELECT 
-          manufacturer,
+          d.manufacturer,
           COUNT(*) as total_devices,
           COUNT(*) FILTER (WHERE status = 'online') as online_devices
-        FROM devices_ont
-        WHERE manufacturer IS NOT NULL AND manufacturer != ''
-        GROUP BY manufacturer
+        FROM devices_ont d
+        INNER JOIN device_filter df ON df.id = d.id
+        WHERE d.manufacturer IS NOT NULL AND d.manufacturer != ''
+        GROUP BY d.manufacturer
       )
       SELECT 
         dc.manufacturer as name,
@@ -95,7 +128,7 @@ export async function GET(request: Request) {
       LEFT JOIN ping_stats ps ON ps.manufacturer = dc.manufacturer
       LEFT JOIN packet_loss_stats pls ON pls.manufacturer = dc.manufacturer
       ORDER BY dc.total_devices DESC
-    `)
+    `, filterParams.length > 0 ? filterParams : undefined)
 
     client.release()
 

@@ -16,20 +16,23 @@ interface ThresholdData {
 
 interface ThresholdChartProps {
   timeRange?: string
+  areaId?: string
   regionalId?: string
+  nopId?: string
   speedGroupId?: string
 }
 
-export default function ThresholdChart({ timeRange = '24h', regionalId, speedGroupId }: ThresholdChartProps) {
+export default function ThresholdChart({ timeRange = '24h', areaId, regionalId, nopId, speedGroupId }: ThresholdChartProps) {
   const [data, setData] = useState<ThresholdData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function fetchData() {
+    const fetchData = async () => {
       try {
-        const params = new URLSearchParams()
-        params.append('timeRange', timeRange)
+        const params = new URLSearchParams({ timeRange })
+        if (areaId) params.append('areaId', areaId)
         if (regionalId) params.append('regionalId', regionalId)
+        if (nopId) params.append('nopId', nopId)
         if (speedGroupId) params.append('speedGroupId', speedGroupId)
 
         const response = await fetch(`/api/dashboard/threshold?${params}`)

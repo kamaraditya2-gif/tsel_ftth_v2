@@ -59,13 +59,13 @@ export default function RegionalPage() {
   )
 
   if (loading) return (
-    <div className="min-h-screen p-8 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+    <div className="min-h-screen p-8 flex items-center justify-center">
       <div className="text-gray-400">Loading regions...</div>
     </div>
   )
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen p-4 md:p-8 bg-transparent">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white flex items-center gap-3">
           <MapPin className="w-8 h-8 text-cyan-400" />

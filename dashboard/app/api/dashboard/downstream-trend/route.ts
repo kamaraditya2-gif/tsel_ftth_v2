@@ -7,7 +7,9 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const timeRange = searchParams.get('timeRange') || '24h'
+    const areaId = searchParams.get('areaId')
     const regionalId = searchParams.get('regionalId')
+    const nopId = searchParams.get('nopId')
     const speedGroupId = searchParams.get('speedGroupId')
     const manufacturerId = searchParams.get('manufacturerId')
     const ontModelId = searchParams.get('ontModelId')
@@ -31,9 +33,21 @@ export async function GET(request: Request) {
     const filterParams: any[] = []
     let paramIndex = 1
 
+    if (areaId) {
+      filterConditions.push(`d.cluster_nop_id IN (SELECT id FROM master_cluster_nop WHERE area_id = $${paramIndex})`)
+      filterParams.push(parseInt(areaId))
+      paramIndex++
+    }
+
     if (regionalId) {
-      filterConditions.push(`d.group_id = $${paramIndex}`)
+      filterConditions.push(`d.downstream_server_id = $${paramIndex}`)
       filterParams.push(parseInt(regionalId))
+      paramIndex++
+    }
+
+    if (nopId) {
+      filterConditions.push(`d.cluster_nop_id = $${paramIndex}`)
+      filterParams.push(parseInt(nopId))
       paramIndex++
     }
 

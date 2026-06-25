@@ -4,6 +4,9 @@ import pool from '@/lib/db'
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const timeRange = searchParams.get('timeRange') || '24h'
+  const areaId = searchParams.get('areaId')
+  const regionalId = searchParams.get('regionalId')
+  const nopId = searchParams.get('nopId')
 
   let interval: string
   switch (timeRange) {
@@ -15,11 +18,25 @@ export async function GET(request: Request) {
     default: interval = '24 hours'; break
   }
 
+  const filterWhere = []
+  const filterParams: any[] = []
+  let pIdx = 1
+  if (areaId) { filterWhere.push(`n.area_id = $${pIdx++}`); filterParams.push(parseInt(areaId)) }
+  if (regionalId) { filterWhere.push(`d.downstream_server_id = $${pIdx++}`); filterParams.push(parseInt(regionalId)) }
+  if (nopId) { filterWhere.push(`d.cluster_nop_id = $${pIdx++}`); filterParams.push(parseInt(nopId)) }
+  const filterSQL = filterWhere.length > 0 ? 'AND ' + filterWhere.join(' AND ') : ''
+
   try {
     const client = await pool.connect()
 
     const result = await client.query(`
       WITH 
+      device_filter AS (
+        SELECT d.id FROM devices_ont d
+        LEFT JOIN master_cluster_nop n ON n.id = d.cluster_nop_id
+        WHERE d.cpe_type IS NOT NULL AND d.cpe_type != ''
+        ${filterSQL}
+      ),
       download_stats AS (
         SELECT 
           d.cpe_type,
@@ -29,6 +46,7 @@ export async function GET(request: Request) {
         JOIN test_results_speed_download t ON t.device_id = d.id
         WHERE t.executed_at >= NOW() - INTERVAL '${interval}'
           AND d.cpe_type IS NOT NULL AND d.cpe_type != ''
+          AND d.id IN (SELECT id FROM device_filter)
         GROUP BY d.cpe_type
       ),
       upload_stats AS (
@@ -40,6 +58,7 @@ export async function GET(request: Request) {
         JOIN test_results_speed_upload t ON t.device_id = d.id
         WHERE t.executed_at >= NOW() - INTERVAL '${interval}'
           AND d.cpe_type IS NOT NULL AND d.cpe_type != ''
+          AND d.id IN (SELECT id FROM device_filter)
         GROUP BY d.cpe_type
       ),
       ping_stats AS (
@@ -52,6 +71,7 @@ export async function GET(request: Request) {
         JOIN test_results_ping t ON t.device_id = d.id
         WHERE t.executed_at >= NOW() - INTERVAL '${interval}'
           AND d.cpe_type IS NOT NULL AND d.cpe_type != ''
+          AND d.id IN (SELECT id FROM device_filter)
         GROUP BY d.cpe_type
       ),
       packet_loss_stats AS (
@@ -64,16 +84,18 @@ export async function GET(request: Request) {
         JOIN test_results_ping t ON t.device_id = d.id
         WHERE t.executed_at >= NOW() - INTERVAL '${interval}'
           AND d.cpe_type IS NOT NULL AND d.cpe_type != ''
+          AND d.id IN (SELECT id FROM device_filter)
         GROUP BY d.cpe_type
       ),
       device_counts AS (
         SELECT 
-          cpe_type,
+          d.cpe_type,
           COUNT(*) as total_devices,
           COUNT(*) FILTER (WHERE status = 'online') as online_devices
-        FROM devices_ont
-        WHERE cpe_type IS NOT NULL AND cpe_type != ''
-        GROUP BY cpe_type
+        FROM devices_ont d
+        WHERE d.cpe_type IS NOT NULL AND d.cpe_type != ''
+          AND d.id IN (SELECT id FROM device_filter)
+        GROUP BY d.cpe_type
       )
       SELECT 
         dc.cpe_type as name,
@@ -95,7 +117,7 @@ export async function GET(request: Request) {
       LEFT JOIN ping_stats ps ON ps.cpe_type = dc.cpe_type
       LEFT JOIN packet_loss_stats pls ON pls.cpe_type = dc.cpe_type
       ORDER BY dc.total_devices DESC
-    `)
+    `, filterParams.length > 0 ? filterParams : undefined)
 
     client.release()
 

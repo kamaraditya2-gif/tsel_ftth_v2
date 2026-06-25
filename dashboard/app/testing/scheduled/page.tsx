@@ -117,7 +117,7 @@ export default function ScheduledPage() {
   const getCronLabel = (cron: string) => CRON_PRESETS.find(p => p.cron === cron)?.label || cron
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen p-4 md:p-8 bg-transparent">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">

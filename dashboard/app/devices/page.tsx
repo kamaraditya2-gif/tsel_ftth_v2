@@ -738,7 +738,7 @@ function DevicesPageContent() {
   )
 
   return (
-    <div className="min-h-screen p-8 bg-white/90 dark:bg-gray-800/90">
+    <div className="min-h-screen p-8 bg-transparent">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Devices</h1>
         <button
