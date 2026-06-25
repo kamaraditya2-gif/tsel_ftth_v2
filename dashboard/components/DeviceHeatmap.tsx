@@ -156,48 +156,9 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
     if (!mapRef.current) {
       const map = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: {
-          version: 8,
-          sources: {
-            tiles: {
-              type: 'raster',
-              tiles: ['/api/tiles/{z}/{x}/{y}.png?v=2'],
-              tileSize: 256,
-              attribution: '&copy; CARTO',
-            },
-            buildings: {
-              type: 'vector',
-              tiles: ['https://api.maptiler.com/tiles/v3/{z}/{x}/{y}.pbf?key=3XChKc8u4YXTUmjuoqaP'],
-              maxzoom: 17,
-              attribution: '&copy; MapTiler &copy; OpenStreetMap contributors',
-            },
-          },
-          layers: [
-            {
-              id: 'tiles-layer',
-              type: 'raster',
-              source: 'tiles',
-              minzoom: 0,
-              maxzoom: 18,
-            },
-            {
-              id: '3d-buildings',
-              type: 'fill-extrusion',
-              source: 'buildings',
-              'source-layer': 'building',
-              minzoom: 14,
-              paint: {
-                'fill-extrusion-color': 'hsl(35, 10%, 82%)',
-                'fill-extrusion-height': ['get', 'render_height'],
-                'fill-extrusion-base': ['get', 'render_min_height'],
-                'fill-extrusion-opacity': 0.6,
-              },
-            },
-          ],
-        },
+        style: `https://api.maptiler.com/maps/streets-v2/style.json?key=3XChKc8u4YXTUmjuoqaP`,
         center: [118, -2.5],
         zoom: 5,
-        pitch: 55,
         attributionControl: false,
       })
 
@@ -230,7 +191,7 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
       if (nopId) {
         const avgLat = validDevices.reduce((s, d) => s + Number(d.lat), 0) / validDevices.length
         const avgLng = validDevices.reduce((s, d) => s + Number(d.lng), 0) / validDevices.length
-        map.jumpTo({ center: [avgLng, avgLat], zoom: 17, pitch: 55 })
+        map.jumpTo({ center: [avgLng, avgLat], zoom: 17 })
       } else {
         const lngs = validDevices.map(d => Number(d.lng))
         const lats = validDevices.map(d => Number(d.lat))
