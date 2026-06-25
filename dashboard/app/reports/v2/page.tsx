@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { BarChart3, Download, FileText, MapPin, Building2, Box, Cpu, Activity, AlertTriangle, Server } from 'lucide-react'
-import GlobalFilter from '@/components/GlobalFilter'
+import LocationFilter from '@/components/LocationFilter'
 
 const REPORT_TYPES = [
   { id: 'alarm-area', label: 'Alarm per Area', icon: MapPin },
@@ -20,20 +20,19 @@ export default function ReportsV2Page() {
   const [reportData, setReportData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({})
+  const [locFilters, setLocFilters] = useState({ areaId: null as number | null, regionalId: null as number | null, nopId: null as number | null })
 
   const fetchReport = async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v as string) })
-
-      let endpoint = '/api/reports/v2'
       const p = new URLSearchParams()
       p.set('type', activeReport)
+      if (locFilters.areaId) p.set('area_id', locFilters.areaId.toString())
+      if (locFilters.regionalId) p.set('regional_id', locFilters.regionalId.toString())
+      if (locFilters.nopId) p.set('nop_id', locFilters.nopId.toString())
       Object.entries(filters).forEach(([k, v]) => { if (v) p.set(k, v as string) })
-      endpoint += '?' + p.toString()
 
-      const res = await fetch(`${endpoint}?${params}`)
+      const res = await fetch(`/api/reports/v2?${p}`)
       const data = await res.json()
       setReportData(data.data || data || [])
     } catch (e) {
@@ -44,7 +43,7 @@ export default function ReportsV2Page() {
     }
   }
 
-  useEffect(() => { fetchReport() }, [activeReport, filters])
+  useEffect(() => { fetchReport() }, [activeReport, filters, locFilters])
 
   const exportCSV = () => {
     if (reportData.length === 0) return
@@ -84,7 +83,9 @@ export default function ReportsV2Page() {
 
         {/* Filter */}
         <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-md p-4">
-          <GlobalFilter onFilterChange={setFilters} />
+          <LocationFilter onFilterChange={(a,r,n) => {
+            setLocFilters({ areaId: a, regionalId: r, nopId: n })
+          }} />
         </div>
 
         {/* Report Type Tabs */}

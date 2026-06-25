@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Activity, RefreshCw, Network } from 'lucide-react'
-import GlobalFilter from '@/components/GlobalFilter'
+import { Activity, RefreshCw, Network, Search } from 'lucide-react'
 import NetworkDiagram from '@/components/NetworkDiagram'
+import LocationFilter from '@/components/LocationFilter'
 
 function countHops(raw: any): number {
   if (!raw) return 0
@@ -37,13 +37,21 @@ export default function PerformanceTestPage() {
   const [results, setResults] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({})
+  const [locFilters, setLocFilters] = useState({ areaId: null as number | null, regionalId: null as number | null, nopId: null as number | null })
+  const filtersRef = useRef(filters)
+  const locRef = useRef(locFilters)
+  filtersRef.current = filters
+  locRef.current = locFilters
   const [traceDevice, setTraceDevice] = useState<any>(null)
   const intervalRef = useRef<NodeJS.Timeout>()
 
-  const fetchResults = async (f: any = filters) => {
+  const fetchResults = async (f: any = filters, loc: any = locFilters) => {
     try {
       const params = new URLSearchParams({ limit: '50' })
       Object.entries(f).forEach(([k, v]) => { if (v) params.set(k, v as string) })
+      if (loc.areaId) params.set('area_id', loc.areaId.toString())
+      if (loc.regionalId) params.set('regional_id', loc.regionalId.toString())
+      if (loc.nopId) params.set('nop_id', loc.nopId.toString())
       const res = await fetch(`/api/performance?${params}`)
       const data = await res.json()
       if (data.results) setResults(data.results)
@@ -56,7 +64,9 @@ export default function PerformanceTestPage() {
 
   useEffect(() => {
     fetchResults()
-    intervalRef.current = setInterval(() => fetchResults(), 5000)
+    intervalRef.current = setInterval(() => {
+      fetchResults(filtersRef.current, locRef.current)
+    }, 5000)
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [])
 
@@ -90,9 +100,24 @@ export default function PerformanceTestPage() {
           </button>
         </div>
 
-        {/* Filter */}
-        <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-md p-4">
-          <GlobalFilter onFilterChange={handleFilterChange} showProfile={false} />
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3">
+          <LocationFilter onFilterChange={(a,r,n) => {
+            const nl = { areaId: a, regionalId: r, nopId: n }
+            setLocFilters(nl)
+            fetchResults(filters, nl)
+          }} />
+          <input
+            type="text"
+            placeholder="Search device..."
+            value={(filters as any).search || ''}
+            onChange={(e) => {
+              const nf = { ...filters, search: e.target.value }
+              setFilters(nf)
+              fetchResults(nf, locFilters)
+            }}
+            className="px-3 py-1.5 bg-slate-800 border border-slate-600 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-red-500 w-40"
+          />
         </div>
 
         {/* Network Diagram */}

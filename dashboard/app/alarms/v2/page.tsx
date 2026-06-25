@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Bell, AlertTriangle, AlertCircle, ChevronDown, ChevronUp, RefreshCw, MessageSquare, Send, Ticket, Play, Clock, X } from 'lucide-react'
-import GlobalFilter from '@/components/GlobalFilter'
+import LocationFilter from '@/components/LocationFilter'
 
 interface AlarmItem { alarm_code?: string; alarm_type: string; category: string; metric_value: number; threshold_value: number; severity: string; unit: string }
 interface DeviceAlarm {
@@ -18,6 +18,9 @@ export default function AlarmsV2Page() {
   const [total, setTotal] = useState(0); const [totalCleared, setTotalCleared] = useState(0)
   const [loading, setLoading] = useState(true); const [expandedId, setExpandedId] = useState<number | null>(null)
   const [filters, setFilters] = useState({}); const [tab, setTab] = useState('active')
+  const [locFilters, setLocFilters] = useState({ areaId: null as number | null, regionalId: null as number | null, nopId: null as number | null })
+  const filtersRef = useRef(filters); const locRef = useRef(locFilters)
+  filtersRef.current = filters; locRef.current = locFilters
   const [rootCauses, setRootCauses] = useState<any[]>([])
   const [comments, setComments] = useState<Comment[]>([]); const [newComment, setNewComment] = useState('')
   const [replyingTo, setReplyingTo] = useState<number | null>(null); const [replyText, setReplyText] = useState('')
@@ -26,10 +29,14 @@ export default function AlarmsV2Page() {
   const [selectedRc, setSelectedRc] = useState<number | null>(null); const [rcNote, setRcNote] = useState('')
   const [retesting, setRetesting] = useState(false)
 
-  const fetchAlarms = async (f = filters) => {
+  const fetchAlarms = async (f = filters, loc = locFilters) => {
     setLoading(true)
     try {
-      const p = new URLSearchParams(); Object.entries(f).forEach(([k, v]) => { if (v) p.set(k, v as string) })
+      const p = new URLSearchParams()
+      if (loc.areaId) p.set('area_id', loc.areaId.toString())
+      if (loc.regionalId) p.set('regional_id', loc.regionalId.toString())
+      if (loc.nopId) p.set('nop_id', loc.nopId.toString())
+      Object.entries(f).forEach(([k, v]) => { if (v) p.set(k, v as string) })
       const res = await fetch(`/api/alarms/check?${p}`); const r = await res.json()
       setData(r.alarms || []); setCleared(r.cleared || []); setTotal(r.total || 0); setTotalCleared(r.total_cleared || 0)
       setRootCauses(r.root_causes || [])
@@ -37,7 +44,12 @@ export default function AlarmsV2Page() {
   }
   useEffect(() => { fetchAlarms() }, [])
 
-  const handleFilterChange = (f: any) => { setFilters(f); fetchAlarms(f) }
+  const handleFilterChange = (f: any) => { setFilters(f); fetchAlarms(f, locFilters) }
+  const handleLocationChange = (a: number | null, r: number | null, n: number | null) => {
+    const nl = { areaId: a, regionalId: r, nopId: n }
+    setLocFilters(nl)
+    fetchAlarms(filters, nl)
+  }
 
   const list = tab === 'active' ? data : cleared
 
@@ -106,7 +118,9 @@ export default function AlarmsV2Page() {
           <button onClick={() => fetchAlarms()} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-700 text-white text-sm hover:bg-slate-600"><RefreshCw className="w-4 h-4" /> Refresh</button>
         </div>
 
-        <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-md p-4"><GlobalFilter onFilterChange={handleFilterChange} /></div>
+        <div className="flex flex-wrap items-center gap-3 bg-slate-800/50 backdrop-blur-md p-4 rounded-2xl border border-slate-700/50 relative z-50">
+          <LocationFilter onFilterChange={handleLocationChange} />
+        </div>
 
         {/* Tabs */}
         <div className="flex gap-2">

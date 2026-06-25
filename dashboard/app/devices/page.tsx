@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import OntArchitectureDiagram from '@/components/OntArchitectureDiagram'
 import NetworkOverviewHeader from '@/components/NetworkOverviewHeader'
 import InlineAlias from '@/components/InlineAlias'
+import LocationFilter from '@/components/LocationFilter'
 
 export const dynamic = 'force-dynamic'
 
@@ -765,51 +766,7 @@ function DevicesPageContent() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
-            <select
-              value={selectedArea || ''}
-              onChange={(e) => {
-                const v = e.target.value
-                setSelectedArea(v ? parseInt(v) : null)
-                setSelectedRegion(null)
-                setSelectedNopCity(null)
-                setNopClusters([])
-              }}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="">All Areas</option>
-              {areas.map((a: any) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-            <select
-              value={selectedRegion === 'none' ? 'none' : (selectedRegion || '')}
-              onChange={(e) => {
-                const v = e.target.value
-                if (v === 'none') setSelectedRegion('none')
-                else if (v === '') setSelectedRegion(null)
-                else {
-                  setSelectedRegion(parseInt(v))
-                  setSelectedNopCity(null)
-                  fetchNopClusters(selectedArea, parseInt(v))
-                }
-              }}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="">All Regionals</option>
-              {downstreamServers.map((ds) => (
-                <option key={ds.id} value={ds.id}>{ds.name}</option>
-              ))}
-            </select>
-            <select
-              value={selectedNopCity || ''}
-              onChange={(e) => setSelectedNopCity(e.target.value ? parseInt(e.target.value) : null)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="">All NOP Cities</option>
-              {nopClusters.map((n: any) => (
-                <option key={n.id} value={n.id}>{n.name}</option>
-              ))}
-            </select>
+            <LocationFilter onFilterChange={(a,r,n) => { setSelectedArea(a); setSelectedRegion(r); setSelectedNopCity(n) }} />
             <select
               value={selectedSpeed === 'none' ? 'none' : (selectedSpeed || '')}
               onChange={(e) => {

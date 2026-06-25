@@ -16,6 +16,7 @@ import TopAlarmCard from '@/components/TopAlarmCard'
 import PerformanceAnalytics from '@/components/PerformanceAnalytics'
 import TopCards from '@/components/TopCards'
 import NetworkDiagram from '@/components/NetworkDiagram'
+import LocationFilter from '@/components/LocationFilter'
 import dynamic from 'next/dynamic'
 
 const DeviceHeatmap = dynamic(() => import('@/components/DeviceHeatmap'), { ssr: false })
@@ -119,7 +120,7 @@ export default function DashboardPage() {
     }, 30000)
 
     return () => clearInterval(interval)
-  }, [timeRange, selectedRegional, selectedSpeedGroup, selectedManufacturer, selectedOntModel, selectedServer])
+  }, [timeRange, selectedArea, selectedRegional, selectedNopCity, selectedSpeedGroup, selectedManufacturer, selectedOntModel, selectedServer])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -214,18 +215,12 @@ export default function DashboardPage() {
   const fetchDownstreamTrendData = async () => {
     try {
       const params = new URLSearchParams({ timeRange })
-      if (selectedRegional) {
-        params.append('regionalId', selectedRegional.toString())
-      }
-      if (selectedSpeedGroup) {
-        params.append('speedGroupId', selectedSpeedGroup.toString())
-      }
-      if (selectedManufacturer) {
-        params.append('manufacturerId', selectedManufacturer.toString())
-      }
-      if (selectedOntModel) {
-        params.append('ontModelId', selectedOntModel.toString())
-      }
+      if (selectedArea) params.append('areaId', selectedArea.toString())
+      if (selectedRegional) params.append('regionalId', selectedRegional.toString())
+      if (selectedNopCity) params.append('nopId', selectedNopCity.toString())
+      if (selectedSpeedGroup) params.append('speedGroupId', selectedSpeedGroup.toString())
+      if (selectedManufacturer) params.append('manufacturerId', selectedManufacturer.toString())
+      if (selectedOntModel) params.append('ontModelId', selectedOntModel.toString())
       params.append('serverId', selectedServer.toString())
       const res = await fetch(`/api/dashboard/downstream-trend?${params.toString()}`)
       const data = await res.json()
@@ -269,7 +264,11 @@ export default function DashboardPage() {
 
   const fetchOntTypeComparison = async () => {
     try {
-      const res = await fetch(`/api/dashboard/ont-type-comparison?timeRange=${timeRange}`)
+      const p = new URLSearchParams({ timeRange })
+      if (selectedArea) p.append('areaId', selectedArea.toString())
+      if (selectedRegional) p.append('regionalId', selectedRegional.toString())
+      if (selectedNopCity) p.append('nopId', selectedNopCity.toString())
+      const res = await fetch(`/api/dashboard/ont-type-comparison?${p}`)
       const data = await res.json()
       if (data.data && Array.isArray(data.data)) {
         setOntTypeData(data.data)
@@ -281,7 +280,11 @@ export default function DashboardPage() {
 
   const fetchOntBrandComparison = async () => {
     try {
-      const res = await fetch(`/api/dashboard/ont-brand-comparison?timeRange=${timeRange}`)
+      const p = new URLSearchParams({ timeRange })
+      if (selectedArea) p.append('areaId', selectedArea.toString())
+      if (selectedRegional) p.append('regionalId', selectedRegional.toString())
+      if (selectedNopCity) p.append('nopId', selectedNopCity.toString())
+      const res = await fetch(`/api/dashboard/ont-brand-comparison?${p}`)
       const data = await res.json()
       if (data.data && Array.isArray(data.data)) {
         setOntBrandData(data.data)
@@ -626,71 +629,8 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Area Dropdown */}
-          <div className="relative">
-            <select
-              value={selectedArea || ''}
-              onChange={(e) => { setSelectedArea(e.target.value ? parseInt(e.target.value) : null); setSelectedRegional(null); setSelectedNopCity(null) }}
-              className="appearance-none bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-white text-xs font-medium rounded-lg px-3 py-2 pr-8 cursor-pointer hover:bg-slate-800/80 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-            >
-              <option value="">All Areas</option>
-              {areas.map((a: any) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Telkomsel Regional Dropdown */}
-          <div className="relative" id="regional-dropdown">
-            <button
-              onClick={() => setRegionalDropdownOpen(!regionalDropdownOpen)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-cyan-500/30 bg-white/10 backdrop-blur-md text-sm text-white hover:bg-white/20 transition-all duration-300 whitespace-nowrap shadow-lg shadow-cyan-500/20"
-            >
-              <MapPin className="w-4 h-4 text-cyan-300" />
-              <span className="truncate max-w-[140px]">{getRegionalLabel()}</span>
-              <ChevronDown className="w-4 h-4 text-cyan-300 flex-shrink-0" />
-            </button>
-            {regionalDropdownOpen && (
-              <div className="absolute top-full left-0 mt-2 bg-slate-900/95 backdrop-blur-md border border-cyan-500/30 rounded-lg shadow-xl shadow-cyan-500/20 z-10 min-w-[200px] max-h-[300px] overflow-y-auto">
-                <button onClick={() => { setSelectedRegional(null); setRegionalDropdownOpen(false) }}
-                  className="w-full text-left px-4 py-2 text-sm text-white hover:bg-cyan-500/20 transition-colors first:rounded-t-lg">
-                  All Regions
-                </button>
-                {downstreamServers.map((s: any) => (
-                  <button key={s.id} onClick={() => { setSelectedRegional(s.id); setRegionalDropdownOpen(false); setSelectedNopCity(null) }}
-                    className="w-full text-left px-4 py-2 text-sm text-white hover:bg-cyan-500/20 transition-colors">
-                    {s.name} — {s.province}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* NOP City Dropdown */}
-          <div className="relative" id="nop-dropdown">
-            <button
-              onClick={() => setNopDropdownOpen(!nopDropdownOpen)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-500/30 bg-white/10 backdrop-blur-md text-sm text-white hover:bg-white/20 transition-all duration-300 whitespace-nowrap shadow-lg shadow-emerald-500/20"
-            >
-              <Building2 className="w-4 h-4 text-emerald-300" />
-              <span className="truncate max-w-[120px]">{selectedNopCity ? nopCities.find((c:any) => c.id === selectedNopCity)?.city || selectedNopCity : 'NOP City'}</span>
-              <ChevronDown className="w-4 h-4 text-emerald-300 flex-shrink-0" />
-            </button>
-            {nopDropdownOpen && (
-              <div className="absolute top-full left-0 mt-2 bg-slate-900/95 backdrop-blur-md border border-emerald-500/30 rounded-lg shadow-xl shadow-emerald-500/20 z-10 min-w-[180px] max-h-[300px] overflow-y-auto">
-                <button onClick={() => { setSelectedNopCity(null); setNopDropdownOpen(false) }}
-                  className="w-full text-left px-4 py-2 text-sm text-white hover:bg-emerald-500/20 transition-colors first:rounded-t-lg">
-                  All Cities
-                </button>
-                {(selectedRegional ? nopCities.filter((c:any) => c.region_id === selectedRegional) : nopCities).map((c: any) => (
-                  <button key={c.id} onClick={() => { setSelectedNopCity(c.id); setNopDropdownOpen(false) }}
-                    className="w-full text-left px-4 py-2 text-sm text-white hover:bg-emerald-500/20 transition-colors">
-                    {c.city}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Location Cascading */}
+          <LocationFilter onFilterChange={(a,r,n) => { setSelectedArea(a); setSelectedRegional(r); setSelectedNopCity(n) }} />
 
           {/* Speed Group Dropdown */}
           <div className="relative" id="speed-group-dropdown">
@@ -855,7 +795,9 @@ export default function DashboardPage() {
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-indigo-500/10 border border-indigo-500/20">
             <ThresholdChart
               timeRange={timeRange}
+              areaId={selectedArea ? selectedArea.toString() : undefined}
               regionalId={selectedRegional ? selectedRegional.toString() : undefined}
+              nopId={selectedNopCity ? selectedNopCity.toString() : undefined}
               speedGroupId={selectedSpeedGroup ? selectedSpeedGroup.toString() : undefined}
             />
           </div>
@@ -888,7 +830,9 @@ export default function DashboardPage() {
           <DeviceHeatmap
             timeRange={timeRange}
             dataSource={dataSource}
+            areaId={selectedArea ? selectedArea.toString() : undefined}
             regionalId={selectedRegional ? selectedRegional.toString() : undefined}
+            nopId={selectedNopCity ? selectedNopCity.toString() : undefined}
             speedGroupId={selectedSpeedGroup ? selectedSpeedGroup.toString() : undefined}
             manufacturerId={selectedManufacturer ? selectedManufacturer.toString() : undefined}
             ontModelId={selectedOntModel ? selectedOntModel.toString() : undefined}
