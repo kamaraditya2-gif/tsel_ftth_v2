@@ -1,8 +1,8 @@
 'use client'
 
-/* eslint-disable @typescript-eslint/no-require-imports */
-
 import { useEffect, useRef, useState } from 'react'
+import maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
 
 interface MapDevice {
   id: number
@@ -59,8 +59,6 @@ function getPingColor(ping: number | null, status: string): string {
   return '#ef4444'
 }
 
-// Speed threshold comparison: color by how the latest download speed compares
-// to the device's subscribed download_threshold.
 function getSpeedColor(device: MapDevice): string {
   if (device.status === 'offline') return '#ef4444'
   const speed = device.download_speed
@@ -74,7 +72,6 @@ function getSpeedColor(device: MapDevice): string {
   return '#ef4444'
 }
 
-// Downstream latency color based on avg_latency_ms from test_results_direct_ping
 function getDownstreamPingColor(device: MapDevice): string {
   if (device.status === 'offline') return '#ef4444'
   const ping = device.avg_latency_ms
@@ -86,7 +83,6 @@ function getDownstreamPingColor(device: MapDevice): string {
   return '#ef4444'
 }
 
-// Downstream packet loss color
 function getPacketLossColor(device: MapDevice): string {
   if (device.status === 'offline') return '#ef4444'
   const loss = device.packet_loss_percent
@@ -115,16 +111,17 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
   const [loading, setLoading] = useState(true)
   const [metric, setMetric] = useState<MetricMode>('ping')
   const [dataSource, setDataSource] = useState<DataSource>(propDataSource)
-  const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<any>(null)
-  const markersRef = useRef<any[]>([])
-  const linesRef = useRef<any[]>([])
+  const mapContainerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<maplibregl.Map | null>(null)
+  const markersRef = useRef<maplibregl.Marker[]>([])
+  const popupsRef = useRef<maplibregl.Popup[]>([])
+  const lineSourceRef = useRef<string | null>(null)
 
   useEffect(() => {
     async function fetchDevices() {
       try {
         const params = new URLSearchParams({ timeRange, dataSource })
-        if (areaId) params.append("areaId", areaId)
+        if (areaId) params.append('areaId', areaId)
         if (regionalId) params.append('regionalId', regionalId)
         if (nopId) params.append('nopId', nopId)
         if (speedGroupId) params.append('speedGroupId', speedGroupId)
@@ -153,44 +150,58 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
   }, [timeRange, areaId, regionalId, nopId, speedGroupId, manufacturerId, ontModelId, dataSource, serverId])
 
   useEffect(() => {
-    if (!mapRef.current) return
+    if (!mapContainerRef.current) return
     if (typeof window === 'undefined') return
 
-    let L: any
-    try {
-      L = require('leaflet')
-      require('leaflet/dist/leaflet.css')
-    } catch {
-      return
+    if (!mapRef.current) {
+      const map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: {
+          version: 8,
+          sources: {
+            tiles: {
+              type: 'raster',
+              tiles: ['/api/tiles/{z}/{x}/{y}.png?v=2'],
+              tileSize: 256,
+              attribution: '&copy; CARTO Dark',
+            },
+          },
+          layers: [
+            {
+              id: 'tiles-layer',
+              type: 'raster',
+              source: 'tiles',
+              minzoom: 0,
+              maxzoom: 18,
+            },
+          ],
+        },
+        center: [118, -2.5],
+        zoom: 5,
+        attributionControl: false,
+      })
+
+      map.addControl(new maplibregl.NavigationControl(), 'bottom-right')
+      mapRef.current = map
     }
 
-    if (!mapInstanceRef.current) {
-      mapInstanceRef.current = L.map(mapRef.current, {
-        zoomControl: true,
-        scrollWheelZoom: true,
-      }).setView([-2.5, 118], 5)
+    const map = mapRef.current
 
-      // Same-origin proxy endpoint serves tiles (local or proxied from OSM)
-      const tileUrl = '/api/tiles/{z}/{x}/{y}.png?v=2'
-      L.tileLayer(tileUrl, {
-        attribution: '&copy; CARTO Dark',
-        maxZoom: 18,
-      }).addTo(mapInstanceRef.current)
-    }
-
-    const map = mapInstanceRef.current
-
-    // Ensure the map renders correctly inside its container (fixes gray tiles
-    // when the container is sized after the map is created).
-    const timer = setTimeout(() => map.invalidateSize(), 100)
-
-    // Clear existing markers and lines
-    markersRef.current.forEach((m) => map.removeLayer(m))
+    // Clear existing markers and popups
+    markersRef.current.forEach(m => m.remove())
     markersRef.current = []
-    linesRef.current.forEach((l) => map.removeLayer(l))
-    linesRef.current = []
+    popupsRef.current.forEach(p => p.remove())
+    popupsRef.current = []
 
-    // Coordinates may arrive as strings (pg DECIMAL) — coerce and filter invalid.
+    // Remove old line source and layer
+    if (lineSourceRef.current) {
+      try {
+        if (map.getLayer('connection-lines')) map.removeLayer('connection-lines')
+        if (map.getSource('connection-lines')) map.removeSource('connection-lines')
+      } catch {}
+      lineSourceRef.current = null
+    }
+
     const validDevices = devices.filter(
       (d) => d.lat != null && d.lng != null && !isNaN(Number(d.lat)) && !isNaN(Number(d.lng))
     )
@@ -199,90 +210,125 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
       if (nopId) {
         const avgLat = validDevices.reduce((s, d) => s + Number(d.lat), 0) / validDevices.length
         const avgLng = validDevices.reduce((s, d) => s + Number(d.lng), 0) / validDevices.length
-        map.setView([avgLat, avgLng], 17)
+        map.setCenter([avgLng, avgLat], 17)
       } else {
-        const bounds = L.latLngBounds(validDevices.map((d) => [Number(d.lat), Number(d.lng)]))
+        const lngs = validDevices.map(d => Number(d.lng))
+        const lats = validDevices.map(d => Number(d.lat))
+        const bounds: [[number, number], [number, number]] = [
+          [Math.min(...lngs), Math.min(...lats)],
+          [Math.max(...lngs), Math.max(...lats)],
+        ]
         const maxZ = regionalId ? 13 : areaId ? 11 : 7
-        map.fitBounds(bounds, { padding: [30, 30], maxZoom: maxZ })
+        map.fitBounds(bounds, { padding: 30, maxZoom: maxZ })
       }
 
-      // Draw connection lines from selected/active downstream server to each ONT (downstream mode only)
+      // Connection lines (downstream mode)
       if (dataSource === 'downstream') {
         const selectedServerObj = servers.find((s) => s.id === Number(serverId)) || servers.find((s) => s.status === 'active')
         if (selectedServerObj && selectedServerObj.lat && selectedServerObj.lng) {
-          validDevices.forEach((device) => {
-            const lineColor = device.avg_latency_ms !== null
-              ? (device.avg_latency_ms < 50 ? '#22c55e' : device.avg_latency_ms < 100 ? '#eab308' : '#ef4444')
+          const lineFeatures: any[] = validDevices.map((device) => {
+            const avgLatency = device.avg_latency_ms
+            const lineColor = avgLatency !== null
+              ? (avgLatency < 50 ? '#22c55e' : avgLatency < 100 ? '#eab308' : '#ef4444')
               : '#9ca3af'
-            const line = L.polyline(
-              [
-                [Number(selectedServerObj.lat), Number(selectedServerObj.lng)],
-                [Number(device.lat), Number(device.lng)]
-              ],
-              {
-                color: lineColor,
-                weight: 1.5,
-                opacity: 0.35,
-                dashArray: '4, 6',
-              }
-            ).addTo(map)
-            linesRef.current.push(line)
+            return {
+              type: 'Feature',
+              geometry: {
+                type: 'LineString',
+                coordinates: [
+                  [Number(selectedServerObj.lng), Number(selectedServerObj.lat)],
+                  [Number(device.lng), Number(device.lat)],
+                ],
+              },
+              properties: { color: lineColor },
+            }
           })
+
+          try {
+            map.addSource('connection-lines', {
+              type: 'geojson',
+              data: { type: 'FeatureCollection', features: lineFeatures },
+            })
+            map.addLayer({
+              id: 'connection-lines',
+              type: 'line',
+              source: 'connection-lines',
+              paint: {
+                'line-color': ['get', 'color'],
+                'line-width': 1.5,
+                'line-opacity': 0.35,
+                'line-dasharray': [4, 6],
+              },
+            })
+            lineSourceRef.current = 'connection-lines'
+          } catch (e) {
+            console.error('Error adding connection lines:', e)
+          }
         }
       }
 
-      // Render server markers
+      // Server markers
       servers.forEach((server) => {
         if (!server.lat || !server.lng) return
         const isActive = server.status === 'active'
         const isSelected = server.id === Number(serverId)
         const size = isSelected ? 32 : 22
-        const serverIcon = L.divIcon({
-          className: '',
-          html: `<div style="
-            width: ${size}px; height: ${size}px; border-radius: 50%;
-            background: ${isActive ? server.color || '#ef4444' : '#6b7280'};
-            border: ${isSelected ? '4px solid #ffffff' : '2px solid #ffffff'};
-            box-shadow: 0 0 ${isSelected ? '16px' : '8px'} ${isActive ? server.color || '#ef4444' : '#6b7280'}80;
-            display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
-          ">
-            <svg width="${size * 0.5}" height="${size * 0.5}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-              <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-              <line x1="6" y1="6" x2="6.01" y2="6"></line>
-              <line x1="6" y1="18" x2="6.01" y2="18"></line>
-            </svg>
-          </div>`,
-          iconSize: [size, size],
-          iconAnchor: [size / 2, size / 2],
-        })
-        const marker = L.marker([Number(server.lat), Number(server.lng)], { icon: serverIcon }).addTo(map)
-        const popup = `
+
+        const el = document.createElement('div')
+        el.style.width = `${size}px`
+        el.style.height = `${size}px`
+        el.style.borderRadius = '50%'
+        el.style.background = isActive ? (server.color || '#ef4444') : '#6b7280'
+        el.style.border = isSelected ? '4px solid #ffffff' : '2px solid #ffffff'
+        el.style.boxShadow = `0 0 ${isSelected ? '16px' : '8px'} ${isActive ? (server.color || '#ef4444') : '#6b7280'}80`
+        el.style.display = 'flex'
+        el.style.alignItems = 'center'
+        el.style.justifyContent = 'center'
+        el.style.transition = 'all 0.2s'
+        el.style.cursor = 'pointer'
+        el.innerHTML = `<svg width="${size * 0.5}" height="${size * 0.5}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+          <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+          <line x1="6" y1="6" x2="6.01" y2="6"></line>
+          <line x1="6" y1="18" x2="6.01" y2="18"></line>
+        </svg>`
+
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([Number(server.lng), Number(server.lat)])
+          .addTo(map)
+
+        const popupHtml = `
           <div style="min-width:180px;font-family:system-ui,sans-serif">
-            <div style="font-weight:600;font-size:14px;margin-bottom:4px;color:#111827">${server.name}</div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px">${server.name}</div>
             <div style="font-size:12px;color:#6b7280;margin-bottom:2px">${server.location}</div>
             <div style="font-size:12px;color:#6b7280;margin-bottom:4px">${server.province}</div>
             <span style="background:${isActive ? '#dcfce7' : '#f3f4f6'};color:${isActive ? '#166534' : '#6b7280'};padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:500">${server.status.toUpperCase()}</span>
             ${isSelected ? '<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:500;margin-left:4px">SELECTED</span>' : ''}
           </div>
         `
-        marker.bindPopup(popup)
+        const popup = new maplibregl.Popup({ offset: 25 }).setHTML(popupHtml)
+        marker.setPopup(popup)
         markersRef.current.push(marker)
       })
 
+      // Device markers
       validDevices.forEach((device) => {
         const color = getColor(device, metric, dataSource)
         const radius = getRadius(device.status)
+        const diameter = radius * 2
 
-        const circle = L.circleMarker([Number(device.lat), Number(device.lng)], {
-          radius,
-          fillColor: color,
-          color: '#ffffff',
-          weight: 2,
-          opacity: 1,
-          fillOpacity: 0.85,
-        }).addTo(map)
+        const el = document.createElement('div')
+        el.style.width = `${diameter}px`
+        el.style.height = `${diameter}px`
+        el.style.borderRadius = '50%'
+        el.style.background = color
+        el.style.border = '2px solid #ffffff'
+        el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3)'
+        el.style.cursor = 'pointer'
+
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([Number(device.lng), Number(device.lat)])
+          .addTo(map)
 
         const metricRow = metric === 'ping'
           ? (dataSource === 'upstream'
@@ -298,7 +344,7 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
 
         const popupContent = `
           <div style="min-width:180px;font-family:system-ui,sans-serif">
-            <div style="font-weight:600;font-size:14px;margin-bottom:6px;color:#111827">${device.serial_number}</div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:6px">${device.serial_number}</div>
             <div style="font-size:12px;color:#6b7280;margin-bottom:2px">IndiHome: ${device.indihome_id || '-'}</div>
             <div style="font-size:12px;color:#6b7280;margin-bottom:2px">Regional: ${device.regional_name || '-'}</div>
             <div style="font-size:12px;color:#6b7280;margin-bottom:4px">Speed: ${device.speed_name || '-'}</div>
@@ -309,21 +355,32 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
           </div>
         `
 
-        circle.bindPopup(popupContent)
-        markersRef.current.push(circle)
+        const popup = new maplibregl.Popup({ offset: 15 }).setHTML(popupContent)
+        marker.setPopup(popup)
+        markersRef.current.push(marker)
       })
     }
 
     return () => {
-      clearTimeout(timer)
+      markersRef.current.forEach(m => m.remove())
+      markersRef.current = []
+      popupsRef.current.forEach(p => p.remove())
+      popupsRef.current = []
+      if (lineSourceRef.current && map) {
+        try {
+          if (map.getLayer('connection-lines')) map.removeLayer('connection-lines')
+          if (map.getSource('connection-lines')) map.removeSource('connection-lines')
+        } catch {}
+        lineSourceRef.current = null
+      }
     }
-  }, [devices, metric, dataSource])
+  }, [devices, metric, dataSource, servers, serverId])
 
   useEffect(() => {
     return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove()
-        mapInstanceRef.current = null
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
       }
     }
   }, [])
@@ -423,7 +480,7 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
         </div>
       </div>
       <div className="h-[500px] rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-        <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
+        <div ref={mapContainerRef} style={{ height: '100%', width: '100%' }} />
       </div>
     </div>
   )

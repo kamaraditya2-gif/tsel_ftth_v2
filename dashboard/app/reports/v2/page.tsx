@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { BarChart3, Download, FileText, MapPin, Building2, Box, Cpu, Activity, AlertTriangle, Server } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { BarChart3, Download, FileText, MapPin, Building2, Box, Cpu, Activity, AlertTriangle, Server, X, Eye, ChevronDown, ChevronUp } from 'lucide-react'
 import LocationFilter from '@/components/LocationFilter'
 
 const REPORT_TYPES = [
@@ -21,6 +21,12 @@ export default function ReportsV2Page() {
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({})
   const [locFilters, setLocFilters] = useState({ areaId: null as number | null, regionalId: null as number | null, nopId: null as number | null })
+  const [allDevices, setAllDevices] = useState<any[]>([])
+  const [detailRow, setDetailRow] = useState<any>(null)
+
+  useEffect(() => {
+    fetch('/api/devices').then(r => r.json()).then(d => setAllDevices(Array.isArray(d) ? d : [])).catch(() => {})
+  }, [])
 
   const fetchReport = async () => {
     setLoading(true)
@@ -60,6 +66,32 @@ export default function ReportsV2Page() {
   }
 
   const columns = reportData.length > 0 ? Object.keys(reportData[0]) : []
+
+  const detailDevices = useMemo(() => {
+    if (!detailRow) return []
+    switch (activeReport) {
+      case 'alarm-area':
+        return allDevices.filter(d => d.area_name === detailRow.area)
+      case 'alarm-regional':
+        return allDevices.filter(d => d.region_name === detailRow.regional)
+      case 'alarm-nop':
+        return allDevices.filter(d => d.nop_name === detailRow.nop)
+      case 'alarm-brand':
+        return allDevices.filter(d => (d.manufacturer || '').toLowerCase() === (detailRow.brand || '').toLowerCase())
+      case 'alarm-ont-type':
+        return allDevices.filter(d => d.cpe_type === detailRow.ont_type)
+      case 'availability':
+        return allDevices.filter(d =>
+          d.area_name === detailRow.area &&
+          d.region_name === detailRow.regional &&
+          d.nop_name === detailRow.nop
+        )
+      case 'performance':
+        return allDevices
+      default:
+        return []
+    }
+  }, [detailRow, allDevices, activeReport])
 
   return (
     <div className="min-h-screen p-6">
@@ -116,17 +148,18 @@ export default function ReportsV2Page() {
                       {col.replace(/_/g, ' ')}
                     </th>
                   ))}
+                  <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
                 {loading ? (
-                  <tr><td colSpan={columns.length} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
+                  <tr><td colSpan={columns.length + 1} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
                 ) : reportData.length === 0 ? (
-                  <tr><td colSpan={columns.length} className="px-4 py-10 text-center text-gray-400">No data available</td></tr>
+                  <tr><td colSpan={columns.length + 1} className="px-4 py-10 text-center text-gray-400">No data available</td></tr>
                 ) : reportData.map((row: any, i: number) => (
                   <tr key={i} className="hover:bg-slate-700/30 transition-colors">
                     {columns.map(col => (
-                      <td key={col} className="px-4 py-3 text-sm text-white whitespace-nowrap">
+                      <td key={col} className="px-4 py-3 text-sm text-white whitespace-nowrap cursor-pointer" onClick={() => setDetailRow(row)}>
                         {col.includes('count') || col.includes('total') ? (
                           <span className="font-bold">{row[col]}</span>
                         ) : col.includes('pct') || col.includes('rate') ? (
@@ -140,6 +173,12 @@ export default function ReportsV2Page() {
                         )}
                       </td>
                     ))}
+                    <td className="px-4 py-3">
+                      <button onClick={() => setDetailRow(detailRow === row ? null : row)}
+                        className="p-1 rounded-lg hover:bg-slate-600 text-gray-400">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -152,6 +191,83 @@ export default function ReportsV2Page() {
           )}
         </div>
       </div>
+
+      {/* Device Detail Slide-in Panel */}
+      {detailRow && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={() => setDetailRow(null)}>
+          <div className="w-full max-w-2xl bg-slate-900 h-full overflow-y-auto shadow-2xl border-l border-slate-700" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-slate-900 z-10 flex items-center justify-between p-6 border-b border-slate-700">
+              <div>
+                <h2 className="text-lg font-bold text-white">Device Details</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {activeReport === 'alarm-area' && `Area: ${detailRow.area}`}
+                  {activeReport === 'alarm-regional' && `Regional: ${detailRow.regional}`}
+                  {activeReport === 'alarm-nop' && `NOP: ${detailRow.nop}`}
+                  {activeReport === 'alarm-brand' && `Brand: ${detailRow.brand}`}
+                  {activeReport === 'alarm-ont-type' && `ONT Type: ${detailRow.ont_type}`}
+                  {activeReport === 'availability' && `${detailRow.area} / ${detailRow.regional} / ${detailRow.nop}`}
+                  {activeReport === 'performance' && 'All Devices'}
+                  &nbsp;&middot; {detailDevices.length} devices
+                </p>
+              </div>
+              <button onClick={() => setDetailRow(null)} className="p-2 rounded-lg hover:bg-slate-700 text-gray-400"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-3">
+              {detailDevices.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">No devices found for this group.</p>
+              ) : (
+                detailDevices.map(d => (
+                  <div key={d.id} className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 hover:border-slate-600 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="text-sm font-semibold text-white">{d.device_name || d.serial_number}</p>
+                        <p className="text-xs text-gray-400 font-mono">{d.serial_number}{d.indihome_id ? ` · ${d.indihome_id}` : ''}</p>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${d.status === 'online' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
+                        {d.status}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                      <div>
+                        <span className="text-gray-500">Brand</span>
+                        <p className="text-gray-300">{d.manufacturer || '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Type</span>
+                        <p className="text-gray-300">{d.cpe_type || '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Speed</span>
+                        <p className="text-gray-300">{d.speed_name || '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">NOP</span>
+                        <p className="text-gray-300">{d.nop_name || '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Regional</span>
+                        <p className="text-gray-300">{d.region_name || '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Area</span>
+                        <p className="text-gray-300">{d.area_name || '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Avg Ping (24h)</span>
+                        <p className="font-mono text-blue-300">{Number(d.avg_ping).toFixed(2)} ms</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Alias</span>
+                        <p className="text-gray-300">{d.alias_device || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -759,7 +759,7 @@ function DevicesPageContent() {
         </button>
       </div>
 
-      <NetworkOverviewHeader />
+      <NetworkOverviewHeader areaId={selectedArea} regionalId={selectedRegion === 'none' ? null : selectedRegion} nopId={selectedNopCity} />
 
       {/* Success Toast */}
       {successMsg && (

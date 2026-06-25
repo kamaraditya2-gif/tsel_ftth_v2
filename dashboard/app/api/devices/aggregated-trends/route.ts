@@ -2,44 +2,82 @@ import { NextResponse } from 'next/server'
 import pool from '@/lib/db'
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(request: Request) {
   let client
   try {
+    const { searchParams } = new URL(request.url)
+    const areaId = searchParams.get('area_id')
+    const regionalId = searchParams.get('regional_id')
+    const nopId = searchParams.get('nop_id')
+
+    const deviceFilter: string[] = []
+    const filterParams: any[] = []
+    let paramIndex = 1
+
+    if (areaId) {
+      deviceFilter.push(`d.cluster_nop_id IN (SELECT id FROM master_cluster_nop WHERE area_id = $${paramIndex})`)
+      filterParams.push(parseInt(areaId))
+      paramIndex++
+    }
+    if (regionalId) {
+      deviceFilter.push(`d.downstream_server_id = $${paramIndex}`)
+      filterParams.push(parseInt(regionalId))
+      paramIndex++
+    }
+    if (nopId) {
+      deviceFilter.push(`d.cluster_nop_id = $${paramIndex}`)
+      filterParams.push(parseInt(nopId))
+      paramIndex++
+    }
+
+    const joinClause = deviceFilter.length > 0
+      ? `JOIN devices_ont d ON tp.device_id = d.id AND ${deviceFilter.join(' AND ')}`
+      : ''
+    const joinClauseDL = deviceFilter.length > 0
+      ? `JOIN devices_ont d ON td.device_id = d.id AND ${deviceFilter.join(' AND ')}`
+      : ''
+    const joinClauseUL = deviceFilter.length > 0
+      ? `JOIN devices_ont d ON tu.device_id = d.id AND ${deviceFilter.join(' AND ')}`
+      : ''
+
     client = await pool.connect()
 
     const [pingTrends, downloadTrends, uploadTrends] = await Promise.all([
       client.query(`
         SELECT
-          DATE_TRUNC('hour', executed_at) as hour_bucket,
-          AVG(ping_igw) as avg_ping_igw,
-          AVG(ping_ebr) as avg_ping_ebr,
-          AVG(packet_loss_igw) as avg_packet_loss,
+          DATE_TRUNC('hour', tp.executed_at) as hour_bucket,
+          AVG(tp.ping_igw) as avg_ping_igw,
+          AVG(tp.ping_ebr) as avg_ping_ebr,
+          AVG(tp.packet_loss_igw) as avg_packet_loss,
           COUNT(*) as sample_count
-        FROM test_results_ping
-        WHERE executed_at > NOW() - INTERVAL '24 hours'
-        GROUP BY DATE_TRUNC('hour', executed_at)
+        FROM test_results_ping tp
+        ${joinClause}
+        WHERE tp.executed_at > NOW() - INTERVAL '24 hours'
+        GROUP BY DATE_TRUNC('hour', tp.executed_at)
         ORDER BY hour_bucket ASC
-      `),
+      `, filterParams),
       client.query(`
         SELECT
-          DATE_TRUNC('hour', executed_at) as hour_bucket,
-          AVG(download_speed) as avg_download_speed,
+          DATE_TRUNC('hour', td.executed_at) as hour_bucket,
+          AVG(td.download_speed) as avg_download_speed,
           COUNT(*) as sample_count
-        FROM test_results_speed_download
-        WHERE executed_at > NOW() - INTERVAL '24 hours'
-        GROUP BY DATE_TRUNC('hour', executed_at)
+        FROM test_results_speed_download td
+        ${joinClauseDL}
+        WHERE td.executed_at > NOW() - INTERVAL '24 hours'
+        GROUP BY DATE_TRUNC('hour', td.executed_at)
         ORDER BY hour_bucket ASC
-      `),
+      `, filterParams),
       client.query(`
         SELECT
-          DATE_TRUNC('hour', executed_at) as hour_bucket,
-          AVG(upload_speed) as avg_upload_speed,
+          DATE_TRUNC('hour', tu.executed_at) as hour_bucket,
+          AVG(tu.upload_speed) as avg_upload_speed,
           COUNT(*) as sample_count
-        FROM test_results_speed_upload
-        WHERE executed_at > NOW() - INTERVAL '24 hours'
-        GROUP BY DATE_TRUNC('hour', executed_at)
+        FROM test_results_speed_upload tu
+        ${joinClauseUL}
+        WHERE tu.executed_at > NOW() - INTERVAL '24 hours'
+        GROUP BY DATE_TRUNC('hour', tu.executed_at)
         ORDER BY hour_bucket ASC
-      `)
+      `, filterParams)
     ])
 
     const pingMap = new Map()

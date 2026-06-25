@@ -2,44 +2,86 @@ import { NextResponse } from 'next/server'
 import pool from '@/lib/db'
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(request: Request) {
   let client
   try {
+    const { searchParams } = new URL(request.url)
+    const areaId = searchParams.get('area_id')
+    const regionalId = searchParams.get('regional_id')
+    const nopId = searchParams.get('nop_id')
+
+    const deviceFilter: string[] = []
+    const filterParams: any[] = []
+    let paramIndex = 1
+
+    if (areaId) {
+      deviceFilter.push(`d.cluster_nop_id IN (SELECT id FROM master_cluster_nop WHERE area_id = $${paramIndex})`)
+      filterParams.push(parseInt(areaId))
+      paramIndex++
+    }
+    if (regionalId) {
+      deviceFilter.push(`d.downstream_server_id = $${paramIndex}`)
+      filterParams.push(parseInt(regionalId))
+      paramIndex++
+    }
+    if (nopId) {
+      deviceFilter.push(`d.cluster_nop_id = $${paramIndex}`)
+      filterParams.push(parseInt(nopId))
+      paramIndex++
+    }
+
+    const joinClause = deviceFilter.length > 0
+      ? `JOIN devices_ont d ON tp.device_id = d.id AND ${deviceFilter.join(' AND ')}`
+      : ''
+    const joinClauseDL = deviceFilter.length > 0
+      ? `JOIN devices_ont d ON td.device_id = d.id AND ${deviceFilter.join(' AND ')}`
+      : ''
+    const joinClauseUL = deviceFilter.length > 0
+      ? `JOIN devices_ont d ON tu.device_id = d.id AND ${deviceFilter.join(' AND ')}`
+      : ''
+    const deviceWhere = deviceFilter.length > 0
+      ? 'AND ' + deviceFilter.join(' AND ').replace(/\bd\./g, 'd2.')
+      : ''
+
     client = await pool.connect()
 
     const [pingStats, downloadStats, uploadStats, deviceCounts, successStats] = await Promise.all([
       client.query(`
         SELECT
-          AVG(ping_igw) as avg_ping_igw,
-          AVG(ping_ebr) as avg_ping_ebr,
-          AVG(packet_loss_igw) as avg_packet_loss_igw,
-          AVG(packet_loss_ebr) as avg_packet_loss_ebr
-        FROM test_results_ping
-        WHERE executed_at > NOW() - INTERVAL '24 hours'
-      `),
+          AVG(tp.ping_igw) as avg_ping_igw,
+          AVG(tp.ping_ebr) as avg_ping_ebr,
+          AVG(tp.packet_loss_igw) as avg_packet_loss_igw,
+          AVG(tp.packet_loss_ebr) as avg_packet_loss_ebr
+        FROM test_results_ping tp
+        ${joinClause}
+        WHERE tp.executed_at > NOW() - INTERVAL '24 hours'
+      `, filterParams),
       client.query(`
-        SELECT AVG(download_speed) as avg_download_speed
-        FROM test_results_speed_download
-        WHERE executed_at > NOW() - INTERVAL '24 hours'
-      `),
+        SELECT AVG(td.download_speed) as avg_download_speed
+        FROM test_results_speed_download td
+        ${joinClauseDL}
+        WHERE td.executed_at > NOW() - INTERVAL '24 hours'
+      `, filterParams),
       client.query(`
-        SELECT AVG(upload_speed) as avg_upload_speed
-        FROM test_results_speed_upload
-        WHERE executed_at > NOW() - INTERVAL '24 hours'
-      `),
+        SELECT AVG(tu.upload_speed) as avg_upload_speed
+        FROM test_results_speed_upload tu
+        ${joinClauseUL}
+        WHERE tu.executed_at > NOW() - INTERVAL '24 hours'
+      `, filterParams),
       client.query(`
         SELECT
           COUNT(*) as total_devices,
           SUM(CASE WHEN status = 'online' THEN 1 ELSE 0 END) as online_count,
           SUM(CASE WHEN status = 'offline' THEN 1 ELSE 0 END) as offline_count
-        FROM devices_ont
-      `),
+        FROM devices_ont d2
+        WHERE 1=1 ${deviceWhere}
+      `, filterParams),
       client.query(`
         SELECT
           COUNT(*) as total_tests,
           SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as success_count
-        FROM queue_jobs
-        WHERE created_at > NOW() - INTERVAL '24 hours'
+        FROM queue_jobs qj
+        WHERE qj.created_at > NOW() - INTERVAL '24 hours'
       `)
     ])
 

@@ -5,6 +5,11 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const cpeTypesOnly = searchParams.get('cpe_types_only') === 'true'
+  const areaId = searchParams.get('area_id')
+  const regionalId = searchParams.get('regional_id')
+  const nopId = searchParams.get('nop_id')
+  const manufacturer = searchParams.get('manufacturer')
+  const cpeType = searchParams.get('cpe_type')
 
   let client
   try {
@@ -19,6 +24,40 @@ export async function GET(request: Request) {
       `)
       return NextResponse.json({ cpe_types: res.rows.map(r => r.cpe_type) })
     }
+
+    const filterConditions: string[] = []
+    const filterParams: any[] = []
+    let paramIndex = 1
+
+    if (areaId) {
+      filterConditions.push(`n.area_id = $${paramIndex}`)
+      filterParams.push(parseInt(areaId))
+      paramIndex++
+    }
+    if (regionalId) {
+      filterConditions.push(`d.downstream_server_id = $${paramIndex}`)
+      filterParams.push(parseInt(regionalId))
+      paramIndex++
+    }
+    if (nopId) {
+      filterConditions.push(`d.cluster_nop_id = $${paramIndex}`)
+      filterParams.push(parseInt(nopId))
+      paramIndex++
+    }
+    if (manufacturer) {
+      filterConditions.push(`d.manufacturer ILIKE $${paramIndex}`)
+      filterParams.push(manufacturer)
+      paramIndex++
+    }
+    if (cpeType) {
+      filterConditions.push(`d.cpe_type = $${paramIndex}`)
+      filterParams.push(cpeType)
+      paramIndex++
+    }
+
+    const whereClause = filterConditions.length > 0
+      ? `AND ${filterConditions.join(' AND ')}`
+      : ''
 
     const res = await client.query(`
       SELECT 
@@ -44,19 +83,24 @@ export async function GET(request: Request) {
         sg.name as speed_name,
         ds.name as region_name,
         ds.province as region_province,
+        n.name as nop_name,
+        ma.name as area_name,
         COALESCE(p.avg_ping, 0) as avg_ping
       FROM devices_ont d
       LEFT JOIN group_devices g ON d.group_id = g.id
       LEFT JOIN speed_group sg ON d.speed_id = sg.id
       LEFT JOIN downstream_servers ds ON d.downstream_server_id = ds.id
+      LEFT JOIN master_cluster_nop n ON d.cluster_nop_id = n.id
+      LEFT JOIN master_area ma ON n.area_id = ma.id
       LEFT JOIN (
         SELECT device_id, AVG(ping_igw) as avg_ping
         FROM test_results_ping
         WHERE executed_at > NOW() - INTERVAL '24 hours'
         GROUP BY device_id
       ) p ON d.id = p.device_id 
+      WHERE 1=1 ${whereClause}
       ORDER BY d.device_name
-    `)
+    `, filterParams)
 
     const devices = res.rows.map(row => ({
       id: row.id,
@@ -80,6 +124,8 @@ export async function GET(request: Request) {
       speed_name: row.speed_name,
       region_name: row.region_name,
       region_province: row.region_province,
+      nop_name: row.nop_name,
+      area_name: row.area_name,
       avg_ping: row.avg_ping,
     }))
 

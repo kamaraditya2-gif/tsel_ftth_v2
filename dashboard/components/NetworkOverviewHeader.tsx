@@ -33,15 +33,27 @@ interface TrendData {
   avg_upload_speed: number
 }
 
-export default function NetworkOverviewHeader() {
+interface NetworkOverviewHeaderProps {
+  areaId?: number | null
+  regionalId?: number | null
+  nopId?: number | null
+}
+
+export default function NetworkOverviewHeader({ areaId, regionalId, nopId }: NetworkOverviewHeaderProps) {
   const [averages, setAverages] = useState<Averages | null>(null)
   const [trends, setTrends] = useState<TrendData[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const params = new URLSearchParams()
+    if (areaId) params.set('area_id', areaId.toString())
+    if (regionalId) params.set('regional_id', regionalId.toString())
+    if (nopId) params.set('nop_id', nopId.toString())
+    const qs = params.toString()
+
     Promise.all([
-      fetch('/api/devices/averages').then(r => r.json()),
-      fetch('/api/devices/aggregated-trends').then(r => r.json())
+      fetch(`/api/devices/averages${qs ? `?${qs}` : ''}`).then(r => r.json()),
+      fetch(`/api/devices/aggregated-trends${qs ? `?${qs}` : ''}`).then(r => r.json())
     ]).then(([avgData, trendData]) => {
       setAverages(avgData)
       setTrends(Array.isArray(trendData) ? trendData : [])
@@ -50,7 +62,7 @@ export default function NetworkOverviewHeader() {
     }).finally(() => {
       setLoading(false)
     })
-  }, [])
+  }, [areaId, regionalId, nopId])
 
   if (loading) {
     return (
