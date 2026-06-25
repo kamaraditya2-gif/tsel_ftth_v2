@@ -102,7 +102,7 @@ function getColor(device: MapDevice, metric: MetricMode, dataSource: DataSource)
 }
 
 function getRadius(status: string): number {
-  return status === 'offline' ? 14 : 10
+  return status === 'offline' ? 16 : 12
 }
 
 export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataSource = 'upstream', areaId, regionalId, nopId, speedGroupId, manufacturerId, ontModelId, serverId }: DeviceHeatmapProps) {
@@ -167,9 +167,9 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
             },
             buildings: {
               type: 'vector',
-              tiles: ['https://tiles.openfreemap.org/{z}/{x}/{y}.pbf'],
-              maxzoom: 16,
-              attribution: '&copy; OpenStreetMap contributors',
+              tiles: ['https://api.maptiler.com/tiles/v3/{z}/{x}/{y}.pbf?key=3XChKc8u4YXTUmjuoqaP'],
+              maxzoom: 17,
+              attribution: '&copy; MapTiler &copy; OpenStreetMap contributors',
             },
           },
           layers: [
@@ -342,9 +342,12 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
         el.style.height = `${diameter}px`
         el.style.borderRadius = '50%'
         el.style.background = color
-        el.style.border = '2px solid #ffffff'
-        el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3)'
+        el.style.border = '3px solid #ffffff'
+        el.style.boxShadow = `0 0 0 3px rgba(0,0,0,0.4), 0 0 12px ${color}80`
         el.style.cursor = 'pointer'
+        el.style.transition = 'transform 0.15s'
+        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.5)' })
+        el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)' })
 
         const marker = new maplibregl.Marker({ element: el })
           .setLngLat([Number(device.lng), Number(device.lat)])
