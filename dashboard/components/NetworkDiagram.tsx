@@ -3,11 +3,28 @@
 import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 
-export default function NetworkDiagram(props: any) {
+interface NetworkDiagramUpstream {
+  avgDownload: number | string
+  avgUpload: number | string
+  avgLatency: number | string
+  avgEbrLatency: number | string
+}
+
+interface NetworkDiagramDownstream {
+  avgLatency: number | string
+  avgPacketLoss: number | string
+}
+
+interface NetworkDiagramProps {
+  upstream: NetworkDiagramUpstream
+  downstream: NetworkDiagramDownstream
+}
+
+export default function NetworkDiagram({ upstream, downstream }: NetworkDiagramProps) {
   const [mode, setMode] = useState('upstream')
   const [show, setShow] = useState(false)
-  const u = props.upstream
-  const d = props.downstream
+  const u = upstream
+  const d = downstream
 
   if (!show) {
     return (
@@ -115,7 +132,7 @@ export default function NetworkDiagram(props: any) {
         {/* Difference indicator */}
         <rect x="395" y="165" width="150" height="22" rx="6" fill="rgba(148,163,184,0.08)" stroke="rgba(148,163,184,0.15)" strokeWidth="0.5" />
         <text x="470" y="179" textAnchor="middle" fill="#94a3b8" fontSize="9">
-          Δ {Math.abs((u.avgLatency||0)-(u.avgEbrLatency||0))} ms
+          Δ {Math.abs((Number(u.avgLatency)||0)-(Number(u.avgEbrLatency)||0))} ms
         </text>
 
         {/* File Server node */}

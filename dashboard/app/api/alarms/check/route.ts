@@ -198,6 +198,9 @@ export async function GET(request: Request) {
       })
 
     let filtered = alarms
+    if (severity) {
+      filtered = filtered.filter(a => a.max_severity === severity)
+    }
 
     return NextResponse.json({
       total: filtered.length,

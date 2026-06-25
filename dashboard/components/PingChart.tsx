@@ -1,6 +1,6 @@
 'use client'
 
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, ComposedChart, Legend } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ComposedChart, Legend } from 'recharts'
 
 interface PingChartProps {
   data: any[]
@@ -87,27 +87,53 @@ export default function PingChart({ data, type = 'ping', unit: customUnit }: Pin
               iconType="circle"
               wrapperStyle={{ paddingTop: '10px' }}
             />
-            {/* MIN-MAX range bands (rendered behind the avg lines) */}
-            <Area
+            {/* MIN-MAX range lines */}
+            <Line
               type="monotone"
-              dataKey={(d: any) => [d.igw_min, d.igw_max]}
-              stroke="none"
-              fill="#3b82f6"
-              fillOpacity={0.12}
-              name="_igwRange"
-              legendType="none"
+              dataKey="igw_min"
+              stroke="#3b82f6"
+              strokeWidth={1}
+              strokeDasharray="4 4"
+              dot={false}
               activeDot={false}
+              name="near IGW (min)"
+              legendType="none"
               isAnimationActive={false}
             />
-            <Area
+            <Line
               type="monotone"
-              dataKey={(d: any) => [d.ebr_min, d.ebr_max]}
-              stroke="none"
-              fill="#8b5cf6"
-              fillOpacity={0.12}
-              name="_ebrRange"
-              legendType="none"
+              dataKey="igw_max"
+              stroke="#3b82f6"
+              strokeWidth={1}
+              strokeDasharray="4 4"
+              dot={false}
               activeDot={false}
+              name="near IGW (max)"
+              legendType="none"
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="ebr_min"
+              stroke="#8b5cf6"
+              strokeWidth={1}
+              strokeDasharray="4 4"
+              dot={false}
+              activeDot={false}
+              name="near EBR (min)"
+              legendType="none"
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="ebr_max"
+              stroke="#8b5cf6"
+              strokeWidth={1}
+              strokeDasharray="4 4"
+              dot={false}
+              activeDot={false}
+              name="near EBR (max)"
+              legendType="none"
               isAnimationActive={false}
             />
             <Line 
@@ -192,27 +218,53 @@ export default function PingChart({ data, type = 'ping', unit: customUnit }: Pin
               iconType="circle"
               wrapperStyle={{ paddingTop: '10px' }}
             />
-            {/* MIN-MAX range bands (rendered behind the avg lines) */}
-            <Area
+            {/* MIN-MAX range lines */}
+            <Line
               type="monotone"
-              dataKey={(d: any) => [d.min_download, d.max_download]}
-              stroke="none"
-              fill="#22c55e"
-              fillOpacity={0.12}
-              name="_downloadRange"
-              legendType="none"
+              dataKey="min_download"
+              stroke="#22c55e"
+              strokeWidth={1}
+              strokeDasharray="4 4"
+              dot={false}
               activeDot={false}
+              name="Download (min)"
+              legendType="none"
               isAnimationActive={false}
             />
-            <Area
+            <Line
               type="monotone"
-              dataKey={(d: any) => [d.min_upload, d.max_upload]}
-              stroke="none"
-              fill="#3b82f6"
-              fillOpacity={0.12}
-              name="_uploadRange"
-              legendType="none"
+              dataKey="max_download"
+              stroke="#22c55e"
+              strokeWidth={1}
+              strokeDasharray="4 4"
+              dot={false}
               activeDot={false}
+              name="Download (max)"
+              legendType="none"
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="min_upload"
+              stroke="#3b82f6"
+              strokeWidth={1}
+              strokeDasharray="4 4"
+              dot={false}
+              activeDot={false}
+              name="Upload (min)"
+              legendType="none"
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="max_upload"
+              stroke="#3b82f6"
+              strokeWidth={1}
+              strokeDasharray="4 4"
+              dot={false}
+              activeDot={false}
+              name="Upload (max)"
+              legendType="none"
               isAnimationActive={false}
             />
             <Line 

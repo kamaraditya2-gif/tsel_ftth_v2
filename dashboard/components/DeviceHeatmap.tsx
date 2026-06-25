@@ -1,5 +1,6 @@
-// @ts-nocheck
 'use client'
+
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 import { useEffect, useRef, useState } from 'react'
 
@@ -181,7 +182,7 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
 
     // Ensure the map renders correctly inside its container (fixes gray tiles
     // when the container is sized after the map is created).
-    setTimeout(() => map.invalidateSize(), 100)
+    const timer = setTimeout(() => map.invalidateSize(), 100)
 
     // Clear existing markers and lines
     markersRef.current.forEach((m) => map.removeLayer(m))
@@ -195,9 +196,15 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
     )
 
     if (validDevices.length > 0) {
-      const bounds = L.latLngBounds(validDevices.map((d) => [Number(d.lat), Number(d.lng)]))
-      const maxZ = nopId ? 17 : regionalId ? 13 : areaId ? 11 : 7
-      map.fitBounds(bounds, { padding: [30, 30], maxZoom: maxZ })
+      if (nopId) {
+        const avgLat = validDevices.reduce((s, d) => s + Number(d.lat), 0) / validDevices.length
+        const avgLng = validDevices.reduce((s, d) => s + Number(d.lng), 0) / validDevices.length
+        map.setView([avgLat, avgLng], 17)
+      } else {
+        const bounds = L.latLngBounds(validDevices.map((d) => [Number(d.lat), Number(d.lng)]))
+        const maxZ = regionalId ? 13 : areaId ? 11 : 7
+        map.fitBounds(bounds, { padding: [30, 30], maxZoom: maxZ })
+      }
 
       // Draw connection lines from selected/active downstream server to each ONT (downstream mode only)
       if (dataSource === 'downstream') {
@@ -308,7 +315,7 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
     }
 
     return () => {
-      // cleanup handled by effect re-runs above
+      clearTimeout(timer)
     }
   }, [devices, metric, dataSource])
 

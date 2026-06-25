@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Server, Cpu, Settings, UserCircle, Users, Workflow, Moon, Sun, FileCode, LogOut, MapPin, FlaskConical, ListChecks, Clock, Zap, Gauge, Database, Building2, Box, BarChart3, Menu, X, Bell, Layers, Activity, Globe, Network, AlertTriangle } from 'lucide-react'
+import { LayoutDashboard, Server, Cpu, Settings, UserCircle, Users, Workflow, Moon, Sun, FileCode, LogOut, MapPin, FlaskConical, Clock, Zap, Gauge, Database, Building2, Box, BarChart3, Menu, X, Layers, Activity, Globe, Network, AlertTriangle } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 
 const menuItems = [
