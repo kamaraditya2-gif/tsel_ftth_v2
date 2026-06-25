@@ -163,7 +163,7 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
               type: 'raster',
               tiles: ['/api/tiles/{z}/{x}/{y}.png?v=2'],
               tileSize: 256,
-              attribution: '&copy; CARTO Dark',
+              attribution: '&copy; CARTO',
             },
             buildings: {
               type: 'vector',
@@ -187,7 +187,7 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
               'source-layer': 'building',
               minzoom: 14,
               paint: {
-                'fill-extrusion-color': 'hsl(35, 10%, 82%)',
+                'fill-extrusion-color': 'hsl(0, 0%, 45%)',
                 'fill-extrusion-height': ['get', 'render_height'],
                 'fill-extrusion-base': ['get', 'render_min_height'],
                 'fill-extrusion-opacity': 0.6,
