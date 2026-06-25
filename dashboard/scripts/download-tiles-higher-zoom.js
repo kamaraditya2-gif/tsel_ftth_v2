@@ -94,7 +94,9 @@ function latToTileY(lat, zoom) {
 
 function downloadTile(z, x, y) {
   return new Promise((resolve) => {
-    const url = `https://api.maptiler.com/tiles/satellite/${z}/${x}/${y}.jpg?key=3XChKc8u4YXTUmjuoqaP`;
+    const subdomains = ['a', 'b', 'c'];
+    const subdomain = subdomains[Math.floor(Math.random() * subdomains.length)];
+    const url = `https://${subdomain}.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png`;
 
     const zDir = path.join(tilesDir, z.toString());
     const xDir = path.join(zDir, x.toString());

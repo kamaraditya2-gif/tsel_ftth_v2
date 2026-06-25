@@ -27,25 +27,23 @@ export async function GET(
     // and lets us send the required User-Agent header that OSM expects.
     try {
       const tilePath = params.path.join('/')
-      const isJpg = tilePath.endsWith('.jpg')
-      const tileKey = tilePath.replace(/\.(png|jpg)$/, '')
-      const maptilerUrl = `https://api.maptiler.com/tiles/satellite/${tileKey}.jpg?key=3XChKc8u4YXTUmjuoqaP`
+      const osmUrl = `https://a.basemaps.cartocdn.com/dark_all/${tilePath}`
 
-      const upstreamRes = await fetch(maptilerUrl, {
+      const osmRes = await fetch(osmUrl, {
         headers: {
           'User-Agent': 'MojoJojoMonitor/1.0 (dashboard map tiles)',
         },
       })
 
-      if (!upstreamRes.ok) {
-        return new NextResponse(null, { status: upstreamRes.status })
+      if (!osmRes.ok) {
+        return new NextResponse(null, { status: osmRes.status })
       }
 
-      const arrayBuffer = await upstreamRes.arrayBuffer()
+      const arrayBuffer = await osmRes.arrayBuffer()
 
       return new NextResponse(Buffer.from(arrayBuffer), {
         headers: {
-          'Content-Type': 'image/jpeg',
+          'Content-Type': 'image/png',
           'Cache-Control': 'public, max-age=86400',
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET',
