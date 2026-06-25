@@ -127,6 +127,7 @@ function DevicesPageContent() {
   })
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deviceToDelete, setDeviceToDelete] = useState<Device | null>(null)
+  const [successMsg, setSuccessMsg] = useState('')
   const [showOnDemandTestModal, setShowOnDemandTestModal] = useState(false)
   const [onDemandTestDevice, setOnDemandTestDevice] = useState<Device | null>(null)
   const [selectedTestTypes, setSelectedTestTypes] = useState({
@@ -433,9 +434,9 @@ function DevicesPageContent() {
   }
 
   const handleUpdate = async () => {
-    if (!selectedDevice) return
-
+    if (!selectedDevice) { alert('No device selected'); return }
     try {
+      console.log('Saving device:', selectedDevice.id, editFormData)
       const res = await fetch(`/api/devices/${selectedDevice.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -443,13 +444,18 @@ function DevicesPageContent() {
       })
 
       if (!res.ok) {
-        console.error('Failed to update device')
+        const errText = await res.text()
+        console.error('Failed to update device:', res.status, errText)
+        alert('Error: ' + errText)
         return
       }
 
       await fetchDevices()
       setShowEditModal(false)
       setSelectedDevice(null)
+      alert('Device saved successfully!')
+      setSuccessMsg('Device updated successfully')
+      setTimeout(() => setSuccessMsg(''), 3000)
     } catch (error) {
       console.error('Error updating device:', error)
     }
@@ -470,6 +476,8 @@ function DevicesPageContent() {
 
       await fetchDevices()
       setShowAddModal(false)
+      setSuccessMsg('Device added successfully')
+      setTimeout(() => setSuccessMsg(''), 3000)
       setAddFormData({
         device_name: '',
         serial_number: '',
@@ -752,6 +760,13 @@ function DevicesPageContent() {
       </div>
 
       <NetworkOverviewHeader />
+
+      {/* Success Toast */}
+      {successMsg && (
+        <div className="fixed top-4 right-4 z-[100] bg-green-600 text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-semibold">
+          ✅ {successMsg}
+        </div>
+      )}
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-visible">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">

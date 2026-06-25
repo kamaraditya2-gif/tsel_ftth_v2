@@ -27,7 +27,7 @@ export async function GET(
     // and lets us send the required User-Agent header that OSM expects.
     try {
       const tilePath = params.path.join('/')
-      const osmUrl = `https://tile.openstreetmap.org/${tilePath}`
+      const osmUrl = `https://a.basemaps.cartocdn.com/dark_all/${tilePath}`
 
       const osmRes = await fetch(osmUrl, {
         headers: {

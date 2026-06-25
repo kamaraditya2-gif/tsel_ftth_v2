@@ -64,8 +64,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const query = `UPDATE devices_ont SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`
     const res = await client.query(query, values)
 
-    client.release()
-
     if (res.rows.length === 0) {
       return NextResponse.json({ error: 'Device not found' }, { status: 404 })
     }

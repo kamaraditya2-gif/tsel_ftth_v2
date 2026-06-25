@@ -169,9 +169,9 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
       }).setView([-2.5, 118], 5)
 
       // Same-origin proxy endpoint serves tiles (local or proxied from OSM)
-      const tileUrl = '/api/tiles/{z}/{x}/{y}.png'
+      const tileUrl = '/api/tiles/{z}/{x}/{y}.png?v=2'
       L.tileLayer(tileUrl, {
-        attribution: '&copy; OpenStreetMap contributors',
+        attribution: '&copy; CARTO Dark',
         maxZoom: 18,
       }).addTo(mapInstanceRef.current)
     }
@@ -195,7 +195,9 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
 
     if (validDevices.length > 0) {
       const bounds = L.latLngBounds(validDevices.map((d) => [Number(d.lat), Number(d.lng)]))
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 })
+      const maxZ = nopId ? 16 : regionalId ? 12 : areaId ? 10 : 8
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: maxZ })
+      setTimeout(() => { try { map.invalidateSize() } catch(e) {} }, 300)
 
       // Draw connection lines from selected/active downstream server to each ONT (downstream mode only)
       if (dataSource === 'downstream') {

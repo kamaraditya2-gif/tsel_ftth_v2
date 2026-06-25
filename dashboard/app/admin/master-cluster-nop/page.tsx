@@ -58,8 +58,14 @@ export default function MasterClusterNopPage() {
         fetch('/api/downstream-servers'),
         fetch('/api/master-area')
       ])
-      if (regRes.ok) setRegionals(await regRes.json())
-      if (areaRes.ok) setAreas(await areaRes.json())
+      if (regRes.ok) {
+        const regData = await regRes.json()
+        setRegionals(Array.isArray(regData) ? regData : regData.servers || [])
+      }
+      if (areaRes.ok) {
+        const areaData = await areaRes.json()
+        setAreas(Array.isArray(areaData) ? areaData : [])
+      }
     } catch {
       console.error('Failed to fetch dropdown data')
     }
