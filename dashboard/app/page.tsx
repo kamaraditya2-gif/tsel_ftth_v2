@@ -14,6 +14,7 @@ import AlarmPieChart from '@/components/AlarmPieChart'
 import L1AvailabilityCard from '@/components/L1AvailabilityCard'
 import TopAlarmCard from '@/components/TopAlarmCard'
 import PerformanceAnalytics from '@/components/PerformanceAnalytics'
+import TopCards from '@/components/TopCards'
 import dynamic from 'next/dynamic'
 
 const DeviceHeatmap = dynamic(() => import('@/components/DeviceHeatmap'), { ssr: false })
@@ -73,7 +74,7 @@ export default function DashboardPage() {
   const [manufacturerDropdownOpen, setManufacturerDropdownOpen] = useState(false)
   const [ontModelDropdownOpen, setOntModelDropdownOpen] = useState(false)
   const [selectedRegional, setSelectedRegional] = useState<number | null>(null)
-  const [selectedNopCity, setSelectedNopCity] = useState<string | null>(null)
+  const [selectedNopCity, setSelectedNopCity] = useState<number | null>(null)
   const [nopDropdownOpen, setNopDropdownOpen] = useState(false)
   const [selectedSpeedGroup, setSelectedSpeedGroup] = useState<number | null>(null)
   const [selectedManufacturer, setSelectedManufacturer] = useState<number | null>(null)
@@ -85,6 +86,8 @@ export default function DashboardPage() {
   const [downstreamServers, setDownstreamServers] = useState<any[]>([])
   const [selectedServer, setSelectedServer] = useState<number>(1)
   const [nopCities, setNopCities] = useState<any[]>([])
+  const [areas, setAreas] = useState<any[]>([])
+  const [selectedArea, setSelectedArea] = useState<number | null>(null)
   const [ontTypeData, setOntTypeData] = useState<OntTypeComparison[]>([])
   const [ontBrandData, setOntBrandData] = useState<OntTypeComparison[]>([])
   const [dashboardV2, setDashboardV2] = useState<any>(null)
@@ -99,6 +102,7 @@ export default function DashboardPage() {
     fetchOntModels()
     fetchDownstreamServers()
     fetchNopCities()
+    fetchAreas()
     fetchOntTypeComparison()
     fetchOntBrandComparison()
     fetchDashboardV2()
@@ -178,8 +182,14 @@ export default function DashboardPage() {
   const fetchDashboardData = async () => {
     try {
       const params = new URLSearchParams({ timeRange })
+      if (selectedArea) {
+        params.append('areaId', selectedArea.toString())
+      }
       if (selectedRegional) {
         params.append('regionalId', selectedRegional.toString())
+      }
+      if (selectedNopCity) {
+        params.append('nopId', selectedNopCity.toString())
       }
       if (selectedSpeedGroup) {
         params.append('speedGroupId', selectedSpeedGroup.toString())
@@ -243,6 +253,16 @@ export default function DashboardPage() {
       if (data.cities) setNopCities(data.cities)
     } catch (error) {
       console.error('Failed to fetch NOP cities:', error)
+    }
+  }
+
+  const fetchAreas = async () => {
+    try {
+      const res = await fetch('/api/master-area')
+      const data = await res.json()
+      if (Array.isArray(data)) setAreas(data)
+    } catch (error) {
+      console.error('Failed to fetch areas:', error)
     }
   }
 
@@ -605,6 +625,20 @@ export default function DashboardPage() {
             )}
           </div>
 
+          {/* Area Dropdown */}
+          <div className="relative">
+            <select
+              value={selectedArea || ''}
+              onChange={(e) => { setSelectedArea(e.target.value ? parseInt(e.target.value) : null); setSelectedRegional(null); setSelectedNopCity(null) }}
+              className="appearance-none bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-white text-xs font-medium rounded-lg px-3 py-2 pr-8 cursor-pointer hover:bg-slate-800/80 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            >
+              <option value="">All Areas</option>
+              {areas.map((a: any) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Telkomsel Regional Dropdown */}
           <div className="relative" id="regional-dropdown">
             <button
@@ -638,7 +672,7 @@ export default function DashboardPage() {
               className="flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-500/30 bg-white/10 backdrop-blur-md text-sm text-white hover:bg-white/20 transition-all duration-300 whitespace-nowrap shadow-lg shadow-emerald-500/20"
             >
               <Building2 className="w-4 h-4 text-emerald-300" />
-              <span className="truncate max-w-[120px]">{selectedNopCity || 'NOP City'}</span>
+              <span className="truncate max-w-[120px]">{selectedNopCity ? nopCities.find((c:any) => c.id === selectedNopCity)?.city || selectedNopCity : 'NOP City'}</span>
               <ChevronDown className="w-4 h-4 text-emerald-300 flex-shrink-0" />
             </button>
             {nopDropdownOpen && (
@@ -648,9 +682,9 @@ export default function DashboardPage() {
                   All Cities
                 </button>
                 {(selectedRegional ? nopCities.filter((c:any) => c.region_id === selectedRegional) : nopCities).map((c: any) => (
-                  <button key={c.id} onClick={() => { setSelectedNopCity(c.city); setNopDropdownOpen(false) }}
+                  <button key={c.id} onClick={() => { setSelectedNopCity(c.id); setNopDropdownOpen(false) }}
                     className="w-full text-left px-4 py-2 text-sm text-white hover:bg-emerald-500/20 transition-colors">
-                    {c.city}
+                    {c.name}
                   </button>
                 ))}
               </div>
@@ -772,21 +806,6 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-4 flex-wrap">
-          <div className="inline-flex rounded-lg border border-purple-500/30 p-0.5 bg-white/10 backdrop-blur-md">
-            <button
-              onClick={() => setDataSource('upstream')}
-              className={`px-4 py-2 text-xs font-medium rounded-md transition-all duration-300 ${dataSource === 'upstream' ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30' : 'text-gray-300 hover:text-white hover:bg-white/10'}`}
-            >
-              Upstream
-            </button>
-            <button
-              onClick={() => setDataSource('downstream')}
-              className={`px-4 py-2 text-xs font-medium rounded-md transition-all duration-300 ${dataSource === 'downstream' ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30' : 'text-gray-300 hover:text-white hover:bg-white/10'}`}
-            >
-              Downstream
-            </button>
-          </div>
-
           {/* Downstream Server Selector - only visible in downstream mode */}
           {dataSource === 'downstream' && downstreamServers.length > 0 && (
             <div className="relative">
@@ -821,195 +840,12 @@ export default function DashboardPage() {
 
       {/* KPI Cards */}
       {dashboardData && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Total Devices Card */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-purple-500/10 border border-purple-500/20 p-6 hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 hover:scale-105">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-500/20 rounded-xl">
-                <Server className="w-6 h-6 text-purple-300" />
-              </div>
-              <span className="text-xs font-medium text-purple-300">Device Status</span>
-            </div>
-            <div className="flex items-center justify-center">
-              <div className="relative w-32 h-32">
-                <svg className="w-full h-full" viewBox="0 0 100 100">
-                  {/* Background arc */}
-                  <path
-                    d="M 10 50 A 40 40 0 0 1 90 50"
-                    stroke="rgba(168, 85, 247, 0.2)"
-                    strokeWidth="8"
-                    fill="none"
-                    strokeLinecap="round"
-                  />
-                  {/* Color gradient arc (red to green) */}
-                  <defs>
-                    <linearGradient id="deviceStatusGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#ef4444" />
-                      <stop offset="100%" stopColor="#22c55e" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d="M 10 50 A 40 40 0 0 1 90 50"
-                    stroke="url(#deviceStatusGradient)"
-                    strokeWidth="8"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeDasharray={`${Math.PI * 40}`}
-                    strokeDashoffset={`${Math.PI * 40 * (1 - ((dashboardData.deviceStatus?.online || 0) / (dashboardData.totalDevices || 1)))}`}
-                    className="transition-all duration-1000 ease-in-out"
-                  />
-                  {/* Needle for online */}
-                  <g
-                    transform={`rotate(${((dashboardData.deviceStatus?.online || 0) / (dashboardData.totalDevices || 1)) * 180 - 90}, 50, 50)`}
-                    className="transition-transform duration-1000 ease-in-out"
-                  >
-                    <line
-                      x1="50"
-                      y1="50"
-                      x2="50"
-                      y2="15"
-                      stroke="#a855f7"
-                      strokeWidth="2"
-                    />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="4"
-                      fill="#a855f7"
-                    />
-                  </g>
-                  {/* Labels */}
-                  <text x="10" y="65" fontSize="8" fill="#a855f7">0</text>
-                  <text x="42" y="65" fontSize="8" fill="#a855f7">{Math.ceil((dashboardData.totalDevices || 0) / 2)}</text>
-                  <text x="78" y="65" fontSize="8" fill="#a855f7">{dashboardData.totalDevices || 0}</text>
-                </svg>
-                <div className="absolute bottom-0 left-0 right-0 flex flex-row items-center justify-center gap-4">
-                  <div className="flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3 text-green-400" />
-                    <span className="text-sm font-semibold text-white">{dashboardData.deviceStatus?.online || 0}</span>
-                    <span className="text-xs text-gray-400">Online</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <XCircle className="w-3 h-3 text-red-400" />
-                    <span className="text-sm font-semibold text-white">{dashboardData.deviceStatus?.offline || 0}</span>
-                    <span className="text-xs text-gray-400">Offline</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Average Speed Card */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-cyan-500/10 border border-cyan-500/20 p-6 hover:shadow-2xl hover:shadow-cyan-500/20 transition-all duration-300 hover:scale-105">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-cyan-500/20 rounded-xl">
-                <Network className="w-6 h-6 text-cyan-300" />
-              </div>
-              <span className="text-xs font-medium text-cyan-300">Avg Speed</span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">Download</span>
-                <span className="text-lg font-semibold text-white">{dashboardData.avgDownload || 0} Mbps</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">Upload</span>
-                <span className="text-lg font-semibold text-white">{dashboardData.avgUpload || 0} Mbps</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Average Latency Card */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-orange-500/10 border border-orange-500/20 p-6 hover:shadow-2xl hover:shadow-orange-500/20 transition-all duration-300 hover:scale-105">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-orange-500/20 rounded-xl">
-                <Clock className="w-6 h-6 text-orange-300" />
-              </div>
-              <span className="text-xs font-medium text-orange-300">Avg Latency</span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">near IGW</span>
-                <span className="text-lg font-semibold text-white">{dashboardData.avgPingIgw || 0} ms</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">near EBR</span>
-                <span className="text-lg font-semibold text-white">{dashboardData.avgPingEbr || 0} ms</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Average Packet Loss Card */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-pink-500/10 border border-pink-500/20 p-6 hover:shadow-2xl hover:shadow-pink-500/20 transition-all duration-300 hover:scale-105">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-pink-500/20 rounded-xl">
-                <AlertCircle className="w-6 h-6 text-pink-300" />
-              </div>
-              <span className="text-xs font-medium text-pink-300">Avg Packet Loss</span>
-            </div>
-            <div className="flex items-center justify-center">
-              <div className="relative w-32 h-32">
-                <svg className="w-full h-full" viewBox="0 0 100 100">
-                  {/* Background arc */}
-                  <path
-                    d="M 10 50 A 40 40 0 0 1 90 50"
-                    stroke="rgba(236, 72, 153, 0.2)"
-                    strokeWidth="8"
-                    fill="none"
-                    strokeLinecap="round"
-                  />
-                  {/* Color gradient arc */}
-                  <defs>
-                    <linearGradient id="packetLossGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#22c55e" />
-                      <stop offset="50%" stopColor="#eab308" />
-                      <stop offset="100%" stopColor="#ef4444" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d="M 10 50 A 40 40 0 0 1 90 50"
-                    stroke="url(#packetLossGradient)"
-                    strokeWidth="8"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeDasharray={`${Math.PI * 40}`}
-                    strokeDashoffset={`${Math.PI * 40 * (1 - (dashboardData.avgPacketLoss || 0) / 100)}`}
-                    className="transition-all duration-1000 ease-in-out"
-                  />
-                  {/* Needle */}
-                  <g
-                    transform={`rotate(${(dashboardData.avgPacketLoss || 0) * 1.8 - 90}, 50, 50)`}
-                    className="transition-transform duration-1000 ease-in-out"
-                  >
-                    <line
-                      x1="50"
-                      y1="50"
-                      x2="50"
-                      y2="15"
-                      stroke="#ec4899"
-                      strokeWidth="2"
-                    />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="4"
-                      fill="#ec4899"
-                    />
-                  </g>
-                  {/* Labels */}
-                  <text x="10" y="65" fontSize="8" fill="#ec4899">0%</text>
-                  <text x="42" y="65" fontSize="8" fill="#ec4899">50%</text>
-                  <text x="82" y="65" fontSize="8" fill="#ec4899">100%</text>
-                </svg>
-                <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-white">
-                    {dashboardData.avgPacketLoss || 0}%
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <TopCards
+          dashboardData={dashboardData}
+          dashboardV2={dashboardV2}
+          ontBrandData={ontBrandData}
+          ontTypeData={ontTypeData}
+        />
       )}
 
       {/* Device Heatmap */}
