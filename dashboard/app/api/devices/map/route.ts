@@ -85,7 +85,7 @@ export async function GET(request: Request) {
           d.last_seen,
           d.lat,
           d.lng,
-          gd.name as regional_name,
+          ds.name as regional_name,
           sg.name as speed_name,
           sg.download_threshold,
           sg.upload_threshold,
@@ -110,7 +110,7 @@ export async function GET(request: Request) {
             LIMIT 1
           ) as packet_loss_percent
         FROM devices_ont d
-        LEFT JOIN group_devices gd ON d.group_id = gd.id
+        LEFT JOIN downstream_servers ds ON d.downstream_server_id = ds.id
         LEFT JOIN speed_group sg ON d.speed_id = sg.id
         WHERE d.lat IS NOT NULL
           AND d.lng IS NOT NULL
@@ -129,7 +129,7 @@ export async function GET(request: Request) {
           d.last_seen,
           d.lat,
           d.lng,
-          gd.name as regional_name,
+          ds.name as regional_name,
           sg.name as speed_name,
           sg.download_threshold,
           sg.upload_threshold,
@@ -161,7 +161,7 @@ export async function GET(request: Request) {
           NULL as avg_latency_ms,
           NULL as packet_loss_percent
         FROM devices_ont d
-        LEFT JOIN group_devices gd ON d.group_id = gd.id
+        LEFT JOIN downstream_servers ds ON d.downstream_server_id = ds.id
         LEFT JOIN speed_group sg ON d.speed_id = sg.id
         WHERE d.lat IS NOT NULL
           AND d.lng IS NOT NULL

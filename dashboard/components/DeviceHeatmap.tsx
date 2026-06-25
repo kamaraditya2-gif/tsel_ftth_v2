@@ -195,9 +195,8 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
 
     if (validDevices.length > 0) {
       const bounds = L.latLngBounds(validDevices.map((d) => [Number(d.lat), Number(d.lng)]))
-      const maxZ = nopId ? 16 : regionalId ? 12 : areaId ? 10 : 8
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: maxZ })
-      setTimeout(() => { try { map.invalidateSize() } catch(e) {} }, 300)
+      const maxZ = nopId ? 17 : regionalId ? 13 : areaId ? 11 : 7
+      map.fitBounds(bounds, { padding: [30, 30], maxZoom: maxZ })
 
       // Draw connection lines from selected/active downstream server to each ONT (downstream mode only)
       if (dataSource === 'downstream') {
