@@ -74,6 +74,8 @@ export async function GET(request: Request) {
     const devices = devicesRes.rows
     const alarms: any[] = []
 
+    let alarmCounter = 0
+
     for (const device of devices) {
       const deviceAlarms: any[] = []
 
@@ -135,6 +137,7 @@ export async function GET(request: Request) {
 
     if (violated) {
           deviceAlarms.push({
+            alarm_code: 'ALM-' + Date.now().toString(36).toUpperCase() + '-' + String(++alarmCounter).padStart(3,'0'),
             alarm_type: th.alarm_name,
             category: th.category,
             metric_value: currentValue,

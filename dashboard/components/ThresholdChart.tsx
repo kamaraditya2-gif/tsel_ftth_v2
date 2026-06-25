@@ -51,7 +51,7 @@ export default function ThresholdChart({ timeRange = '24h', regionalId, speedGro
 
   if (loading) {
     return (
-      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-lg shadow-sm p-2 border border-gray-200 dark:border-gray-700">
         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Speed Threshold Comparison</h3>
         <div className="h-80 flex items-center justify-center">
           <div className="text-gray-500 dark:text-gray-400">Loading...</div>
@@ -62,7 +62,7 @@ export default function ThresholdChart({ timeRange = '24h', regionalId, speedGro
 
   if (!data) {
     return (
-      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-lg shadow-sm p-2 border border-gray-200 dark:border-gray-700">
         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Speed Threshold Comparison</h3>
         <div className="h-80 flex items-center justify-center">
           <div className="text-gray-500 dark:text-gray-400">No data available</div>
@@ -96,23 +96,23 @@ export default function ThresholdChart({ timeRange = '24h', regionalId, speedGro
   const overallCompliance = grandTotal > 0 ? Math.round((totalAbove / grandTotal) * 100) : 0
 
   return (
-    <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-      <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
+    <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-lg shadow-sm p-2 border border-gray-200 dark:border-gray-700">
+      <div className="flex flex-col gap-2 mb-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Speed Threshold Comparison</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Devices meeting their subscribed speed threshold</p>
+          <h3 className="text-[8px] font-bold text-gray-900 dark:text-white">Speed</h3>
+          <p className="text-[8px] text-gray-600 dark:text-gray-400 mt-1">Devices meeting their subscribed speed threshold</p>
         </div>
         <div className="flex items-center gap-3">
-          <ComplianceRing percent={overallCompliance} size={64} stroke={7} />
+          <ComplianceRing percent={overallCompliance} size={24} stroke={4} />
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-400">Overall compliance</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{overallCompliance}%</p>
+            <p className="text-[10px] font-bold text-gray-900 dark:text-white">{overallCompliance}%</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">{totalAbove} of {grandTotal} tests</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
         {metrics.map((m) => {
           const total = m.above + m.below
           const compliance = total > 0 ? Math.round((m.above / total) * 100) : 0
@@ -121,9 +121,9 @@ export default function ThresholdChart({ timeRange = '24h', regionalId, speedGro
           return (
             <div
               key={m.key}
-              className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/40 p-5"
+              className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/40 p-1.5"
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
                 <ComplianceRing percent={compliance} size={84} stroke={9} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Bell, AlertTriangle, AlertCircle, ChevronDown, ChevronUp, RefreshCw, MessageSquare, Send, Ticket, Play, Clock, X } from 'lucide-react'
 import GlobalFilter from '@/components/GlobalFilter'
 
-interface AlarmItem { alarm_type: string; category: string; metric_value: number; threshold_value: number; severity: string; unit: string }
+interface AlarmItem { alarm_code?: string; alarm_type: string; category: string; metric_value: number; threshold_value: number; severity: string; unit: string }
 interface DeviceAlarm {
   device_id: number; device_name: string; serial_number: string; brand: string; ont_type: string
   speed_name: string; speed_limit: number; latency: number; packet_loss: number
@@ -121,15 +121,16 @@ export default function AlarmsV2Page() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-700 bg-slate-800/80">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Alarm ID</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Device</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Brand/Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Timestamp</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Latency</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Packet Loss</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Download</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Upload</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Speed Pkg</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Severity</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Root Cause</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Status</th>
                   <th className="px-4 py-3 w-10"></th>
                 </tr>
@@ -139,15 +140,16 @@ export default function AlarmsV2Page() {
                 : list.length === 0 ? <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">{tab === 'active' ? 'No threshold violations' : 'No cleared devices'}</td></tr>
                 : list.map((d: DeviceAlarm) => (
                   <><tr key={d.device_id} className="hover:bg-slate-700/30 transition-colors">
+                    <td className="px-4 py-3"><span className="text-[11px] font-mono text-gray-400 font-semibold tracking-wider">{d.alarms[0]?.alarm_code || '-'}</span></td>
                     <td className="px-4 py-3"><p className="text-sm text-white">{d.device_name}</p><p className="text-xs text-gray-400">{d.serial_number}</p></td>
                     <td className="px-4 py-3"><p className="text-sm text-white">{d.brand || '-'}</p><p className="text-xs text-gray-400">{d.ont_type || ''}</p></td>
-                    <td className="px-4 py-3">{d.latency != null ? <span className={`text-sm font-mono ${d.latency > 100 ? 'text-red-400' : d.latency > 50 ? 'text-amber-400' : 'text-green-400'}`}>{d.latency} ms</span> : <span className="text-xs text-gray-500">—</span>}</td>
-                    <td className="px-4 py-3">{d.packet_loss != null ? <span className={`text-sm font-mono ${d.packet_loss > 5 ? 'text-red-400' : d.packet_loss > 2 ? 'text-amber-400' : 'text-green-400'}`}>{d.packet_loss}%</span> : <span className="text-xs text-gray-500">—</span>}</td>
-                    <td className="px-4 py-3">{d.download != null ? <span className="text-sm font-mono text-white">{d.download} Mbps</span> : <span className="text-xs text-gray-500">—</span>}</td>
-                    <td className="px-4 py-3">{d.upload != null ? <span className="text-sm font-mono text-white">{d.upload} Mbps</span> : <span className="text-xs text-gray-500">—</span>}</td>
-                    <td className="px-4 py-3"><span className="text-sm text-gray-300">{d.speed_name || '-'} {d.speed_limit ? `(${d.speed_limit} Mbps)` : ''}</span></td>
+                    <td className="px-4 py-3"><span className="text-xs text-gray-400">{new Date().toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'})} {new Date().toLocaleDateString('id-ID', {day:'2-digit',month:'short'})}</span></td>
+                    <td className="px-4 py-3">{d.latency != null ? <span className={`text-sm font-mono ${d.latency > 100 ? 'text-red-400' : d.latency > 50 ? 'text-amber-400' : 'text-green-400'}`}>{Number(d.latency).toFixed(2)} ms</span> : <span className="text-xs text-gray-500">—</span>}</td>
+                    <td className="px-4 py-3">{d.packet_loss != null ? <span className={`text-sm font-mono ${d.packet_loss > 5 ? 'text-red-400' : d.packet_loss > 2 ? 'text-amber-400' : 'text-green-400'}`}>{Number(d.packet_loss).toFixed(2)}%</span> : <span className="text-xs text-gray-500">—</span>}</td>
+                    <td className="px-4 py-3">{d.download != null ? <span className="text-sm font-mono text-white">{Number(d.download).toFixed(2)} Mbps</span> : <span className="text-xs text-gray-500">—</span>}</td>
+                    <td className="px-4 py-3">{d.upload != null ? <span className="text-sm font-mono text-white">{Number(d.upload).toFixed(2)} Mbps</span> : <span className="text-xs text-gray-500">—</span>}</td>
+                    <td className="px-4 py-3"><span className="text-sm text-gray-300">{d.speed_name || '-'} {d.speed_limit ? '(' + d.speed_limit + ' Mbps)' : ''}</span></td>
                     <td className="px-4 py-3"><span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${severityColor(d.max_severity)}`}>{d.max_severity === 'critical' ? <AlertCircle className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}{d.max_severity}</span></td>
-                    <td className="px-4 py-3"><span className="text-xs text-gray-300">{d.root_cause ? rootCauseName(d.root_cause.id) : '-'}</span></td>
                     <td className="px-4 py-3">{d.ticket ? <span className="text-xs text-blue-400">{d.ticket.number}</span> : <span className="text-xs text-gray-500">—</span>}</td>
                     <td className="px-4 py-3"><button onClick={() => toggleExpand(d)} className="p-1 rounded-lg hover:bg-slate-600 text-gray-400">{expandedId === d.device_id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}</button></td>
                   </tr>
@@ -214,7 +216,7 @@ export default function AlarmsV2Page() {
           <div className="space-y-4">
             <div><p className="text-xs text-gray-400 mb-1">Device</p><p className="text-sm text-white">{ticketPanel.device_name} ({ticketPanel.serial_number})</p></div>
             <div><p className="text-xs text-gray-400 mb-1">Violations</p>
-              <div className="space-y-1">{ticketPanel.alarms.map((a: AlarmItem, i: number) => <div key={i} className="flex items-center gap-2 text-sm"><span className={`w-2 h-2 rounded-full ${a.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'}`} /><span className="text-gray-300">{a.alarm_type.replace(/_/g, ' ')}: {a.metric_value}{a.unit}</span></div>)}</div>
+              <div className="space-y-1">{ticketPanel.alarms.map((a: AlarmItem, i: number) => <div key={i} className="flex items-center gap-2 text-sm"><span className={`w-2 h-2 rounded-full ${a.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'}`} /><span className="text-gray-300">{a.alarm_type.replace(/_/g, ' ')}: {a.metric_value}{a.unit}</span><span className="text-[9px] text-gray-500 font-mono">{a.alarm_code || ''}</span></div>)}</div>
             </div>
             <div><label className="text-xs text-gray-400 mb-1 block">Root Cause Analysis</label><textarea value={ticketRCA} onChange={e => setTicketRCA(e.target.value)} rows={3} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white" placeholder="Describe root cause..." /></div>
             <div><label className="text-xs text-gray-400 mb-1 block">Summary</label><textarea value={ticketSummary} onChange={e => setTicketSummary(e.target.value)} rows={3} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white" placeholder="Ticket summary..." /></div>

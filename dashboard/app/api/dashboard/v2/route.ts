@@ -92,6 +92,16 @@ export async function GET() {
         AND p.executed_at > NOW() - INTERVAL '24 hours'
     `)
 
+    // Downstream fping data
+    const downstreamResult = await client.query(`
+      SELECT
+        COALESCE(ROUND(AVG(avg_latency_ms)::numeric, 1), 0) as avg_latency,
+        COALESCE(ROUND(AVG(packet_loss_percent)::numeric, 1), 0) as avg_packet_loss,
+        COUNT(*) as total_pings
+      FROM test_results_direct_ping
+      WHERE created_at > NOW() - INTERVAL '24 hours'
+    `)
+
     client.release()
 
     return NextResponse.json({
@@ -106,6 +116,7 @@ export async function GET() {
         ontTypes: topOntTypeResult.rows,
       },
       performance: perfResult.rows[0],
+      downstream: downstreamResult.rows[0],
     })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

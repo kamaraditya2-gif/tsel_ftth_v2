@@ -15,6 +15,7 @@ import L1AvailabilityCard from '@/components/L1AvailabilityCard'
 import TopAlarmCard from '@/components/TopAlarmCard'
 import PerformanceAnalytics from '@/components/PerformanceAnalytics'
 import TopCards from '@/components/TopCards'
+import NetworkDiagram from '@/components/NetworkDiagram'
 import dynamic from 'next/dynamic'
 
 const DeviceHeatmap = dynamic(() => import('@/components/DeviceHeatmap'), { ssr: false })
@@ -684,7 +685,7 @@ export default function DashboardPage() {
                 {(selectedRegional ? nopCities.filter((c:any) => c.region_id === selectedRegional) : nopCities).map((c: any) => (
                   <button key={c.id} onClick={() => { setSelectedNopCity(c.id); setNopDropdownOpen(false) }}
                     className="w-full text-left px-4 py-2 text-sm text-white hover:bg-emerald-500/20 transition-colors">
-                    {c.name}
+                    {c.city}
                   </button>
                 ))}
               </div>
@@ -846,6 +847,39 @@ export default function DashboardPage() {
           ontBrandData={ontBrandData}
           ontTypeData={ontTypeData}
         />
+      )}
+
+      {/* Speed Threshold Comparison */}
+      {dashboardData && (
+        <div className="mb-6">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-indigo-500/10 border border-indigo-500/20">
+            <ThresholdChart
+              timeRange={timeRange}
+              regionalId={selectedRegional ? selectedRegional.toString() : undefined}
+              speedGroupId={selectedSpeedGroup ? selectedSpeedGroup.toString() : undefined}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Network Diagram */}
+      {dashboardData && dashboardV2 && (
+        <div className="mb-4">
+          <NetworkDiagram
+            upstream={{
+              avgDownload: Number(dashboardData.avgDownload) || 0,
+              avgUpload: Number(dashboardData.avgUpload) || 0,
+              avgLatency: Number(dashboardData.avgPingIgw) || 0,
+              avgEbrLatency: Number(dashboardData.avgPingEbr) || 0,
+              avgPacketLoss: Number(dashboardData.avgPacketLoss) || 0,
+            }}
+            downstream={{
+              avgLatency: Number(dashboardV2.downstream?.avg_latency) || 0,
+              avgPacketLoss: Number(dashboardV2.downstream?.avg_packet_loss) || 0,
+              totalDevices: Number(dashboardV2.downstream?.total_pings) || 0,
+            }}
+          />
+        </div>
       )}
 
       {/* Device Heatmap */}
@@ -1321,19 +1355,6 @@ export default function DashboardPage() {
               )}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Threshold Comparison Chart - Only show for upstream */}
-      {dataSource === 'upstream' && (
-        <div className="mb-8">
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-indigo-500/10 border border-indigo-500/20 p-6 hover:shadow-2xl hover:shadow-indigo-500/20 transition-all duration-300">
-            <ThresholdChart
-              timeRange={timeRange}
-              regionalId={selectedRegional ? selectedRegional.toString() : undefined}
-              speedGroupId={selectedSpeedGroup ? selectedSpeedGroup.toString() : undefined}
-            />
-          </div>
         </div>
       )}
 
