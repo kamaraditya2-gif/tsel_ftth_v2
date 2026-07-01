@@ -234,12 +234,17 @@ async function processScheduledTask(client, task) {
     let deviceIds = [];
     
     if (task.group_id) {
-      const devicesRes = await client.query(
-        `SELECT d.id FROM devices_ont d WHERE d.downstream_server_id = $1`,
-        [task.group_id]
-      );
+      let query, params;
+      if (task.nop_city) {
+        query = `SELECT d.id FROM devices_ont d WHERE d.downstream_server_id = $1 AND d.cluster_nop_id = $2`;
+        params = [task.group_id, parseInt(task.nop_city)];
+      } else {
+        query = `SELECT d.id FROM devices_ont d WHERE d.downstream_server_id = $1`;
+        params = [task.group_id];
+      }
+      const devicesRes = await client.query(query, params);
       deviceIds = devicesRes.rows.map(d => d.id);
-      console.log(`   Found ${deviceIds.length} devices with downstream_server_id = ${task.group_id}`);
+      console.log(`   Found ${deviceIds.length} devices with downstream_server_id = ${task.group_id}${task.nop_city ? `, nop_id = ${task.nop_city}` : ''}`);
     } else if (task.device_id) {
       deviceIds = [task.device_id];
       console.log(`   Single device task`);

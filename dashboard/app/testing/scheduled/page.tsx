@@ -253,7 +253,7 @@ export default function ScheduledPage() {
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
                 <option value="">All Cities</option>
                 {filteredCities.map((c: any) => (
-                  <option key={c.id} value={c.city}>{c.city}</option>
+                  <option key={c.id} value={c.id}>{c.city}</option>
                 ))}
               </select>
             </div>
