@@ -306,9 +306,9 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
         el.style.border = '3px solid #ffffff'
         el.style.boxShadow = `0 0 0 3px rgba(0,0,0,0.4), 0 0 12px ${color}80`
         el.style.cursor = 'pointer'
-        el.style.transition = 'transform 0.15s'
-        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.5)' })
-        el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)' })
+        el.style.transition = 'box-shadow 0.15s'
+        el.addEventListener('mouseenter', () => { el.style.boxShadow = `0 0 0 6px rgba(0,0,0,0.4), 0 0 20px ${color}80` })
+        el.addEventListener('mouseleave', () => { el.style.boxShadow = `0 0 0 3px rgba(0,0,0,0.4), 0 0 12px ${color}80` })
 
         const marker = new maplibregl.Marker({ element: el })
           .setLngLat([Number(device.lng), Number(device.lat)])
