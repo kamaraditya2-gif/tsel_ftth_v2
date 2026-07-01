@@ -2,21 +2,47 @@
 
 import { Clock, Network, AlertCircle, Server } from 'lucide-react'
 
+interface AlarmBucket {
+  total: number
+  byType: Record<string, number>
+  bySeverity: Record<string, number>
+}
+
 interface TopCardsProps {
   dashboardData: any
   dashboardV2: any
   ontBrandData: any[]
   ontTypeData: any[]
+  alarmStats?: {
+    active: AlarmBucket
+    cleared: AlarmBucket
+  }
 }
 
-export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ontTypeData }: TopCardsProps) {
+export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ontTypeData, alarmStats }: TopCardsProps) {
+  const active = alarmStats?.active
+  const cleared = alarmStats?.cleared
+
+  // Active alarms
+  const actCritical = active?.bySeverity?.critical || 0
+  const actWarning = active?.bySeverity?.warning || 0
+  const actSpeed = (active?.byType?.download || 0) + (active?.byType?.upload || 0)
+  const actPacketLoss = active?.byType?.packet_loss || 0
+  const actTotal = active?.total || 0
+
+  // Cleared alarms (last timeRange)
+  const clrCritical = cleared?.bySeverity?.critical || 0
+  const clrWarning = cleared?.bySeverity?.warning || 0
+  const clrSpeed = (cleared?.byType?.download || 0) + (cleared?.byType?.upload || 0)
+  const clrPacketLoss = cleared?.byType?.packet_loss || 0
+  const clrTotal = cleared?.total || 0
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
       {/* Latency */}
       <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-orange-500/20 p-2 shadow-lg shadow-orange-500/10">
         <div className="flex items-center gap-1.5 mb-1">
           <Clock className="w-3 h-3 text-orange-400" />
-          <span className="text-[10px] font-bold text-white uppercase">Latency</span>
+          <span className="text-[10px] font-bold text-white uppercase">Avg. Latency</span>
         </div>
         <div className="grid grid-cols-2 gap-1.5 mb-1">
           <div className="bg-slate-700/30 rounded-md p-1 text-center">
@@ -36,9 +62,9 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
           })}
         </div>
         <div className="grid grid-cols-3 gap-0.5 text-[7px] pt-1 border-t border-slate-700/50">
-          <div><span className="text-gray-500">High:</span> <span className="text-red-400 font-bold">{dashboardV2?.kpi?.l1_alarm || 0}</span></div>
-          <div><span className="text-gray-500">Tests:</span> <span className="text-white">{dashboardData?.totalTests || 0}</span></div>
-          <div><span className="text-gray-500">OK:</span> <span className="text-green-400">{dashboardData?.successRate || 0}%</span></div>
+          <div><span className="text-gray-500">Critical:</span> <span className="text-red-400 font-bold">{actCritical}</span></div>
+          <div><span className="text-gray-500">Warning:</span> <span className="text-amber-400">{actWarning}</span></div>
+          <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400">{clrCritical + clrWarning}</span></div>
         </div>
       </div>
 
@@ -66,9 +92,9 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
           })}
         </div>
         <div className="grid grid-cols-3 gap-0.5 text-[7px] pt-1 border-t border-slate-700/50">
-          <div><span className="text-gray-500">Below:</span> <span className="text-amber-400 font-bold">{dashboardV2?.kpi?.l2_alarm || 0}</span></div>
+          <div><span className="text-gray-500">Alarm:</span> <span className="text-amber-400 font-bold">{actSpeed}</span></div>
           <div><span className="text-gray-500">DL:</span> <span className="text-white">{dashboardData?.avgDownload || 0}</span></div>
-          <div><span className="text-gray-500">UL:</span> <span className="text-white">{dashboardData?.avgUpload || 0}</span></div>
+          <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400">{clrSpeed}</span></div>
         </div>
       </div>
 
@@ -96,9 +122,9 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
           })}
         </div>
         <div className="grid grid-cols-3 gap-0.5 text-[7px] pt-1 border-t border-slate-700/50">
+          <div><span className="text-gray-500">Alarm:</span> <span className="text-pink-400 font-bold">{actPacketLoss}</span></div>
           <div><span className="text-gray-500">Online:</span> <span className="text-green-400 font-bold">{dashboardData?.deviceStatus?.online || 0}</span></div>
-          <div><span className="text-gray-500">Offline:</span> <span className="text-red-400 font-bold">{dashboardData?.deviceStatus?.offline || 0}</span></div>
-          <div><span className="text-gray-500">Total:</span> <span className="text-white">{dashboardData?.totalDevices || 0}</span></div>
+          <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400">{clrPacketLoss}</span></div>
         </div>
       </div>
 
@@ -126,9 +152,9 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
           })}
         </div>
         <div className="grid grid-cols-3 gap-0.5 text-[7px] pt-1 border-t border-slate-700/50">
-          <div><span className="text-gray-500">Total:</span> <span className="text-white font-bold">{dashboardData?.totalDevices || 0}</span></div>
-          <div><span className="text-gray-500">Online:</span> <span className="text-green-400 font-bold">{dashboardData?.deviceStatus?.online || 0}</span></div>
-          <div><span className="text-gray-500">Offline:</span> <span className="text-red-400 font-bold">{dashboardData?.deviceStatus?.offline || 0}</span></div>
+          <div><span className="text-gray-500">Alarm:</span> <span className="text-purple-400 font-bold">{actTotal}</span></div>
+          <div><span className="text-gray-500">Critical:</span> <span className="text-red-400 font-bold">{actCritical}</span></div>
+          <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400">{clrTotal}</span></div>
         </div>
       </div>
     </div>

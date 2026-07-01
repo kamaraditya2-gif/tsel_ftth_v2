@@ -6,6 +6,7 @@ import { MoreVertical, Eye, Edit, Trash2, Search, Download, Zap, Plus } from 'lu
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import OntArchitectureDiagram from '@/components/OntArchitectureDiagram'
 import NetworkOverviewHeader from '@/components/NetworkOverviewHeader'
+import OntTypePanel from '@/components/OntTypePanel'
 import InlineAlias from '@/components/InlineAlias'
 import LocationFilter from '@/components/LocationFilter'
 
@@ -759,7 +760,10 @@ function DevicesPageContent() {
         </button>
       </div>
 
-      <NetworkOverviewHeader areaId={selectedArea} regionalId={selectedRegion === 'none' ? null : selectedRegion} nopId={selectedNopCity} />
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
+        <NetworkOverviewHeader areaId={selectedArea} regionalId={selectedRegion === 'none' ? null : selectedRegion} nopId={selectedNopCity} />
+        <OntTypePanel areaId={selectedArea} regionalId={selectedRegion === 'none' ? null : selectedRegion} nopId={selectedNopCity} />
+      </div>
 
       {/* Success Toast */}
       {successMsg && (

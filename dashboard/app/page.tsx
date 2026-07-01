@@ -75,6 +75,7 @@ export default function DashboardPage() {
   const [ontTypeData, setOntTypeData] = useState<OntTypeComparison[]>([])
   const [ontBrandData, setOntBrandData] = useState<OntTypeComparison[]>([])
   const [dashboardV2, setDashboardV2] = useState<any>(null)
+  const [alarmStats, setAlarmStats] = useState<any>(null)
 
   useEffect(() => {
     fetchSystemStatus()
@@ -85,6 +86,7 @@ export default function DashboardPage() {
     fetchOntTypeComparison()
     fetchOntBrandComparison()
     fetchDashboardV2()
+    fetchAlarmStats()
 
     // Refresh data every 30 seconds
     const interval = setInterval(() => {
@@ -93,6 +95,7 @@ export default function DashboardPage() {
       fetchOntTypeComparison()
       fetchOntBrandComparison()
       fetchDashboardV2()
+      fetchAlarmStats()
     }, 30000)
 
     return () => clearInterval(interval)
@@ -219,6 +222,20 @@ export default function DashboardPage() {
       if (data && data.kpi && data.threshold && data.rootCause && data.topAlarms) setDashboardV2(data)
     } catch (error) {
       console.error('Failed to fetch dashboard v2 data:', error)
+    }
+  }
+
+  const fetchAlarmStats = async () => {
+    try {
+      const p = new URLSearchParams({ timeRange })
+      if (selectedArea) p.append('areaId', selectedArea.toString())
+      if (selectedRegional) p.append('regionalId', selectedRegional.toString())
+      if (selectedNopCity) p.append('nopId', selectedNopCity.toString())
+      const res = await fetch(`/api/alarms/stats?${p.toString()}`)
+      const data = await res.json()
+      if (data && data.active && typeof data.active.total === 'number') setAlarmStats(data)
+    } catch (error) {
+      console.error('Failed to fetch alarm stats:', error)
     }
   }
 
@@ -650,6 +667,7 @@ export default function DashboardPage() {
           dashboardV2={dashboardV2}
           ontBrandData={ontBrandData}
           ontTypeData={ontTypeData}
+          alarmStats={alarmStats}
         />
       )}
 

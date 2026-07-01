@@ -112,6 +112,7 @@ services:
       - ./docker-compose.scaling.yml:/app/docker-compose.scaling.yml:ro
       - ./dashboard:/app/dashboard:ro
       - ./worker:/app/worker:ro
+      - ./dashboard/.next:/app/.next
     depends_on:
       postgres:
         condition: service_healthy

@@ -24,32 +24,38 @@ export default function OntArchitectureDiagram({
   const isOnline = status === 'online' || status === 'active' || (pingIgw !== null || pingEbr !== null)
 
   // Calculate segment latencies
+  const num = (v: any) => { const n = Number(v); return isNaN(n) ? 0 : n }
+  const pEbr = num(pingEbr)
+  const pIgw = num(pingIgw)
+
   const ontToOlt = isOnline ? 1.2 : null
-  const oltToEbr = pingEbr !== null ? Math.max(0.5, pingEbr - 1.2) : (isOnline ? 8.5 : null)
+  const oltToEbr = pEbr > 0 ? Math.max(0.5, pEbr - 1.2) : (isOnline ? 8.5 : null)
   
   let ebrToIgw = null
-  if (pingIgw !== null && pingEbr !== null) {
-    ebrToIgw = Math.max(0.5, pingIgw - pingEbr)
-  } else if (pingIgw !== null) {
-    ebrToIgw = Math.max(0.5, pingIgw - 10)
+  if (pIgw > 0 && pEbr > 0) {
+    ebrToIgw = Math.max(0.5, pIgw - pEbr)
+  } else if (pIgw > 0) {
+    ebrToIgw = Math.max(0.5, pIgw - 10)
   } else if (isOnline) {
     ebrToIgw = 12.3
   }
 
   // Choose colors/glows based on status/latency
-  const getLatencyColor = (ms: number | null) => {
-    if (ms === null) return 'text-gray-500'
-    if (ms < 15) return 'text-emerald-400'
-    if (ms < 50) return 'text-amber-400'
+  const getLatencyColor = (ms: any) => {
+    const n = num(ms)
+    if (!n) return 'text-gray-500'
+    if (n < 15) return 'text-emerald-400'
+    if (n < 50) return 'text-amber-400'
     return 'text-rose-400'
   }
 
-  const getStrokeColor = (ms: number | null) => {
-    if (!isOnline) return '#ef4444' // Red if offline
-    if (ms === null) return '#4b5563' // Gray if null
-    if (ms < 15) return '#10b981' // Green
-    if (ms < 50) return '#f59e0b' // Yellow
-    return '#ef4444' // Red
+  const getStrokeColor = (ms: any) => {
+    const n = num(ms)
+    if (!isOnline) return '#ef4444'
+    if (!n) return '#4b5563'
+    if (n < 15) return '#10b981'
+    if (n < 50) return '#f59e0b'
+    return '#ef4444'
   }
 
   // Draw vendor specific ONT graphic using inline SVG
@@ -190,7 +196,7 @@ export default function OntArchitectureDiagram({
         <div className="flex flex-col items-center bg-[#151726]/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/5 shadow-md -my-2 md:-mt-8 z-20">
           <span className="text-[8px] text-gray-500 uppercase tracking-widest">Fiber Link</span>
           <span className={`text-[11px] font-bold ${getLatencyColor(ontToOlt)}`}>
-            {isOnline ? `${ontToOlt?.toFixed(1)} ms` : 'Offline'}
+            {isOnline ? `${num(ontToOlt).toFixed(1)} ms` : 'Offline'}
           </span>
         </div>
 
@@ -210,7 +216,7 @@ export default function OntArchitectureDiagram({
         <div className="flex flex-col items-center bg-[#151726]/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/5 shadow-md -my-2 md:-mt-8 z-20">
           <span className="text-[8px] text-gray-500 uppercase tracking-widest">GPON Backhaul</span>
           <span className={`text-[11px] font-bold ${getLatencyColor(oltToEbr)}`}>
-            {isOnline ? `${oltToEbr?.toFixed(1)} ms` : 'Offline'}
+            {isOnline ? `${num(oltToEbr).toFixed(1)} ms` : 'Offline'}
           </span>
         </div>
 
@@ -230,7 +236,7 @@ export default function OntArchitectureDiagram({
         <div className="flex flex-col items-center bg-[#151726]/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/5 shadow-md -my-2 md:-mt-8 z-20">
           <span className="text-[8px] text-gray-500 uppercase tracking-widest">Metro Transit</span>
           <span className={`text-[11px] font-bold ${getLatencyColor(ebrToIgw)}`}>
-            {isOnline ? `${ebrToIgw?.toFixed(1)} ms` : 'Offline'}
+            {isOnline ? `${num(ebrToIgw).toFixed(1)} ms` : 'Offline'}
           </span>
         </div>
 
@@ -261,11 +267,11 @@ export default function OntArchitectureDiagram({
           <div className="flex items-center gap-6">
             <div className="text-center">
               <p className="text-[10px] text-gray-400 uppercase tracking-wider">Total Latency to EBR</p>
-              <p className="text-lg font-bold text-purple-400 font-mono">{pingEbr !== null ? `${pingEbr.toFixed(1)} ms` : '-'}</p>
+              <p className="text-lg font-bold text-purple-400 font-mono">{pEbr > 0 ? `${pEbr.toFixed(1)} ms` : '-'}</p>
             </div>
             <div className="text-center">
               <p className="text-[10px] text-gray-400 uppercase tracking-wider">Total Latency to IGW</p>
-              <p className="text-lg font-bold text-cyan-400 font-mono">{pingIgw !== null ? `${pingIgw.toFixed(1)} ms` : '-'}</p>
+              <p className="text-lg font-bold text-cyan-400 font-mono">{pIgw > 0 ? `${pIgw.toFixed(1)} ms` : '-'}</p>
             </div>
           </div>
         </div>
