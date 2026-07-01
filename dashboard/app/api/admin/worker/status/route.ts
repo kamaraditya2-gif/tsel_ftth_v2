@@ -55,10 +55,10 @@ async function getQueueStats(queueName: string) {
   }
 
   const [waiting, active, completed, failed, delayed, paused] = await Promise.all([
-    redis.lLen(`${queueKey}:waiting`).catch(() => 0),
+    redis.lLen(`${queueKey}:wait`).catch(() => 0),
     redis.lLen(`${queueKey}:active`).catch(() => 0),
-    redis.lLen(`${queueKey}:completed`).catch(() => 0),
-    redis.lLen(`${queueKey}:failed`).catch(() => 0),
+    redis.zCard(`${queueKey}:completed`).catch(() => 0),
+    redis.zCard(`${queueKey}:failed`).catch(() => 0),
     redis.zCard(`${queueKey}:delayed`).catch(() => 0),
     redis.get(`${queueKey}:paused`).catch(() => null)
   ])
