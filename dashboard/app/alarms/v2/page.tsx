@@ -120,6 +120,13 @@ export default function AlarmsV2Page() {
 
         <div className="flex flex-wrap items-center gap-3 bg-slate-800/50 backdrop-blur-md p-4 rounded-2xl border border-slate-700/50 relative z-50">
           <LocationFilter onFilterChange={handleLocationChange} />
+          <input
+            type="text"
+            placeholder="Search device..."
+            value={(filters as any).search || ''}
+            onChange={e => handleFilterChange({ ...filters, search: e.target.value })}
+            className="px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs flex-1 min-w-[140px]"
+          />
         </div>
 
         {/* Tabs */}

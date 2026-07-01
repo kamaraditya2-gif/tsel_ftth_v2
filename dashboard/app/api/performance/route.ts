@@ -9,6 +9,7 @@ export async function GET(request: Request) {
     const nopId = searchParams.get('nop_id')
     const brand = searchParams.get('brand')
     const ontType = searchParams.get('ont_type')
+    const search = searchParams.get('search')
     const limit = parseInt(searchParams.get('limit') || '50')
 
     let joins = ''
@@ -24,6 +25,7 @@ export async function GET(request: Request) {
     if (nopId) { conditions.push(`d.cluster_nop_id = $${pIdx++}`); params.push(parseInt(nopId)) }
     if (brand) { conditions.push(`d.manufacturer = $${pIdx++}`); params.push(brand) }
     if (ontType) { conditions.push(`d.cpe_type = $${pIdx++}`); params.push(ontType) }
+    if (search) { conditions.push(`(d.device_name ILIKE $${pIdx} OR d.serial_number ILIKE $${pIdx})`); params.push(`%${search}%`); pIdx++ }
 
     const whereSQL = conditions.length > 0 ? `AND ${conditions.join(' AND ')}` : ''
 

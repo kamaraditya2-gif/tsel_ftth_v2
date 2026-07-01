@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     const brand = searchParams.get('brand')
     const ontType = searchParams.get('ont_type')
     const severity = searchParams.get('severity')
+    const search = searchParams.get('search')
 
     const client = await pool.connect()
 
@@ -28,6 +29,7 @@ export async function GET(request: Request) {
     if (nopId) { filterConds.push(`d.cluster_nop_id = $${pIdx++}`); params.push(parseInt(nopId)) }
     if (brand) { filterConds.push(`d.manufacturer = $${pIdx++}`); params.push(brand) }
     if (ontType) { filterConds.push(`d.cpe_type = $${pIdx++}`); params.push(ontType) }
+    if (search) { filterConds.push(`(d.device_name ILIKE $${pIdx} OR d.serial_number ILIKE $${pIdx})`); params.push(`%${search}%`); pIdx++ }
 
     const filterSQL = filterConds.length > 0 ? `AND ${filterConds.join(' AND ')}` : ''
     const filterJoinSQL = filterJoin
