@@ -234,17 +234,12 @@ async function processScheduledTask(client, task) {
     let deviceIds = [];
     
     if (task.group_id) {
-      // Urai group ke individual devices, filter by nop_city if set
-      const groupWhere = 'SELECT id FROM devices_ont WHERE group_id = $1'
-      const nopWhere = task.nop_city ? ' AND nop_city = $2' : ''
-      const params = [task.group_id]
-      if (task.nop_city) params.push(task.nop_city)
       const devicesRes = await client.query(
-        `SELECT id FROM devices_ont WHERE group_id = $1${nopWhere}`,
-        params
+        `SELECT d.id FROM devices_ont d WHERE d.downstream_server_id = $1`,
+        [task.group_id]
       );
       deviceIds = devicesRes.rows.map(d => d.id);
-      console.log(`   Found ${deviceIds.length} devices in group`);
+      console.log(`   Found ${deviceIds.length} devices with downstream_server_id = ${task.group_id}`);
     } else if (task.device_id) {
       deviceIds = [task.device_id];
       console.log(`   Single device task`);

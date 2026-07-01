@@ -7,7 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 interface ScheduledTask {
   id: number; title: string; test_type: string; cron_time: string; started_at: string
   is_active: boolean; group_id: number | null; device_id: number | null; next_run: string
-  created_at: string; group_name?: string; device_count?: number
+  created_at: string; group_name?: string; device_count?: number; nop_city?: string
 }
 
 const CRON_PRESETS = [
@@ -51,7 +51,7 @@ export default function ScheduledPage() {
   }
 
   const handleSave = async () => {
-    let targetGroupId = form.region_id ? (Number(form.region_id) + 100) : null
+    let targetGroupId = form.region_id ? Number(form.region_id) : null
     if (!targetGroupId) {
       alert('Pilih region untuk target device')
       return
@@ -154,7 +154,7 @@ export default function ScheduledPage() {
                 <span className="font-semibold text-white">{task.title}</span>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { setEditing(task); setForm({ title: task.title, test_types: task.test_type.split(','), cron_preset: task.cron_time, is_active: task.is_active, region_id: '', nop_city: '' }); setShowModal(true) }}
+                <button onClick={() => { setEditing(task); setForm({ title: task.title, test_types: task.test_type.split(','), cron_preset: task.cron_time, is_active: task.is_active, region_id: (task.group_id && task.group_id <= 34 ? task.group_id as any : ''), nop_city: task.nop_city || '' }); setShowModal(true) }}
                   className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs">Edit</button>
                 <button onClick={() => handleToggleActive(task)}
                   className={`px-3 py-1 rounded-lg text-xs ${task.is_active ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'}`}>

@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
         t.nop_city, t.is_active,
         t.created_at,
         t.updated_at,
-        g.name as group_name,
+        COALESCE(ds.name, g.name) as group_name,
         g.code as group_code,
         d.serial_number as device_serial,
         d.indihome_id as device_indihome,
@@ -126,6 +126,7 @@ export async function GET(request: NextRequest) {
         COALESCE(jc.total_count, 0) as total_count,
         COALESCE(dc.device_count, 0) as device_count
       FROM tasks t
+      LEFT JOIN downstream_servers ds ON t.group_id = ds.id
       LEFT JOIN group_devices g ON t.group_id = g.id
       LEFT JOIN devices_ont d ON t.device_id = d.id
       LEFT JOIN (
@@ -138,7 +139,7 @@ export async function GET(request: NextRequest) {
         GROUP BY task_id
       ) jc ON t.id = jc.task_id
       LEFT JOIN (
-        SELECT group_id, COUNT(*) as device_count FROM devices_ont WHERE group_id IS NOT NULL GROUP BY group_id
+        SELECT downstream_server_id as group_id, COUNT(*) as device_count FROM devices_ont WHERE downstream_server_id IS NOT NULL GROUP BY downstream_server_id
         UNION ALL
         SELECT id as group_id, 1 as device_count FROM devices_ont WHERE id IN (SELECT device_id FROM tasks WHERE device_id IS NOT NULL)
       ) dc ON t.group_id = dc.group_id OR (t.device_id IS NOT NULL AND dc.group_id = t.device_id)
