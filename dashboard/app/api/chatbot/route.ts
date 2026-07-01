@@ -83,19 +83,109 @@ async function fetchRAGContext(message: string): Promise<string> {
     // 5. Offline devices
     if (lowerMsg.includes('offline') || lowerMsg.includes('mati') || lowerMsg.includes('down')) {
       const offRes = await client.query(`
-        SELECT serial_number, device_name, ip_address::text, regional_name
-        FROM devices_ont
+        SELECT serial_number, device_name, ip_address::text,
+          COALESCE(ds.name, 'N/A') as region
+        FROM devices_ont d
+        LEFT JOIN downstream_servers ds ON d.downstream_server_id = ds.id
         WHERE status = 'offline'
         LIMIT 10
       `)
       if (offRes.rows.length > 0) {
-        contextParts.push(`🔴 OFFLINE DEVICES: ${offRes.rows.map((r: any) => `${r.serial_number} (${r.regional_name || 'N/A'})`).join(', ')}`)
+        contextParts.push(`🔴 OFFLINE DEVICES: ${offRes.rows.map((r: any) => `${r.serial_number} (${r.region})`).join(', ')}`)
       } else {
         contextParts.push(`🔴 OFFLINE DEVICES: 0 device offline`)
       }
     }
 
-    // 6. Downstream servers
+    // 6. Active alarms overview
+    if (lowerMsg.includes('alarm') || lowerMsg.includes('masalah') || lowerMsg.includes('penyebab') || lowerMsg.includes('gangguan') || lowerMsg.includes('error') || lowerMsg.includes('kritis') || lowerMsg.includes('critical')) {
+      const alarmRes = await client.query(`
+        SELECT 
+          alarm_type, severity, COUNT(*) as count
+        FROM active_alarms
+        GROUP BY alarm_type, severity
+        ORDER BY COUNT(*) DESC
+      `)
+      if (alarmRes.rows.length > 0) {
+        contextParts.push(`🔔 ACTIVE ALARMS:\n${alarmRes.rows.map((r: any) => `  - ${r.alarm_type.replace(/_/g, ' ')}: ${r.count} (${r.severity})`).join('\n')}`)
+      } else {
+        contextParts.push(`🔔 ACTIVE ALARMS: 0 active alarms`)
+      }
+    }
+
+    // 6b. Brands with most alarms
+    if (lowerMsg.includes('brand') || lowerMsg.includes('merek') || lowerMsg.includes('vendor') || lowerMsg.includes('manufacturer') || lowerMsg.includes('pabrik')) {
+      const brandAlarmRes = await client.query(`
+        SELECT 
+          d.manufacturer as brand, COUNT(*) as alarm_count,
+          COUNT(*) FILTER (WHERE aa.severity = 'critical') as critical_count
+        FROM active_alarms aa
+        JOIN devices_ont d ON d.id = aa.device_id
+        WHERE d.manufacturer IS NOT NULL AND d.manufacturer != ''
+        GROUP BY d.manufacturer
+        ORDER BY alarm_count DESC
+        LIMIT 10
+      `)
+      if (brandAlarmRes.rows.length > 0) {
+        contextParts.push(`🏭 BRANDS BY ALARM COUNT:\n${brandAlarmRes.rows.map((r: any) => `  - ${r.brand}: ${r.alarm_count} alarms (${r.critical_count} critical)`).join('\n')}`)
+      }
+    }
+
+    // 6c. ONT types with most alarms
+    if (lowerMsg.includes('ont type') || lowerMsg.includes('tipe ont') || lowerMsg.includes('cpe type') || lowerMsg.includes('model')) {
+      const typeAlarmRes = await client.query(`
+        SELECT 
+          d.cpe_type as ont_type, COUNT(*) as alarm_count,
+          COUNT(*) FILTER (WHERE aa.severity = 'critical') as critical_count
+        FROM active_alarms aa
+        JOIN devices_ont d ON d.id = aa.device_id
+        WHERE d.cpe_type IS NOT NULL AND d.cpe_type != ''
+        GROUP BY d.cpe_type
+        ORDER BY alarm_count DESC
+        LIMIT 10
+      `)
+      if (typeAlarmRes.rows.length > 0) {
+        contextParts.push(`📦 ONT TYPES BY ALARM COUNT:\n${typeAlarmRes.rows.map((r: any) => `  - ${r.ont_type}: ${r.alarm_count} alarms (${r.critical_count} critical)`).join('\n')}`)
+      }
+    }
+
+    // 6d. Top problematic devices (most alarms)
+    if (lowerMsg.includes('device masalah') || lowerMsg.includes('ont masalah') || lowerMsg.includes('problem') || lowerMsg.includes('bermasalah') || lowerMsg.includes('banyak alarm')) {
+      const probRes = await client.query(`
+        SELECT 
+          d.serial_number, d.device_name, d.manufacturer as brand, d.cpe_type as ont_type,
+          COUNT(*) as alarm_count,
+          COUNT(*) FILTER (WHERE aa.severity = 'critical') as critical_count,
+          STRING_AGG(DISTINCT aa.alarm_type, ', ') as alarm_types
+        FROM active_alarms aa
+        JOIN devices_ont d ON d.id = aa.device_id
+        GROUP BY d.id, d.serial_number, d.device_name, d.manufacturer, d.cpe_type
+        ORDER BY alarm_count DESC
+        LIMIT 5
+      `)
+      if (probRes.rows.length > 0) {
+        contextParts.push(`🚨 TOP PROBLEMATIC DEVICES:\n${probRes.rows.map((r: any) => `  - ${r.serial_number} (${r.brand} ${r.ont_type}): ${r.alarm_count} alarms (${r.critical_count} critical) — ${r.alarm_types}`).join('\n')}`)
+      }
+    }
+
+    // 6e. Alarm count by region
+    if (lowerMsg.includes('daerah') || lowerMsg.includes('alarm per')) {
+      const regAlarmRes = await client.query(`
+        SELECT 
+          COALESCE(ds.name, 'Unknown') as region,
+          COUNT(*) as alarm_count
+        FROM active_alarms aa
+        JOIN devices_ont d ON d.id = aa.device_id
+        LEFT JOIN downstream_servers ds ON d.downstream_server_id = ds.id
+        GROUP BY ds.name
+        ORDER BY alarm_count DESC
+      `)
+      if (regAlarmRes.rows.length > 0) {
+        contextParts.push(`📍 ALARMS BY REGION:\n${regAlarmRes.rows.map((r: any) => `  - ${r.region}: ${r.alarm_count} alarms`).join('\n')}`)
+      }
+    }
+
+    // 6. Downstream servers (original, renumbered)
     if (lowerMsg.includes('server') || lowerMsg.includes('downstream') || lowerMsg.includes('lokasi')) {
       const srvRes = await client.query(`
         SELECT name, location, province, status, lat, lng
@@ -155,13 +245,13 @@ async function fetchRAGContext(message: string): Promise<string> {
     if (lowerMsg.includes('regional') || lowerMsg.includes('wilayah') || lowerMsg.includes('area')) {
       const regRes = await client.query(`
         SELECT 
-          g.name as regional,
+          ds.name as regional,
           COUNT(d.id) as total_devices,
           COUNT(*) FILTER (WHERE d.status = 'online') as online,
           COUNT(*) FILTER (WHERE d.status = 'offline') as offline
-        FROM group_devices g
-        LEFT JOIN devices_ont d ON d.regional_id = g.id
-        GROUP BY g.name
+        FROM downstream_servers ds
+        LEFT JOIN devices_ont d ON d.downstream_server_id = ds.id
+        GROUP BY ds.name, ds.id
         ORDER BY total_devices DESC
       `)
       contextParts.push(`🗺️ REGIONAL STATS:\n${regRes.rows.map((r: any) => `  - ${r.regional}: ${r.total_devices} devices (${r.online} online, ${r.offline} offline)`).join('\n')}`)
@@ -187,18 +277,18 @@ async function fetchRAGContext(message: string): Promise<string> {
         SELECT 
           d.serial_number,
           d.device_name,
-          g.name as regional,
+          COALESCE(ds.name, 'N/A') as region,
           ROUND(p.avg_latency_ms::numeric, 2) as avg_latency,
           ROUND(p.packet_loss_percent::numeric, 2) as packet_loss
         FROM test_results_direct_ping p
         JOIN devices_ont d ON p.device_id = d.id
-        LEFT JOIN group_devices g ON d.regional_id = g.id
+        LEFT JOIN downstream_servers ds ON d.downstream_server_id = ds.id
         WHERE p.created_at >= NOW() - INTERVAL '24 hours'
         ORDER BY p.avg_latency_ms DESC
         LIMIT 5
       `)
       if (worstRes.rows.length > 0) {
-        contextParts.push(`🚨 WORST PERFORMING DEVICES (24h):\n${worstRes.rows.map((r: any) => `  - ${r.serial_number} (${r.regional}): ${r.avg_latency}ms, ${r.packet_loss}% loss`).join('\n')}`)
+        contextParts.push(`🚨 WORST PERFORMING DEVICES (24h):\n${worstRes.rows.map((r: any) => `  - ${r.serial_number} (${r.region}): ${r.avg_latency}ms, ${r.packet_loss}% loss`).join('\n')}`)
       }
     }
 
@@ -241,7 +331,8 @@ Your job is to help field technicians and network engineers analyze network data
 4. Use Indonesian language if user asks in Indonesian
 5. Use English if user asks in English
 6. For device troubleshooting, suggest actionable steps
-7. Highlight critical issues (high latency, packet loss, offline devices)
+7. Highlight critical issues (high latency, packet loss, offline devices, active alarms)
+8. When asked about problematic devices/brands/ONT types, use the alarm data context
 
 ## Current Database Context:
 ${ragContext || 'No data available from database.'}
