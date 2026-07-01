@@ -67,10 +67,16 @@ export default function ScheduledPage() {
       nop_city: form.nop_city || null,
     }
 
+    let res
     if (editing) {
-      await fetch(`/api/tasks?id=${editing.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      res = await fetch(`/api/tasks?id=${editing.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     } else {
-      await fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      res = await fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      alert('Gagal menyimpan: ' + (err.error || err.details || res.statusText))
+      return
     }
     setShowModal(false)
     setEditing(null)

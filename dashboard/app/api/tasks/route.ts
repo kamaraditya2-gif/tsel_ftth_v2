@@ -308,7 +308,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, test_type, cron_time, is_active } = body
+    const { title, test_type, cron_time, is_active, group_id, nop_city } = body
 
     // Input validation
     if (!title) {
@@ -372,9 +372,9 @@ export async function PUT(request: NextRequest) {
     const hasNextRun = existingColumns.includes('next_run')
 
     // Build dynamic query based on existing columns
-    const setColumns = ['title = $1', 'test_type = $2', 'cron_time = $3', 'is_active = $4', 'updated_at = NOW()']
-    const values = [sanitizedTitle, sanitizedTestType, sanitizedCronTime || null, is_active !== undefined ? is_active : true]
-    let paramIndex = 5
+    const setColumns = ['title = $1', 'test_type = $2', 'cron_time = $3', 'is_active = $4', 'group_id = $5', 'nop_city = $6', 'updated_at = NOW()']
+    const values = [sanitizedTitle, sanitizedTestType, sanitizedCronTime || null, is_active !== undefined ? is_active : true, group_id || null, nop_city || null]
+    let paramIndex = 7
 
     if (hasStartedAt) {
       setColumns.push(`started_at = $${paramIndex}`)
