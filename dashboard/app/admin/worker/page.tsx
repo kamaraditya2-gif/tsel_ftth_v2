@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Activity, CheckCircle, XCircle, Clock, Server, RefreshCw, Zap, Terminal, Pause, Play } from 'lucide-react'
+import { Activity, CheckCircle, XCircle, Clock, Server, RefreshCw, Zap, Terminal, Pause, Play, Trash2 } from 'lucide-react'
 import { useRequireAdmin } from '@/hooks/useRequireAdmin'
 import RegionalStatusCards from '@/components/RegionalStatusCards'
 
@@ -73,6 +73,7 @@ export default function WorkerPage() {
   const [autoScroll, setAutoScroll] = useState(true)
   const [isPaused, setIsPaused] = useState(false)
   const [selectedLogTab, setSelectedLogTab] = useState('all')
+  const [clearing, setClearing] = useState(false)
   const [regionalLogs, setRegionalLogs] = useState<string[]>([])
   const logsEndRef = useRef<HTMLDivElement>(null)
 
@@ -180,6 +181,24 @@ export default function WorkerPage() {
     setRefreshing(false)
   }
 
+  const handleClearAll = async () => {
+    if (!confirm('Clear all queues and stop all workers? Semua job yg sedang diproses akan dihentikan. Workers akan restart otomatis.')) return
+    setClearing(true)
+    try {
+      const res = await fetch('/api/admin/worker/clear-all', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        alert(`Done! ${data.dbDeleted} jobs deleted from DB, ${data.redisDeleted} Redis keys cleared. Workers will stop after current job and restart.`)
+      } else {
+        alert('Error: ' + (data.error || 'Unknown'))
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message)
+    } finally {
+      setClearing(false)
+    }
+  }
+
   const getContainerBadge = (line: string) => {
     if (!line.startsWith('[')) return null
     const match = line.match(/^\[([^\]]+)\]/)
@@ -252,6 +271,14 @@ export default function WorkerPage() {
               </p>
             </div>
           </div>
+          <button
+            onClick={handleClearAll}
+            disabled={clearing}
+            className="p-2 rounded-lg hover:bg-red-500/20 transition-colors text-red-400 mr-1"
+            title="Clear all queues and stop workers"
+          >
+            <Trash2 className={`w-5 h-5 ${clearing ? 'animate-pulse' : ''}`} />
+          </button>
           <button
             onClick={handleRefresh}
             disabled={refreshing}

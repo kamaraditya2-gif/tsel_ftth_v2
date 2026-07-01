@@ -15,6 +15,7 @@ const redisConnection = {
 
 // Generate unique worker ID
 const workerId = `mojo-worker-${Date.now()}`;
+const WORKER_START_TIME = Date.now().toString();
 
 // Distributed rate limiting configuration
 const PING_RATE_LIMIT_SECONDS = parseInt(process.env.PING_RATE_LIMIT_SECONDS) || 10; // 10 seconds between pings per device
@@ -166,6 +167,19 @@ logger.info({
 
 // Main worker for all test types (ping, traceroute, download, upload, ont-status)
 const worker = new Worker(QUEUE_NAME, async (job) => {
+  // Check for stop signal from dashboard
+  try {
+    const stopSignal = await redis.get('worker:stop-signal');
+    if (stopSignal && parseInt(stopSignal) > parseInt(WORKER_START_TIME)) {
+      logger.info('Stop signal received from dashboard, shutting down...');
+      await worker.close();
+      await pool.end();
+      process.exit(0);
+    }
+  } catch (e) {
+    // ignore redis errors
+  }
+
   const { queueJobId, deviceId, testType } = job.data;
   
   // Tandai job dengan worker yang memprosesnya agar dashboard bisa menampilkannya

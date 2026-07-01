@@ -14,6 +14,7 @@ const PING_TIMEOUT_MS = 5000; // Timeout for each ping in milliseconds
 const DOWNSTREAM_SERVER_ID = parseInt(process.env.DOWNSTREAM_SERVER_ID) || 1; // Which downstream server this worker belongs to
 const WORKER_ID = `mojo-direct-ping-${DOWNSTREAM_SERVER_ID}-${Date.now()}`;
 const QUEUE_NAME = 'direct-ping';
+const WORKER_START_TIME = Date.now().toString();
 
 logger.info('Direct Ping Worker Configuration:', {
   interval: `${PING_INTERVAL_MINUTES} minutes`,
@@ -198,6 +199,21 @@ async function pingIP(ipAddress) {
 
 // Main function to process all devices
 async function processDirectPing() {
+  // Check for stop signal from dashboard
+  try {
+    const stopSignal = await redis.get('worker:stop-signal');
+    if (stopSignal && parseInt(stopSignal) > parseInt(WORKER_START_TIME)) {
+      logger.info('Stop signal received from dashboard, shutting down...');
+      await pool.end();
+      if (redis.status === 'ready') {
+        await redis.hdel('acs-workers', WORKER_ID).catch(() => {});
+      }
+      process.exit(0);
+    }
+  } catch (e) {
+    // ignore redis errors
+  }
+
   logger.info('Starting direct ping cycle...');
   
   let client;
