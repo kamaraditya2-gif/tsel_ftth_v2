@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
         COALESCE(jc.completed_count, 0) as completed_count,
         COALESCE(jc.failed_count, 0) as failed_count,
         COALESCE(jc.total_count, 0) as total_count,
-        COALESCE(dc.device_count, 0) as device_count
+        CASE WHEN t.device_id IS NOT NULL THEN 1 ELSE COALESCE(dc.device_count, 0) END as device_count
       FROM tasks t
       LEFT JOIN downstream_servers ds ON t.group_id = ds.id
       LEFT JOIN group_devices g ON t.group_id = g.id
@@ -140,9 +140,7 @@ export async function GET(request: NextRequest) {
       ) jc ON t.id = jc.task_id
       LEFT JOIN (
         SELECT downstream_server_id as group_id, COUNT(*) as device_count FROM devices_ont WHERE downstream_server_id IS NOT NULL GROUP BY downstream_server_id
-        UNION ALL
-        SELECT id as group_id, 1 as device_count FROM devices_ont WHERE id IN (SELECT device_id FROM tasks WHERE device_id IS NOT NULL)
-      ) dc ON t.group_id = dc.group_id OR (t.device_id IS NOT NULL AND dc.group_id = t.device_id)
+      ) dc ON t.group_id = dc.group_id AND t.device_id IS NULL
     `
 
     let countQuery = `SELECT COUNT(*) as total FROM tasks t`
