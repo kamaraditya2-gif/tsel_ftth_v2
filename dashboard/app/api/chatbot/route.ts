@@ -27,6 +27,89 @@ async function fetchRAGContext(message: string): Promise<string> {
     const d = deviceRes.rows[0]
     contextParts.push(`📊 DEVICE OVERVIEW: Total ${d.total} ONT, ${d.online} online, ${d.offline} offline`)
 
+    // 1a. Specific device search — detect serial number or device query
+    const devicePatterns = [
+      ...(message.match(/[A-Z0-9]{6,20}/g) || []),        // potential serial numbers (6+ alphanumeric)
+      ...(message.match(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g) || []),  // IP addresses
+    ]
+    const wantsDevice = lowerMsg.includes('device') || lowerMsg.includes('perangkat') || lowerMsg.includes('ont') || 
+                        lowerMsg.includes('serial') || lowerMsg.includes('detail') || devicePatterns.length > 0
+
+    if (wantsDevice) {
+      const searchPatterns = devicePatterns.length > 0 ? devicePatterns : [message.replace(/.*?(device|perangkat|ont|serial|detail|cari|nama)\s*/i, '').trim()]
+      
+      for (const pattern of searchPatterns) {
+        if (pattern.length < 2) continue
+        const devRes = await client.query(`
+          SELECT 
+            d.id, d.serial_number, d.device_name, d.ip_address::text,
+            d.mac_address, d.status, d.manufacturer as brand, d.cpe_type as ont_type,
+            d.indihome_id, d.group_id,
+            COALESCE(ds.name, 'N/A') as region,
+            COALESCE(n.name, 'N/A') as nop,
+            d.downstream_server_id, d.cluster_nop_id,
+            d.lat, d.lng
+          FROM devices_ont d
+          LEFT JOIN downstream_servers ds ON d.downstream_server_id = ds.id
+          LEFT JOIN master_cluster_nop n ON d.cluster_nop_id = n.id
+          WHERE d.serial_number ILIKE $1
+             OR d.device_name ILIKE $1
+             OR d.ip_address::text = $2
+             OR d.mac_address ILIKE $1
+             OR d.indihome_id ILIKE $1
+          LIMIT 5
+        `, [`%${pattern}%`, pattern])
+        
+        if (devRes.rows.length > 0) {
+          contextParts.push(`📱 DEVICE SEARCH RESULTS for "${pattern}":\n${devRes.rows.map((r: any) =>
+            `  - ${r.serial_number} (${r.device_name || 'N/A'})
+             Status: ${r.status}
+             Brand: ${r.brand || 'N/A'}, Type: ${r.ont_type || 'N/A'}
+             IP: ${r.ip_address || 'N/A'}, MAC: ${r.mac_address || 'N/A'}
+             IndiHome: ${r.indihome_id || 'N/A'}
+             Region: ${r.region}, NOP: ${r.nop}
+             Group: ${r.group_id || 'N/A'}
+             Location: ${r.lat ? `${r.lat}, ${r.lng}` : 'N/A'}`
+          ).join('\n')}`)
+
+          // Also fetch recent test results for found devices
+          const ids = devRes.rows.map((r: any) => r.id)
+          if (ids.length > 0) {
+            const testRes = await client.query(`
+              SELECT device_id,
+                ROUND(ping_igw::numeric, 2) as ping_igw,
+                ROUND(ping_ebr::numeric, 2) as ping_ebr,
+                ROUND(packet_loss_igw::numeric, 2) as packet_loss,
+                executed_at as ping_time
+              FROM test_results_ping
+              WHERE device_id = ANY($1::int[])
+              ORDER BY executed_at DESC
+              LIMIT 10
+            `, [ids])
+            if (testRes.rows.length > 0) {
+              contextParts.push(`📊 RECENT TEST RESULTS:\n${testRes.rows.map((r: any) =>
+                `  - Device #${r.device_id}: IGW ${r.ping_igw}ms, EBR ${r.ping_ebr}ms, Loss ${r.packet_loss}% (${new Date(r.ping_time).toLocaleString('id-ID')})`
+              ).join('\n')}`)
+            }
+
+            // Active alarms for these devices
+            const alarmDevRes = await client.query(`
+              SELECT device_id, alarm_type, severity, COUNT(*) as count
+              FROM active_alarms
+              WHERE device_id = ANY($1::int[])
+              GROUP BY device_id, alarm_type, severity
+              ORDER BY device_id, count DESC
+            `, [ids])
+            if (alarmDevRes.rows.length > 0) {
+              contextParts.push(`🔔 ALARMS:\n${alarmDevRes.rows.map((r: any) =>
+                `  - Device #${r.device_id}: ${r.alarm_type.replace(/_/g, ' ')} (${r.severity}) — ${r.count}x`
+              ).join('\n')}`)
+            }
+          }
+        }
+      }
+    }
+
     // 1b. Recent failed tests (ALWAYS included)
     const failRes = await client.query(`
       SELECT COUNT(*) as total_failed
