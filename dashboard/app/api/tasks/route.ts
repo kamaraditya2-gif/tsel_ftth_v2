@@ -138,9 +138,11 @@ export async function GET(request: NextRequest) {
         FROM queue_jobs
         GROUP BY task_id
       ) jc ON t.id = jc.task_id
-      LEFT JOIN (
-        SELECT downstream_server_id as group_id, COUNT(*) as device_count FROM devices_ont WHERE downstream_server_id IS NOT NULL GROUP BY downstream_server_id
-      ) dc ON t.group_id = dc.group_id AND t.device_id IS NULL
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*) as device_count FROM devices_ont do2
+        WHERE do2.downstream_server_id = t.group_id
+          AND (t.nop_city IS NULL OR t.nop_city = '' OR t.nop_city !~ '^\d+$' OR do2.cluster_nop_id = t.nop_city::INTEGER)
+      ) dc ON true
     `
 
     let countQuery = `SELECT COUNT(*) as total FROM tasks t`
