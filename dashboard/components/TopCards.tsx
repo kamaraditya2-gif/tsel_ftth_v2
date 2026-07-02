@@ -1,6 +1,7 @@
 'use client'
 
 import { Clock, Network, AlertCircle, Server } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 interface AlarmBucket {
   total: number
@@ -20,6 +21,7 @@ interface TopCardsProps {
 }
 
 export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ontTypeData, alarmStats }: TopCardsProps) {
+  const router = useRouter()
   const active = alarmStats?.active
   const cleared = alarmStats?.cleared
 
@@ -36,6 +38,8 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
   const clrSpeed = (cleared?.byType?.download || 0) + (cleared?.byType?.upload || 0)
   const clrPacketLoss = cleared?.byType?.packet_loss || 0
   const clrTotal = cleared?.total || 0
+
+  const goAlarms = (tab?: string) => router.push(`/alarms/v2${tab === 'cleared' ? '?tab=cleared' : ''}`)
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
       {/* Latency */}
@@ -62,9 +66,9 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
           })}
         </div>
         <div className="grid grid-cols-3 gap-0.5 text-[7px] pt-1 border-t border-slate-700/50">
-          <div><span className="text-gray-500">Critical:</span> <span className="text-red-400 font-bold">{actCritical}</span></div>
-          <div><span className="text-gray-500">Warning:</span> <span className="text-amber-400">{actWarning}</span></div>
-          <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400">{clrCritical + clrWarning}</span></div>
+          <div><span className="text-gray-500">Critical:</span> <span className="text-red-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms()}>{actCritical}</span></div>
+          <div><span className="text-gray-500">Warning:</span> <span className="text-amber-400 cursor-pointer hover:underline" onClick={() => goAlarms()}>{actWarning}</span></div>
+          <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400 cursor-pointer hover:underline" onClick={() => goAlarms('cleared')}>{clrCritical + clrWarning}</span></div>
         </div>
       </div>
 
@@ -92,9 +96,9 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
           })}
         </div>
         <div className="grid grid-cols-3 gap-0.5 text-[7px] pt-1 border-t border-slate-700/50">
-          <div><span className="text-gray-500">Alarm:</span> <span className="text-amber-400 font-bold">{actSpeed}</span></div>
+          <div><span className="text-gray-500">Alarm:</span> <span className="text-amber-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms()}>{actSpeed}</span></div>
           <div><span className="text-gray-500">DL:</span> <span className="text-white">{dashboardData?.avgDownload || 0}</span></div>
-          <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400">{clrSpeed}</span></div>
+          <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400 cursor-pointer hover:underline" onClick={() => goAlarms('cleared')}>{clrSpeed}</span></div>
         </div>
       </div>
 
@@ -122,9 +126,9 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
           })}
         </div>
         <div className="grid grid-cols-3 gap-0.5 text-[7px] pt-1 border-t border-slate-700/50">
-          <div><span className="text-gray-500">Alarm:</span> <span className="text-pink-400 font-bold">{actPacketLoss}</span></div>
+          <div><span className="text-gray-500">Alarm:</span> <span className="text-pink-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms()}>{actPacketLoss}</span></div>
           <div><span className="text-gray-500">Online:</span> <span className="text-green-400 font-bold">{dashboardData?.deviceStatus?.online || 0}</span></div>
-          <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400">{clrPacketLoss}</span></div>
+          <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400 cursor-pointer hover:underline" onClick={() => goAlarms('cleared')}>{clrPacketLoss}</span></div>
         </div>
       </div>
 
@@ -152,9 +156,9 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
           })}
         </div>
         <div className="grid grid-cols-3 gap-0.5 text-[7px] pt-1 border-t border-slate-700/50">
-          <div><span className="text-gray-500">Alarm:</span> <span className="text-purple-400 font-bold">{actTotal}</span></div>
-          <div><span className="text-gray-500">Critical:</span> <span className="text-red-400 font-bold">{actCritical}</span></div>
-          <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400">{clrTotal}</span></div>
+          <div><span className="text-gray-500">Alarm:</span> <span className="text-purple-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms()}>{actTotal}</span></div>
+          <div><span className="text-gray-500">Critical:</span> <span className="text-red-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms()}>{actCritical}</span></div>
+          <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400 cursor-pointer hover:underline" onClick={() => goAlarms('cleared')}>{clrTotal}</span></div>
         </div>
       </div>
     </div>
