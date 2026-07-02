@@ -171,16 +171,18 @@ export default function ScheduledPage() {
                   className="px-3 py-1 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 text-xs">Delete</button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-3 text-xs text-gray-400">
-              <span>{task.test_type.replace(/,/g, ', ')}</span>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+              <span className="text-emerald-400 font-medium">{task.group_name || 'All Regions'}</span>
+              {task.nop_city && <span className="text-blue-400">{task.nop_city}</span>}
+              <span className="text-purple-400 font-semibold">{task.device_count || 1} ONT</span>
+              <span className="text-gray-400">{task.test_type.replace(/,/g, ', ')}</span>
               <span className="text-cyan-400">{task.cron_time ? getCronLabel(task.cron_time) : '-'}</span>
               {task.next_run && (
                 <span className={getNextRunStatus(task.next_run).color}>
                   {getNextRunStatus(task.next_run).label}
                 </span>
               )}
-              <span>Next: {task.next_run ? new Date(task.next_run).toLocaleString('en-US', { timeZone: 'Asia/Jakarta', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'} WIB</span>
-              <span className="text-purple-400">{task.device_count || 1} ONT</span>
+              <span className="text-gray-400">Next: {task.next_run ? new Date(task.next_run).toLocaleString('en-US', { timeZone: 'Asia/Jakarta', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'} WIB</span>
             </div>
           </div>
         ))}
