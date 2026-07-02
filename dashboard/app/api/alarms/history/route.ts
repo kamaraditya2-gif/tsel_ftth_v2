@@ -23,15 +23,24 @@ export async function GET(request: Request) {
       thresholds[t.alarm_name] = t
     }
 
+    const alarmMap: Record<string, string> = {
+      packet_loss: 'Packet_Loss', latency: 'Latency', download: 'Download_Speed',
+      upload: 'Upload_Speed', jitter: 'Jitter', crc_error: 'CRC_Error',
+      high_temp: 'Temperature', cpu: 'CPU_Utilization', memory: 'Memory_Utilization',
+      ping_success: 'Ping_Success_Rate', uptime: 'Uptime',
+    }
     const recalcSeverity = (alarmType: string, metricValue: number) => {
-      const th = thresholds[alarmType]
-      if (!th) return 'warning' // keep default if no threshold config
+      const key = alarmMap[alarmType] || alarmType
+      const th = thresholds[key]
+      if (!th) return 'warning'
+      const crit = Number(th.critical_value)
+      const warn = Number(th.warning_value)
       if (th.threshold_type === 'UPPER') {
-        if (metricValue >= Number(th.critical_value)) return 'critical'
-        if (metricValue >= Number(th.warning_value)) return 'warning'
+        if (metricValue >= crit) return 'critical'
+        if (metricValue >= warn) return 'warning'
       } else {
-        if (metricValue <= Number(th.critical_value)) return 'critical'
-        if (metricValue <= Number(th.warning_value)) return 'warning'
+        if (metricValue <= crit) return 'critical'
+        if (metricValue <= warn) return 'warning'
       }
       return 'warning'
     }
