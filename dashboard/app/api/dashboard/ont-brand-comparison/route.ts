@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import pool from '@/lib/db'
+import { parseIds, buildOptionalFilter } from '@/lib/filter-utils'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -21,9 +22,14 @@ export async function GET(request: Request) {
   const filterWhere = []
   const filterParams: any[] = []
   let pIdx = 1
-  if (areaId) { filterWhere.push(`n.area_id = $${pIdx++}`); filterParams.push(parseInt(areaId)) }
-  if (regionalId) { filterWhere.push(`d.downstream_server_id = $${pIdx++}`); filterParams.push(parseInt(regionalId)) }
-  if (nopId) { filterWhere.push(`d.cluster_nop_id = $${pIdx++}`); filterParams.push(parseInt(nopId)) }
+  const areaIdFilter = buildOptionalFilter('n.area_id', areaId, searchParams.get('areaIds'), () => pIdx++, filterParams)
+  if (areaIdFilter) filterWhere.push(areaIdFilter)
+
+  const regionalIdFilter = buildOptionalFilter('d.downstream_server_id', regionalId, searchParams.get('regionalIds'), () => pIdx++, filterParams)
+  if (regionalIdFilter) filterWhere.push(regionalIdFilter)
+
+  const nopIdFilter = buildOptionalFilter('d.cluster_nop_id', nopId, searchParams.get('nopIds'), () => pIdx++, filterParams)
+  if (nopIdFilter) filterWhere.push(nopIdFilter)
   const filterSQL = filterWhere.length > 0 ? 'AND ' + filterWhere.join(' AND ') : ''
 
   try {

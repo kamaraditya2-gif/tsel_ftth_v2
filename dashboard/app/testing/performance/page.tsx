@@ -37,7 +37,7 @@ export default function PerformanceTestPage() {
   const [results, setResults] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({})
-  const [locFilters, setLocFilters] = useState({ areaId: null as number | null, regionalId: null as number | null, nopId: null as number | null })
+  const [locFilters, setLocFilters] = useState({ areaId: null as number | null, regionalId: null as number | null, nopId: null as number | null, areaIds: '', regionalIds: '', nopIds: '' })
   const filtersRef = useRef(filters)
   const locRef = useRef(locFilters)
   filtersRef.current = filters
@@ -49,9 +49,12 @@ export default function PerformanceTestPage() {
     try {
       const params = new URLSearchParams({ limit: '50' })
       Object.entries(f).forEach(([k, v]) => { if (v) params.set(k, v as string) })
-      if (loc.areaId) params.set('area_id', loc.areaId.toString())
-      if (loc.regionalId) params.set('regional_id', loc.regionalId.toString())
-      if (loc.nopId) params.set('nop_id', loc.nopId.toString())
+      if ((loc as any).areaIds) params.set('area_ids', (loc as any).areaIds)
+      else if (loc.areaId) params.set('area_id', loc.areaId.toString())
+      if ((loc as any).regionalIds) params.set('regional_ids', (loc as any).regionalIds)
+      else if (loc.regionalId) params.set('regional_id', loc.regionalId.toString())
+      if ((loc as any).nopIds) params.set('nop_ids', (loc as any).nopIds)
+      else if (loc.nopId) params.set('nop_id', loc.nopId.toString())
       const res = await fetch(`/api/performance?${params}`)
       const data = await res.json()
       if (data.results) setResults(data.results)
@@ -103,7 +106,7 @@ export default function PerformanceTestPage() {
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
           <LocationFilter onFilterChange={(f) => {
-            const nl = { areaId: f.areaIds[0] ?? null, regionalId: f.regionalIds[0] ?? null, nopId: f.nopIds[0] ?? null }
+            const nl = { areaId: f.areaIds[0] ?? null, regionalId: f.regionalIds[0] ?? null, nopId: f.nopIds[0] ?? null, areaIds: f.areaIds.join(','), regionalIds: f.regionalIds.join(','), nopIds: f.nopIds.join(',') }
             setLocFilters(nl)
             fetchResults(filters, nl)
           }} />

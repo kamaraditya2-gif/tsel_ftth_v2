@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import pool from '@/lib/db'
+import { parseIds, buildOptionalFilter } from '@/lib/filter-utils'
 
 export async function GET(request: Request) {
   try {
@@ -24,9 +25,15 @@ export async function GET(request: Request) {
     const params: any[] = []
     let pIdx = 1
 
-    if (areaId) { filterJoin += 'JOIN master_cluster_nop fn ON fn.id = d.cluster_nop_id'; filterConds.push(`fn.area_id = $${pIdx++}`); params.push(parseInt(areaId)) }
-    if (regionalId) { filterConds.push(`d.downstream_server_id = $${pIdx++}`); params.push(parseInt(regionalId)) }
-    if (nopId) { filterConds.push(`d.cluster_nop_id = $${pIdx++}`); params.push(parseInt(nopId)) }
+    if (areaId || searchParams.get('area_ids')) { filterJoin += 'JOIN master_cluster_nop fn ON fn.id = d.cluster_nop_id' }
+    const areaIdFilter = buildOptionalFilter('fn.area_id', areaId, searchParams.get('area_ids'), () => pIdx++, params)
+    if (areaIdFilter) filterConds.push(areaIdFilter)
+
+    const regionalIdFilter = buildOptionalFilter('d.downstream_server_id', regionalId, searchParams.get('regional_ids'), () => pIdx++, params)
+    if (regionalIdFilter) filterConds.push(regionalIdFilter)
+
+    const nopIdFilter = buildOptionalFilter('d.cluster_nop_id', nopId, searchParams.get('nop_ids'), () => pIdx++, params)
+    if (nopIdFilter) filterConds.push(nopIdFilter)
     if (brand) { filterConds.push(`d.manufacturer = $${pIdx++}`); params.push(brand) }
     if (ontType) { filterConds.push(`d.cpe_type = $${pIdx++}`); params.push(ontType) }
     if (search) { filterConds.push(`(d.device_name ILIKE $${pIdx} OR d.serial_number ILIKE $${pIdx})`); params.push(`%${search}%`); pIdx++ }

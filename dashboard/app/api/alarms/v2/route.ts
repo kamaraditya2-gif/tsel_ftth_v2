@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import pool from '@/lib/db'
+import { parseIds, buildOptionalFilter } from '@/lib/filter-utils'
 
 export async function GET(request: Request) {
   try {
@@ -21,18 +22,14 @@ export async function GET(request: Request) {
     const params: any[] = []
     let paramIdx = 1
 
-    if (areaId) {
-      whereClauses.push(`ma.id = $${paramIdx++}`)
-      params.push(parseInt(areaId))
-    }
-    if (regionalId) {
-      whereClauses.push(`ds.id = $${paramIdx++}`)
-      params.push(parseInt(regionalId))
-    }
-    if (nopId) {
-      whereClauses.push(`n.id = $${paramIdx++}`)
-      params.push(parseInt(nopId))
-    }
+    const areaIdFilter = buildOptionalFilter('ma.id', areaId, searchParams.get('area_ids'), () => paramIdx++, params)
+    if (areaIdFilter) whereClauses.push(areaIdFilter)
+
+    const regionalIdFilter = buildOptionalFilter('ds.id', regionalId, searchParams.get('regional_ids'), () => paramIdx++, params)
+    if (regionalIdFilter) whereClauses.push(regionalIdFilter)
+
+    const nopIdFilter = buildOptionalFilter('n.id', nopId, searchParams.get('nop_ids'), () => paramIdx++, params)
+    if (nopIdFilter) whereClauses.push(nopIdFilter)
     if (brand) {
       whereClauses.push(`d.manufacturer = $${paramIdx++}`)
       params.push(brand)

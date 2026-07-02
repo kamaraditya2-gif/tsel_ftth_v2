@@ -19,10 +19,13 @@ interface ThresholdChartProps {
   areaId?: string
   regionalId?: string
   nopId?: string
+  areaIds?: string
+  regionalIds?: string
+  nopIds?: string
   speedGroupId?: string
 }
 
-export default function ThresholdChart({ timeRange = '24h', areaId, regionalId, nopId, speedGroupId }: ThresholdChartProps) {
+export default function ThresholdChart({ timeRange = '24h', areaId, regionalId, nopId, areaIds, regionalIds, nopIds, speedGroupId }: ThresholdChartProps) {
   const [data, setData] = useState<ThresholdData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -30,9 +33,12 @@ export default function ThresholdChart({ timeRange = '24h', areaId, regionalId, 
     const fetchData = async () => {
       try {
         const params = new URLSearchParams({ timeRange })
-        if (areaId) params.append('areaId', areaId)
-        if (regionalId) params.append('regionalId', regionalId)
-        if (nopId) params.append('nopId', nopId)
+        if (areaIds) params.append('areaIds', areaIds)
+        else if (areaId) params.append('areaId', areaId)
+        if (regionalIds) params.append('regionalIds', regionalIds)
+        else if (regionalId) params.append('regionalId', regionalId)
+        if (nopIds) params.append('nopIds', nopIds)
+        else if (nopId) params.append('nopId', nopId)
         if (speedGroupId) params.append('speedGroupId', speedGroupId)
 
         const response = await fetch(`/api/dashboard/threshold?${params}`)
@@ -50,7 +56,7 @@ export default function ThresholdChart({ timeRange = '24h', areaId, regionalId, 
     }
 
     fetchData()
-  }, [timeRange, areaId, regionalId, nopId, speedGroupId])
+  }, [timeRange, areaId, regionalId, nopId, areaIds, regionalIds, nopIds, speedGroupId])
 
   if (loading) {
     return (

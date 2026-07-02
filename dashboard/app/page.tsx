@@ -77,6 +77,7 @@ export default function DashboardPage() {
   const [dashboardV2, setDashboardV2] = useState<any>(null)
   const [alarmStats, setAlarmStats] = useState<any>(null)
   const [showPhase3, setShowPhase3] = useState(false)
+  const [filterLocStr, setFilterLocStr] = useState({ areaIds: '', regionalIds: '', nopIds: '' })
 
   useEffect(() => {
     fetchSystemStatus()
@@ -156,15 +157,12 @@ export default function DashboardPage() {
   const fetchDashboardData = async () => {
     try {
       const params = new URLSearchParams({ timeRange })
-      if (selectedArea) {
-        params.append('areaId', selectedArea.toString())
-      }
-      if (selectedRegional) {
-        params.append('regionalId', selectedRegional.toString())
-      }
-      if (selectedNopCity) {
-        params.append('nopId', selectedNopCity.toString())
-      }
+      if (filterLocStr.areaIds) params.append('areaIds', filterLocStr.areaIds)
+      else if (selectedArea) params.append('areaId', selectedArea.toString())
+      if (filterLocStr.regionalIds) params.append('regionalIds', filterLocStr.regionalIds)
+      else if (selectedRegional) params.append('regionalId', selectedRegional.toString())
+      if (filterLocStr.nopIds) params.append('nopIds', filterLocStr.nopIds)
+      else if (selectedNopCity) params.append('nopId', selectedNopCity.toString())
       if (selectedSpeedGroup) {
         params.append('speedGroupId', selectedSpeedGroup.toString())
       }
@@ -187,9 +185,12 @@ export default function DashboardPage() {
   const fetchOntTypeComparison = async () => {
     try {
       const p = new URLSearchParams({ timeRange })
-      if (selectedArea) p.append('areaId', selectedArea.toString())
-      if (selectedRegional) p.append('regionalId', selectedRegional.toString())
-      if (selectedNopCity) p.append('nopId', selectedNopCity.toString())
+      if (filterLocStr.areaIds) p.append('areaIds', filterLocStr.areaIds)
+      else if (selectedArea) p.append('areaId', selectedArea.toString())
+      if (filterLocStr.regionalIds) p.append('regionalIds', filterLocStr.regionalIds)
+      else if (selectedRegional) p.append('regionalId', selectedRegional.toString())
+      if (filterLocStr.nopIds) p.append('nopIds', filterLocStr.nopIds)
+      else if (selectedNopCity) p.append('nopId', selectedNopCity.toString())
       const res = await fetch(`/api/dashboard/ont-type-comparison?${p}`)
       const data = await res.json()
       if (data.data && Array.isArray(data.data)) {
@@ -203,9 +204,12 @@ export default function DashboardPage() {
   const fetchOntBrandComparison = async () => {
     try {
       const p = new URLSearchParams({ timeRange })
-      if (selectedArea) p.append('areaId', selectedArea.toString())
-      if (selectedRegional) p.append('regionalId', selectedRegional.toString())
-      if (selectedNopCity) p.append('nopId', selectedNopCity.toString())
+      if (filterLocStr.areaIds) p.append('areaIds', filterLocStr.areaIds)
+      else if (selectedArea) p.append('areaId', selectedArea.toString())
+      if (filterLocStr.regionalIds) p.append('regionalIds', filterLocStr.regionalIds)
+      else if (selectedRegional) p.append('regionalId', selectedRegional.toString())
+      if (filterLocStr.nopIds) p.append('nopIds', filterLocStr.nopIds)
+      else if (selectedNopCity) p.append('nopId', selectedNopCity.toString())
       const res = await fetch(`/api/dashboard/ont-brand-comparison?${p}`)
       const data = await res.json()
       if (data.data && Array.isArray(data.data)) {
@@ -229,9 +233,12 @@ export default function DashboardPage() {
   const fetchAlarmStats = async () => {
     try {
       const p = new URLSearchParams({ timeRange })
-      if (selectedArea) p.append('areaId', selectedArea.toString())
-      if (selectedRegional) p.append('regionalId', selectedRegional.toString())
-      if (selectedNopCity) p.append('nopId', selectedNopCity.toString())
+      if (filterLocStr.areaIds) p.append('areaIds', filterLocStr.areaIds)
+      else if (selectedArea) p.append('areaId', selectedArea.toString())
+      if (filterLocStr.regionalIds) p.append('regionalIds', filterLocStr.regionalIds)
+      else if (selectedRegional) p.append('regionalId', selectedRegional.toString())
+      if (filterLocStr.nopIds) p.append('nopIds', filterLocStr.nopIds)
+      else if (selectedNopCity) p.append('nopId', selectedNopCity.toString())
       const res = await fetch(`/api/alarms/stats?${p.toString()}`)
       const data = await res.json()
       if (data && data.active && typeof data.active.total === 'number') setAlarmStats(data)
@@ -530,7 +537,12 @@ export default function DashboardPage() {
           </div>
 
           {/* Location Cascading */}
-          <LocationFilter onFilterChange={(f) => { setSelectedArea(f.areaIds[0] ?? null); setSelectedRegional(f.regionalIds[0] ?? null); setSelectedNopCity(f.nopIds[0] ?? null) }} />
+          <LocationFilter onFilterChange={(f) => {
+            setSelectedArea(f.areaIds[0] ?? null);
+            setSelectedRegional(f.regionalIds[0] ?? null);
+            setSelectedNopCity(f.nopIds[0] ?? null);
+            setFilterLocStr({ areaIds: f.areaIds.join(','), regionalIds: f.regionalIds.join(','), nopIds: f.nopIds.join(',') })
+          }} />
 
           {/* Speed Group Dropdown */}
           <div className="relative" id="speed-group-dropdown">
@@ -676,13 +688,16 @@ export default function DashboardPage() {
       {dashboardData && (
         <div className="mb-6">
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-indigo-500/10 border border-indigo-500/20">
-            <ThresholdChart
-              timeRange={timeRange}
-              areaId={selectedArea ? selectedArea.toString() : undefined}
-              regionalId={selectedRegional ? selectedRegional.toString() : undefined}
-              nopId={selectedNopCity ? selectedNopCity.toString() : undefined}
-              speedGroupId={selectedSpeedGroup ? selectedSpeedGroup.toString() : undefined}
-            />
+                <ThresholdChart
+                  timeRange={timeRange}
+                  areaIds={filterLocStr.areaIds || undefined}
+                  regionalIds={filterLocStr.regionalIds || undefined}
+                  nopIds={filterLocStr.nopIds || undefined}
+                  areaId={selectedArea ? selectedArea.toString() : undefined}
+                  regionalId={selectedRegional ? selectedRegional.toString() : undefined}
+                  nopId={selectedNopCity ? selectedNopCity.toString() : undefined}
+                  speedGroupId={selectedSpeedGroup ? selectedSpeedGroup.toString() : undefined}
+                />
           </div>
         </div>
       )}
@@ -708,15 +723,18 @@ export default function DashboardPage() {
       {/* Device Heatmap */}
       <div className="mb-8">
         <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-purple-500/10 border border-purple-500/20 p-6 hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
-          <DeviceHeatmap
-            timeRange={timeRange}
-            areaId={selectedArea ? selectedArea.toString() : undefined}
-            regionalId={selectedRegional ? selectedRegional.toString() : undefined}
-            nopId={selectedNopCity ? selectedNopCity.toString() : undefined}
-            speedGroupId={selectedSpeedGroup ? selectedSpeedGroup.toString() : undefined}
-            manufacturerId={selectedManufacturer ? selectedManufacturer.toString() : undefined}
-            ontModelId={selectedOntModel ? selectedOntModel.toString() : undefined}
-          />
+                  <DeviceHeatmap
+                    timeRange={timeRange}
+                    areaIds={filterLocStr.areaIds || undefined}
+                    regionalIds={filterLocStr.regionalIds || undefined}
+                    nopIds={filterLocStr.nopIds || undefined}
+                    areaId={selectedArea ? selectedArea.toString() : undefined}
+                    regionalId={selectedRegional ? selectedRegional.toString() : undefined}
+                    nopId={selectedNopCity ? selectedNopCity.toString() : undefined}
+                    speedGroupId={selectedSpeedGroup ? selectedSpeedGroup.toString() : undefined}
+                    manufacturerId={selectedManufacturer ? selectedManufacturer.toString() : undefined}
+                    ontModelId={selectedOntModel ? selectedOntModel.toString() : undefined}
+                  />
         </div>
       </div>
 

@@ -43,6 +43,9 @@ interface DeviceHeatmapProps {
   regionalId?: string
   areaId?: string
   nopId?: string
+  areaIds?: string
+  regionalIds?: string
+  nopIds?: string
   speedGroupId?: string
   manufacturerId?: string
   ontModelId?: string
@@ -105,7 +108,7 @@ function getRadius(status: string): number {
   return status === 'offline' ? 16 : 12
 }
 
-export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataSource = 'upstream', areaId, regionalId, nopId, speedGroupId, manufacturerId, ontModelId, serverId }: DeviceHeatmapProps) {
+export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataSource = 'upstream', areaId, regionalId, nopId, areaIds, regionalIds, nopIds, speedGroupId, manufacturerId, ontModelId, serverId }: DeviceHeatmapProps) {
   const [devices, setDevices] = useState<MapDevice[]>([])
   const [servers, setServers] = useState<DownstreamServer[]>([])
   const [loading, setLoading] = useState(true)
@@ -121,9 +124,12 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
     async function fetchDevices() {
       try {
         const params = new URLSearchParams({ timeRange, dataSource })
-        if (areaId) params.append('areaId', areaId)
-        if (regionalId) params.append('regionalId', regionalId)
-        if (nopId) params.append('nopId', nopId)
+        if (areaIds) params.append('areaIds', areaIds)
+        else if (areaId) params.append('areaId', areaId)
+        if (regionalIds) params.append('regionalIds', regionalIds)
+        else if (regionalId) params.append('regionalId', regionalId)
+        if (nopIds) params.append('nopIds', nopIds)
+        else if (nopId) params.append('nopId', nopId)
         if (speedGroupId) params.append('speedGroupId', speedGroupId)
         if (manufacturerId) params.append('manufacturerId', manufacturerId)
         if (ontModelId) params.append('ontModelId', ontModelId)
@@ -147,7 +153,7 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
     }
 
     fetchDevices()
-  }, [timeRange, areaId, regionalId, nopId, speedGroupId, manufacturerId, ontModelId, dataSource, serverId])
+  }, [timeRange, areaId, regionalId, nopId, areaIds, regionalIds, nopIds, speedGroupId, manufacturerId, ontModelId, dataSource, serverId])
 
   useEffect(() => {
     if (!mapContainerRef.current) return

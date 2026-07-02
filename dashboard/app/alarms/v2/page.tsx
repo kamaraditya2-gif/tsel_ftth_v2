@@ -18,7 +18,7 @@ export default function AlarmsV2Page() {
   const [total, setTotal] = useState(0); const [totalCleared, setTotalCleared] = useState(0)
   const [loading, setLoading] = useState(true); const [expandedId, setExpandedId] = useState<number | null>(null)
   const [filters, setFilters] = useState({}); const [tab, setTab] = useState('active')
-  const [locFilters, setLocFilters] = useState({ areaId: null as number | null, regionalId: null as number | null, nopId: null as number | null })
+  const [locFilters, setLocFilters] = useState({ areaId: null as number | null, regionalId: null as number | null, nopId: null as number | null, areaIds: '', regionalIds: '', nopIds: '' })
   const filtersRef = useRef(filters); const locRef = useRef(locFilters)
   filtersRef.current = filters; locRef.current = locFilters
   const [rootCauses, setRootCauses] = useState<any[]>([])
@@ -33,9 +33,12 @@ export default function AlarmsV2Page() {
     setLoading(true)
     try {
       const p = new URLSearchParams()
-      if (loc.areaId) p.set('area_id', loc.areaId.toString())
-      if (loc.regionalId) p.set('regional_id', loc.regionalId.toString())
-      if (loc.nopId) p.set('nop_id', loc.nopId.toString())
+      if ((loc as any).areaIds) p.set('area_ids', (loc as any).areaIds)
+      else if (loc.areaId) p.set('area_id', loc.areaId.toString())
+      if ((loc as any).regionalIds) p.set('regional_ids', (loc as any).regionalIds)
+      else if (loc.regionalId) p.set('regional_id', loc.regionalId.toString())
+      if ((loc as any).nopIds) p.set('nop_ids', (loc as any).nopIds)
+      else if (loc.nopId) p.set('nop_id', loc.nopId.toString())
       Object.entries(f).forEach(([k, v]) => { if (v) p.set(k, v as string) })
       const res = await fetch(`/api/alarms/check?${p}`); const r = await res.json()
       setData(r.alarms || []); setCleared(r.cleared || []); setTotal(r.total || 0); setTotalCleared(r.total_cleared || 0)
@@ -46,7 +49,7 @@ export default function AlarmsV2Page() {
 
   const handleFilterChange = (f: any) => { setFilters(f); fetchAlarms(f, locFilters) }
   const handleLocationChange = (loc: { areaIds: number[]; regionalIds: number[]; nopIds: number[] }) => {
-    const nl = { areaId: loc.areaIds[0] ?? null, regionalId: loc.regionalIds[0] ?? null, nopId: loc.nopIds[0] ?? null }
+    const nl = { areaId: loc.areaIds[0] ?? null, regionalId: loc.regionalIds[0] ?? null, nopId: loc.nopIds[0] ?? null, areaIds: loc.areaIds.join(','), regionalIds: loc.regionalIds.join(','), nopIds: loc.nopIds.join(',') }
     setLocFilters(nl)
     fetchAlarms(filters, nl)
   }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import pool from '@/lib/db'
+import { parseIds, buildOptionalFilter } from '@/lib/filter-utils'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -14,9 +15,14 @@ export async function GET(request: Request) {
   const params: any[] = []
   let pIdx = 1
 
-  if (areaId) { whereExtra += ` AND ma.id = $${pIdx++}`; params.push(parseInt(areaId)) }
-  if (regionalId) { whereExtra += ` AND ds.id = $${pIdx++}`; params.push(parseInt(regionalId)) }
-  if (nopId) { whereExtra += ` AND n.id = $${pIdx++}`; params.push(parseInt(nopId)) }
+  const areaIdFilter = buildOptionalFilter('ma.id', areaId, searchParams.get('area_ids'), () => pIdx++, params)
+  if (areaIdFilter) whereExtra += ` AND ${areaIdFilter}`
+
+  const regionalIdFilter = buildOptionalFilter('ds.id', regionalId, searchParams.get('regional_ids'), () => pIdx++, params)
+  if (regionalIdFilter) whereExtra += ` AND ${regionalIdFilter}`
+
+  const nopIdFilter = buildOptionalFilter('n.id', nopId, searchParams.get('nop_ids'), () => pIdx++, params)
+  if (nopIdFilter) whereExtra += ` AND ${nopIdFilter}`
   if (brand) { whereExtra += ` AND d.manufacturer = $${pIdx++}`; params.push(brand) }
   if (ontType) { whereExtra += ` AND d.cpe_type = $${pIdx++}`; params.push(ontType) }
 

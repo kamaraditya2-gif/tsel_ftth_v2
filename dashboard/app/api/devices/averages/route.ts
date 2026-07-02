@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import pool from '@/lib/db'
+import { parseIds, buildOptionalFilter } from '@/lib/filter-utils'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
@@ -14,21 +15,14 @@ export async function GET(request: Request) {
     const filterParams: any[] = []
     let paramIndex = 1
 
-    if (areaId) {
-      deviceFilter.push(`d.cluster_nop_id IN (SELECT id FROM master_cluster_nop WHERE area_id = $${paramIndex})`)
-      filterParams.push(parseInt(areaId))
-      paramIndex++
-    }
-    if (regionalId) {
-      deviceFilter.push(`d.downstream_server_id = $${paramIndex}`)
-      filterParams.push(parseInt(regionalId))
-      paramIndex++
-    }
-    if (nopId) {
-      deviceFilter.push(`d.cluster_nop_id = $${paramIndex}`)
-      filterParams.push(parseInt(nopId))
-      paramIndex++
-    }
+    const areaIdFilter = buildOptionalFilter('area_id', areaId, searchParams.get('area_ids'), () => paramIndex++, filterParams)
+    if (areaIdFilter) deviceFilter.push(`d.cluster_nop_id IN (SELECT id FROM master_cluster_nop WHERE ${areaIdFilter})`)
+
+    const regionalIdFilter = buildOptionalFilter('d.downstream_server_id', regionalId, searchParams.get('regional_ids'), () => paramIndex++, filterParams)
+    if (regionalIdFilter) deviceFilter.push(regionalIdFilter)
+
+    const nopIdFilter = buildOptionalFilter('d.cluster_nop_id', nopId, searchParams.get('nop_ids'), () => paramIndex++, filterParams)
+    if (nopIdFilter) deviceFilter.push(nopIdFilter)
 
     const joinClause = deviceFilter.length > 0
       ? `JOIN devices_ont d ON tp.device_id = d.id AND ${deviceFilter.join(' AND ')}`

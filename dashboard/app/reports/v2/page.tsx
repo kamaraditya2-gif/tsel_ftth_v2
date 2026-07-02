@@ -20,7 +20,7 @@ export default function ReportsV2Page() {
   const [reportData, setReportData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({})
-  const [locFilters, setLocFilters] = useState({ areaId: null as number | null, regionalId: null as number | null, nopId: null as number | null })
+  const [locFilters, setLocFilters] = useState({ areaId: null as number | null, regionalId: null as number | null, nopId: null as number | null, areaIds: '', regionalIds: '', nopIds: '' })
   const [allDevices, setAllDevices] = useState<any[]>([])
   const [detailRow, setDetailRow] = useState<any>(null)
 
@@ -33,9 +33,12 @@ export default function ReportsV2Page() {
     try {
       const p = new URLSearchParams()
       p.set('type', activeReport)
-      if (locFilters.areaId) p.set('area_id', locFilters.areaId.toString())
-      if (locFilters.regionalId) p.set('regional_id', locFilters.regionalId.toString())
-      if (locFilters.nopId) p.set('nop_id', locFilters.nopId.toString())
+      if ((locFilters as any).areaIds) p.set('area_ids', (locFilters as any).areaIds)
+      else if (locFilters.areaId) p.set('area_id', locFilters.areaId.toString())
+      if ((locFilters as any).regionalIds) p.set('regional_ids', (locFilters as any).regionalIds)
+      else if (locFilters.regionalId) p.set('regional_id', locFilters.regionalId.toString())
+      if ((locFilters as any).nopIds) p.set('nop_ids', (locFilters as any).nopIds)
+      else if (locFilters.nopId) p.set('nop_id', locFilters.nopId.toString())
       Object.entries(filters).forEach(([k, v]) => { if (v) p.set(k, v as string) })
 
       const res = await fetch(`/api/reports/v2?${p}`)
@@ -116,7 +119,7 @@ export default function ReportsV2Page() {
         {/* Filter */}
         <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-md p-4">
           <LocationFilter onFilterChange={(f) => {
-            setLocFilters({ areaId: f.areaIds[0] ?? null, regionalId: f.regionalIds[0] ?? null, nopId: f.nopIds[0] ?? null })
+            setLocFilters({ areaId: f.areaIds[0] ?? null, regionalId: f.regionalIds[0] ?? null, nopId: f.nopIds[0] ?? null, areaIds: f.areaIds.join(','), regionalIds: f.regionalIds.join(','), nopIds: f.nopIds.join(',') })
           }} />
         </div>
 
