@@ -16,18 +16,18 @@ export async function GET(request: Request) {
     // Get alarm history from active_alarms (current) + alarm_history (if exists)
     const [activeRes, historyRes] = await Promise.all([
       client.query(`
-        SELECT alarm_type, metric_value, threshold_value, severity, unit, 'active' as source, NOW() as triggered_at
+        SELECT alarm_type, metric_value, threshold_value, severity, '' as unit, 'active' as source, NOW() as triggered_at
         FROM active_alarms
         WHERE device_id = $1
         ORDER BY severity, alarm_type
-      `, [deviceId]),
+      `, [parseInt(deviceId)]),
       client.query(`
-        SELECT alarm_type, metric_value, threshold_value, severity, unit, 'history' as source, triggered_at
+        SELECT alarm_type, metric_value, threshold_value, severity, '' as unit, 'history' as source, triggered_at
         FROM alarm_history
         WHERE device_id = $1 AND triggered_at >= NOW() - INTERVAL '3 months'
         ORDER BY triggered_at DESC
         LIMIT 100
-      `, [deviceId]).catch(() => ({ rows: [] }))
+      `, [parseInt(deviceId)]).catch(() => ({ rows: [] }))
     ])
 
     client.release()
