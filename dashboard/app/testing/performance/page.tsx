@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Activity, RefreshCw, Network, Search } from 'lucide-react'
+import { Activity, RefreshCw, Network, Search, Download } from 'lucide-react'
 import NetworkDiagram from '@/components/NetworkDiagram'
 import LocationFilter from '@/components/LocationFilter'
 
@@ -43,6 +43,9 @@ export default function PerformanceTestPage() {
   filtersRef.current = filters
   locRef.current = locFilters
   const [traceDevice, setTraceDevice] = useState<any>(null)
+  const [historyDevice, setHistoryDevice] = useState<any>(null)
+  const [historyData, setHistoryData] = useState<any[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
   const [thresholds, setThresholds] = useState<any[]>([])
   const intervalRef = useRef<NodeJS.Timeout>()
 
@@ -97,6 +100,32 @@ export default function PerformanceTestPage() {
       if (val >= warn) return `>${fmt(warn)}`
     }
     return ''
+  }
+
+  const fetchHistory = async (deviceId: number) => {
+    setHistoryLoading(true)
+    try {
+      const res = await fetch(`/api/performance/history?device_id=${deviceId}&limit=50`)
+      const data = await res.json()
+      setHistoryData(data.results || [])
+    } catch (e) { console.error(e) }
+    finally { setHistoryLoading(false) }
+  }
+
+  const downloadHistory = () => {
+    if (!historyData.length) return
+    const rows = [['Timestamp', 'Type', 'Value']]
+    historyData.forEach((r: any) => {
+      const d = r.data || {}
+      const val = d.ping_igw || d.ping_ebr || d.download_speed || d.upload_speed || ''
+      rows.push([r.ts, r.type, val])
+    })
+    const csv = rows.map(r => r.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `history-${historyDevice?.id || ''}.csv`; a.click()
+    URL.revokeObjectURL(url)
   }
 
   const fetchResults = async (f: any = filters, loc: any = locFilters) => {
@@ -208,13 +237,14 @@ export default function PerformanceTestPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Traceroute</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Last Check</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">History</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
                 {loading ? (
-                  <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
+                  <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
                 ) : results.length === 0 ? (
-                  <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">No results found</td></tr>
+                  <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">No results found</td></tr>
                 ) : results.map((r: any, i: number) => (
                   <tr key={r.id || i} className="hover:bg-slate-700/30 transition-colors">
                     <td className="px-4 py-3">
@@ -282,6 +312,12 @@ export default function PerformanceTestPage() {
                     <td className="px-4 py-3 text-xs text-gray-400">
                       {formatTime(r.last_test_time || r.ping_time || r.download_time || r.upload_time)}
                     </td>
+                    <td className="px-4 py-3 text-center">
+                      <button onClick={() => { setHistoryDevice(r); fetchHistory(r.id) }}
+                        className="px-2 py-1 rounded text-[10px] bg-slate-700 hover:bg-slate-600 text-gray-300 transition-colors">
+                        View
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -326,6 +362,66 @@ export default function PerformanceTestPage() {
                   </div>
                 ))
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History Modal */}
+      {historyDevice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setHistoryDevice(null)}>
+          <div className="bg-slate-900 rounded-2xl border border-slate-700 p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-white">History — {historyDevice.device_name || historyDevice.serial_number}</h3>
+                <p className="text-xs text-gray-400">{historyDevice.serial_number} · Last 3 months</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {historyData.length > 0 && (
+                  <button onClick={downloadHistory}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs transition-colors">
+                    <Download className="w-3 h-3" /> CSV
+                  </button>
+                )}
+                <button onClick={() => setHistoryDevice(null)} className="p-1.5 rounded-lg hover:bg-slate-700 text-gray-400">&times;</button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {historyLoading ? (
+                <div className="text-center py-8 text-gray-400">Loading...</div>
+              ) : historyData.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No historical data for this device</div>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-700">
+                      <th className="px-3 py-2 text-left text-[10px] font-semibold text-gray-400 uppercase">Timestamp</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-semibold text-gray-400 uppercase">Type</th>
+                      <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-400 uppercase">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {historyData.map((h: any, i: number) => {
+                      const d = h.data || {}
+                      const val = d.ping_igw ? `${d.ping_igw} ms` : d.ping_ebr ? `${d.ping_ebr} ms` : d.download_speed ? `${d.download_speed} Mbps` : d.upload_speed ? `${d.upload_speed} Mbps` : '-'
+                      return (
+                        <tr key={i} className="hover:bg-slate-800/50 text-xs">
+                          <td className="px-3 py-2 text-gray-400">{new Date(h.ts).toLocaleString('id-ID')}</td>
+                          <td className="px-3 py-2">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                              h.type === 'ping' ? 'bg-cyan-500/10 text-cyan-300' :
+                              h.type === 'download' ? 'bg-emerald-500/10 text-emerald-300' :
+                              'bg-purple-500/10 text-purple-300'
+                            }`}>{h.type}</span>
+                          </td>
+                          <td className="px-3 py-2 text-right font-mono text-gray-200">{val}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
