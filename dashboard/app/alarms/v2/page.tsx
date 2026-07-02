@@ -54,11 +54,20 @@ function AlarmsV2Page() {
   useEffect(() => {
     const sev = searchParams.get('severity') || ''
     const tb = searchParams.get('tab') || 'active'
+    const aIds = searchParams.get('area_ids') || ''
+    const rIds = searchParams.get('regional_ids') || ''
+    const nIds = searchParams.get('nop_ids') || ''
     if (sev) setFilterSeverity(sev)
     if (tb) setTab(tb)
-    const initialFilters = sev ? { severity: sev } : {}
+    const initialFilters: any = {}
+    if (sev) initialFilters.severity = sev
     setFilters(initialFilters)
-    fetchAlarms(initialFilters, locFilters)
+    const nl = {
+      areaId: null as number | null, regionalId: null as number | null, nopId: null as number | null,
+      areaIds: aIds, regionalIds: rIds, nopIds: nIds
+    }
+    setLocFilters(nl)
+    fetchAlarms(initialFilters, nl)
   }, [])
 
   const fetchAlarmHistory = async (deviceId: number) => {

@@ -18,9 +18,10 @@ interface TopCardsProps {
     active: AlarmBucket
     cleared: AlarmBucket
   }
+  filterParams?: { areaIds: string; regionalIds: string; nopIds: string }
 }
 
-export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ontTypeData, alarmStats }: TopCardsProps) {
+export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ontTypeData, alarmStats, filterParams }: TopCardsProps) {
   const router = useRouter()
   const active = alarmStats?.active
   const cleared = alarmStats?.cleared
@@ -39,7 +40,15 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
   const clrPacketLoss = cleared?.byType?.packet_loss || 0
   const clrTotal = cleared?.total || 0
 
-  const goAlarms = (tab?: string, severity?: string) => router.push(`/alarms/v2?tab=${tab || ''}&severity=${severity || ''}`)
+  const goAlarms = (tab?: string, severity?: string) => {
+    const p = new URLSearchParams()
+    if (tab) p.set('tab', tab)
+    if (severity) p.set('severity', severity)
+    if (filterParams?.areaIds) p.set('area_ids', filterParams.areaIds)
+    if (filterParams?.regionalIds) p.set('regional_ids', filterParams.regionalIds)
+    if (filterParams?.nopIds) p.set('nop_ids', filterParams.nopIds)
+    router.push(`/alarms/v2?${p.toString()}`)
+  }
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
       {/* Latency */}

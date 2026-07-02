@@ -681,6 +681,7 @@ export default function DashboardPage() {
           ontBrandData={ontBrandData}
           ontTypeData={ontTypeData}
           alarmStats={alarmStats}
+          filterParams={filterLocStr}
         />
       )}
 
