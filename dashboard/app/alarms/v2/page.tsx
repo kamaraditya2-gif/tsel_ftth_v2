@@ -31,6 +31,7 @@ export default function AlarmsV2Page() {
   const [historyDevice, setHistoryDevice] = useState<any>(null)
   const [historyData, setHistoryData] = useState<any[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [filterSeverity, setFilterSeverity] = useState('')
 
   const fetchAlarms = async (f = filters, loc = locFilters) => {
     setLoading(true)
@@ -136,6 +137,12 @@ export default function AlarmsV2Page() {
 
         <div className="flex flex-wrap items-center gap-3 bg-slate-800/50 backdrop-blur-md p-4 rounded-2xl border border-slate-700/50 relative z-50">
           <LocationFilter onFilterChange={handleLocationChange} />
+          <select value={filterSeverity} onChange={e => { setFilterSeverity(e.target.value); handleFilterChange({ ...filters, severity: e.target.value }) }}
+            className="px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs">
+            <option value="">All Severity</option>
+            <option value="critical">Critical</option>
+            <option value="warning">Warning</option>
+          </select>
           <input
             type="text"
             placeholder="Search device..."
