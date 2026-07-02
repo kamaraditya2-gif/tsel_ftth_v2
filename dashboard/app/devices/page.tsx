@@ -63,6 +63,10 @@ interface Device {
   success_rate: number | null
 }
 
+const datasheetUrls: Record<string, string> = {
+  'F670L': 'http://ztegpon.cz/pdf/ZXHN%20F670L%20datasheet.pdf',
+}
+
 function DevicesPageContent() {
   const searchParams = useSearchParams()
   const [devices, setDevices] = useState<Device[]>([])
@@ -891,8 +895,15 @@ function DevicesPageContent() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {device.ip_address || '-'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {device.model || '-'}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {device.model ? (
+                      datasheetUrls[device.model] ? (
+                        <a href={datasheetUrls[device.model]} target="_blank" rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 underline underline-offset-2">{device.model}</a>
+                      ) : (
+                        <span className="text-gray-500 dark:text-gray-400">{device.model}</span>
+                      )
+                    ) : <span className="text-gray-500 dark:text-gray-400">-</span>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {device.indihome_id || '-'}
