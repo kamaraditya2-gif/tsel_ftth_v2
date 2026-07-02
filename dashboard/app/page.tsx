@@ -101,7 +101,7 @@ export default function DashboardPage() {
     }, 30000)
 
     return () => clearInterval(interval)
-  }, [timeRange, selectedArea, selectedRegional, selectedNopCity, selectedSpeedGroup, selectedManufacturer, selectedOntModel])
+  }, [timeRange, selectedArea, selectedRegional, selectedNopCity, selectedSpeedGroup, selectedManufacturer, selectedOntModel, filterLocStr])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
