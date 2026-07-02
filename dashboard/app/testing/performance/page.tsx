@@ -220,6 +220,7 @@ export default function PerformanceTestPage() {
                     <td className="px-4 py-3">
                       <p className="text-sm text-white">{r.device_name || r.serial_number || '-'}</p>
                       <p className="text-xs text-gray-400">{r.serial_number || ''}</p>
+                      {r.alias_device && <p className="text-[10px] text-cyan-400 mt-0.5">{r.alias_device}</p>}
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-sm text-white">{r.brand || '-'}</p>

@@ -39,7 +39,7 @@ export async function GET(request: Request) {
 
     const result = await client.query(`
       SELECT
-        d.id, d.device_name, d.serial_number, d.manufacturer as brand, d.cpe_type as ont_type,
+        d.id, d.device_name, d.serial_number, d.alias_device, d.manufacturer as brand, d.cpe_type as ont_type,
         sg.name as speed_name, sg.speed_limit, sg.profile as speed_profile,
         p.ping_igw as latency, p.ping_ebr as latency_ebr,
         p.packet_loss_igw as packet_loss, p.created_at as ping_time,
