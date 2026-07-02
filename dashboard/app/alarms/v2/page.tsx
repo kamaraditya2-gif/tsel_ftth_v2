@@ -28,6 +28,9 @@ export default function AlarmsV2Page() {
   const [ticketSummary, setTicketSummary] = useState('');   const [ticketRCA, setTicketRCA] = useState('')
   const [selectedRc, setSelectedRc] = useState<number | null>(null); const [rcNote, setRcNote] = useState('')
   const [retesting, setRetesting] = useState(false)
+  const [historyDevice, setHistoryDevice] = useState<any>(null)
+  const [historyData, setHistoryData] = useState<any[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
 
   const fetchAlarms = async (f = filters, loc = locFilters) => {
     setLoading(true)
@@ -46,6 +49,16 @@ export default function AlarmsV2Page() {
     } catch (e) { console.error(e) } finally { setLoading(false) }
   }
   useEffect(() => { fetchAlarms() }, [])
+
+  const fetchAlarmHistory = async (deviceId: number) => {
+    setHistoryLoading(true)
+    try {
+      const res = await fetch(`/api/alarms/history?device_id=${deviceId}`)
+      const data = await res.json()
+      setHistoryData(data.results || [])
+    } catch (e) { console.error(e) }
+    finally { setHistoryLoading(false) }
+  }
 
   const handleFilterChange = (f: any) => { setFilters(f); fetchAlarms(f, locFilters) }
   const handleLocationChange = (loc: { areaIds: number[]; regionalIds: number[]; nopIds: number[] }) => {
@@ -156,12 +169,13 @@ export default function AlarmsV2Page() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Speed Pkg</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Severity</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Status</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">Hist</th>
                   <th className="px-4 py-3 w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
-                {loading ? <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">Checking alarms...</td></tr>
-                : list.length === 0 ? <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">{tab === 'active' ? 'No threshold violations' : 'No cleared devices'}</td></tr>
+                {loading ? <tr><td colSpan={13} className="px-4 py-10 text-center text-gray-400">Checking alarms...</td></tr>
+                : list.length === 0 ? <tr><td colSpan={13} className="px-4 py-10 text-center text-gray-400">{tab === 'active' ? 'No threshold violations' : 'No cleared devices'}</td></tr>
                 : list.map((d: DeviceAlarm) => (
                   <><tr key={d.device_id} className="hover:bg-slate-700/30 transition-colors">
                     <td className="px-4 py-3"><span className="text-[11px] font-mono text-gray-400 font-semibold tracking-wider">{d.alarms[0]?.alarm_code || '-'}</span></td>
@@ -175,9 +189,10 @@ export default function AlarmsV2Page() {
                     <td className="px-4 py-3"><span className="text-sm text-gray-300">{d.speed_name || '-'} {d.speed_limit ? '(' + d.speed_limit + ' Mbps)' : ''}</span></td>
                     <td className="px-4 py-3"><span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${severityColor(d.max_severity)}`}>{d.max_severity === 'critical' ? <AlertCircle className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}{d.max_severity}</span></td>
                     <td className="px-4 py-3">{d.ticket ? <span className="text-xs text-blue-400">{d.ticket.number}</span> : <span className="text-xs text-gray-500">—</span>}</td>
+                    <td className="px-4 py-3 text-center"><button onClick={() => { setHistoryDevice(d); fetchAlarmHistory(d.device_id) }} className="px-1.5 py-0.5 rounded text-[10px] bg-slate-700 hover:bg-slate-600 text-gray-300 transition-colors">View</button></td>
                     <td className="px-4 py-3"><button onClick={() => toggleExpand(d)} className="p-1 rounded-lg hover:bg-slate-600 text-gray-400">{expandedId === d.device_id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}</button></td>
                   </tr>
-                  {expandedId === d.device_id && <tr key={`${d.device_id}-detail`}><td colSpan={12} className="px-6 py-4 bg-slate-800/30">
+                  {expandedId === d.device_id && <tr key={`${d.device_id}-detail`}><td colSpan={13} className="px-6 py-4 bg-slate-800/30">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Left: Root Cause + Retest */}
                       <div className="space-y-4">
@@ -248,6 +263,48 @@ export default function AlarmsV2Page() {
           </div>
         </div>
       </div>}
+
+      {/* History Modal */}
+      {historyDevice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setHistoryDevice(null)}>
+          <div className="bg-slate-900 rounded-2xl border border-slate-700 p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">Alarm History — {historyDevice.device_name}</h3>
+              <button onClick={() => setHistoryDevice(null)} className="p-1 rounded-lg hover:bg-slate-700 text-gray-400"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {historyLoading ? (
+                <div className="text-center py-8 text-gray-400">Loading...</div>
+              ) : historyData.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No alarm history for this device</div>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-700">
+                      <th className="px-3 py-2 text-left text-[10px] font-semibold text-gray-400 uppercase">Time</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-semibold text-gray-400 uppercase">Alarm Type</th>
+                      <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-400 uppercase">Value</th>
+                      <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-400 uppercase">Threshold</th>
+                      <th className="px-3 py-2 text-center text-[10px] font-semibold text-gray-400 uppercase">Severity</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {historyData.map((h: any, i: number) => (
+                      <tr key={i} className="hover:bg-slate-800/50 text-xs">
+                        <td className="px-3 py-2 text-gray-400">{h.triggered_at ? new Date(h.triggered_at).toLocaleString('id-ID') : '-'}</td>
+                        <td className="px-3 py-2 text-gray-200">{h.alarm_type?.replace(/_/g, ' ')}</td>
+                        <td className="px-3 py-2 text-right font-mono text-gray-200">{h.metric_value}{h.unit}</td>
+                        <td className="px-3 py-2 text-right font-mono text-gray-500">{h.threshold_value}{h.unit}</td>
+                        <td className="px-3 py-2 text-center"><span className={`px-1.5 py-0.5 rounded text-[10px] ${h.severity === 'critical' ? 'bg-red-500/10 text-red-300' : 'bg-amber-500/10 text-amber-300'}`}>{h.severity}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
