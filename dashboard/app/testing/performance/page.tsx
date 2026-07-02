@@ -58,20 +58,21 @@ export default function PerformanceTestPage() {
   const calcTh = (alarmName: string, speedLimit: number | null, profile?: string) => {
     const th = getTh(alarmName, profile)
     if (!th || !speedLimit) return null
-    return speedLimit * (th.warning_value / 100)
+    return speedLimit * (num(th.warning_value) / 100)
   }
   const calcCrit = (alarmName: string, speedLimit: number | null, profile?: string) => {
     const th = getTh(alarmName, profile)
     if (!th || !speedLimit) return null
-    return speedLimit * (th.critical_value / 100)
+    return speedLimit * (num(th.critical_value) / 100)
   }
 
-  const igwTh = () => getTh('Latency_IGW')?.warning_value ?? getTh('Latency')?.warning_value ?? 30
-  const igwCrit = () => getTh('Latency_IGW')?.critical_value ?? getTh('Latency')?.critical_value ?? 60
-  const ebrTh = () => getTh('Latency_EBR')?.warning_value ?? getTh('Latency')?.warning_value ?? 80
-  const ebrCrit = () => getTh('Latency_EBR')?.critical_value ?? getTh('Latency')?.critical_value ?? 150
-  const plTh = () => getTh('Packet_Loss')?.warning_value ?? 3
-  const plCrit = () => getTh('Packet_Loss')?.critical_value ?? 5
+  const num = (v: any) => { const n = Number(v); return isNaN(n) ? 0 : n }
+  const igwTh = () => num(getTh('Latency_IGW')?.warning_value) || num(getTh('Latency')?.warning_value) || 30
+  const igwCrit = () => num(getTh('Latency_IGW')?.critical_value) || num(getTh('Latency')?.critical_value) || 60
+  const ebrTh = () => num(getTh('Latency_EBR')?.warning_value) || num(getTh('Latency')?.warning_value) || 80
+  const ebrCrit = () => num(getTh('Latency_EBR')?.critical_value) || num(getTh('Latency')?.critical_value) || 150
+  const plTh = () => num(getTh('Packet_Loss')?.warning_value) || 3
+  const plCrit = () => num(getTh('Packet_Loss')?.critical_value) || 5
 
   const thColor = (val: number | null, warn: number, crit: number, lower: boolean) => {
     if (val == null) return 'text-gray-500'
