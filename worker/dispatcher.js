@@ -333,11 +333,10 @@ async function dispatchJobsInChunks(client, deviceIds, task, payloadData) {
     return;
   }
 
-  // Delete old queue_jobs for this task before creating new ones
-  // Hanya hapus yang pending — jangan hapus yang sedang diproses worker
-  // untuk menghindari foreign key violation saat worker menyimpan hasil
-  await client.query('DELETE FROM queue_jobs WHERE task_id = $1 AND status = $2', [task.id, 'pending']);
-  console.log(`   Deleted old queue_jobs for task ${task.id}`);
+  // Delete stale queue_jobs for this task — hanya yang pending > 1 jam
+  // Jangan hapus yang baru dibuat (< 1 jam) karena worker mungkin masih proses
+  await client.query("DELETE FROM queue_jobs WHERE task_id = $1 AND status = 'pending' AND created_at < NOW() - INTERVAL '1 hour'", [task.id]);
+  console.log(`   Deleted stale queue_jobs for task ${task.id}`);
 
   const totalJobs = deviceIds.length * testTypes.length;
   let jobsDispatched = 0;
