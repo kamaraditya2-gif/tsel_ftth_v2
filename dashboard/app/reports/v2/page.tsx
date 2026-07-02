@@ -161,43 +161,43 @@ export default function ReportsV2Page() {
         </div>
 
         {/* Table */}
-        <div className="rounded-2xl border border-slate-600/60 bg-slate-800/50 backdrop-blur-md overflow-hidden">
+        <div className="rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-slate-700/80">
+                <tr className="bg-gray-100 dark:bg-gray-700">
                   {columns.map(col => (
-                    <th key={col} className="px-4 py-3 text-left text-xs font-semibold text-gray-200 uppercase tracking-wider whitespace-nowrap border border-slate-600/40">
+                    <th key={col} className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider whitespace-nowrap border border-gray-200 dark:border-gray-600">
                       {col.replace(/_/g, ' ')}
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-200 uppercase tracking-wider border border-slate-600/40">Detail</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider border border-gray-200 dark:border-gray-600">Detail</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={columns.length + 1} className="px-4 py-10 text-center text-gray-400 border border-slate-600/40">Loading...</td></tr>
+                  <tr><td colSpan={columns.length + 1} className="px-4 py-10 text-center text-gray-400 border border-gray-200 dark:border-gray-600">Loading...</td></tr>
                 ) : reportData.length === 0 ? (
-                  <tr><td colSpan={columns.length + 1} className="px-4 py-10 text-center text-gray-400 border border-slate-600/40">No data available</td></tr>
+                  <tr><td colSpan={columns.length + 1} className="px-4 py-10 text-center text-gray-400 border border-gray-200 dark:border-gray-600">No data available</td></tr>
                 ) : reportData.map((row: any, i: number) => (
-                  <tr key={i} className={`${i % 2 === 0 ? 'bg-slate-800/50' : 'bg-slate-800/20'} hover:bg-slate-700/40 transition-colors`}>
+                  <tr key={i} className={`${i % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-850'} hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors`}>
                     {columns.map(col => (
-                      <td key={col} className={`px-4 py-2.5 text-sm whitespace-nowrap border border-slate-600/30 cursor-pointer ${col.includes('count') || col.includes('total') ? 'font-bold text-white' : 'text-gray-200'}`}
+                      <td key={col} className={`px-4 py-2.5 text-sm whitespace-nowrap border border-gray-200 dark:border-gray-600 cursor-pointer ${col.includes('count') || col.includes('total') ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-800 dark:text-gray-200'}`}
                         onClick={() => setDetailRow(row)}>
                         {col.includes('pct') || col.includes('rate') ? (
-                          <span className={`font-mono ${Number(row[col]) > 90 ? 'text-emerald-400' : Number(row[col]) > 70 ? 'text-amber-400' : 'text-red-400'}`}>
+                          <span className={`font-mono ${Number(row[col]) > 90 ? 'text-green-600 dark:text-emerald-400' : Number(row[col]) > 70 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}>
                             {row[col]}%
                           </span>
                         ) : col.includes('latency') || col.includes('ping') ? (
-                          <span className="font-mono text-cyan-300">{row[col]} ms</span>
+                          <span className="font-mono text-blue-600 dark:text-cyan-300">{row[col]} ms</span>
                         ) : (
-                          <span>{row[col]}</span>
+                          <span className="text-gray-900 dark:text-gray-100">{row[col]}</span>
                         )}
                       </td>
                     ))}
-                    <td className="px-4 py-2.5 border border-slate-600/30 text-center">
+                    <td className="px-4 py-2.5 border border-gray-200 dark:border-gray-600 text-center">
                       <button onClick={() => setDetailRow(detailRow === row ? null : row)}
-                        className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+                        className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors">
                         <Eye className="w-4 h-4" />
                       </button>
                     </td>
@@ -207,7 +207,7 @@ export default function ReportsV2Page() {
             </table>
           </div>
           {reportData.length > 0 && (
-            <div className="px-4 py-2 border-t border-slate-600/40 text-xs text-gray-500 bg-slate-700/30">
+            <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-600 text-xs text-gray-500 bg-gray-50 dark:bg-gray-850">
               {reportData.length} rows
             </div>
           )}
