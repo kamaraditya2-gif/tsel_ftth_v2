@@ -50,15 +50,22 @@ export default function PerformanceTestPage() {
     fetch('/api/admin/threshold?status=active').then(r => r.json()).then(d => setThresholds(Array.isArray(d) ? d : [])).catch(() => {})
   }, [])
 
-  const getTh = (alarmName: string) => {
-    const t = thresholds.filter((th: any) => th.alarm_name === alarmName)
+  const getTh = (alarmName: string, profile?: string) => {
+    const t = thresholds.filter((th: any) => th.alarm_name === alarmName && (!profile || th.profile === profile))
     return t.length > 0 ? t[0] : null
   }
 
-  const fmtTh = (val: number | null | undefined, unit: string) => val != null ? `${val}${unit}` : ''
+  const calcTh = (alarmName: string, speedLimit: number | null, profile?: string) => {
+    const th = getTh(alarmName, profile)
+    if (!th || !speedLimit) return null
+    return speedLimit * (th.warning_value / 100)
+  }
+  const calcCrit = (alarmName: string, speedLimit: number | null, profile?: string) => {
+    const th = getTh(alarmName, profile)
+    if (!th || !speedLimit) return null
+    return speedLimit * (th.critical_value / 100)
+  }
 
-  const dlTh = (r: any) => r.download_threshold != null ? r.download_threshold : getTh('Download_Speed')?.warning_value
-  const ulTh = (r: any) => r.upload_threshold != null ? r.upload_threshold : getTh('Upload_Speed')?.warning_value
   const latTh = () => getTh('Latency')?.warning_value ?? 50
   const latCrit = () => getTh('Latency')?.critical_value ?? 100
   const plTh = () => getTh('Packet_Loss')?.warning_value ?? 2
@@ -78,12 +85,13 @@ export default function PerformanceTestPage() {
 
   const thText = (val: number | null, warn: number, crit: number, unit: string, lower: boolean) => {
     if (val == null) return ''
+    const fmt = (v: number) => `${v}${unit}`
     if (lower) {
-      if (val <= crit) return `<${fmtTh(crit, unit)}`
-      if (val <= warn) return `<${fmtTh(warn, unit)}`
+      if (val <= crit) return `<${fmt(crit)}`
+      if (val <= warn) return `<${fmt(warn)}`
     } else {
-      if (val >= crit) return `>${fmtTh(crit, unit)}`
-      if (val >= warn) return `>${fmtTh(warn, unit)}`
+      if (val >= crit) return `>${fmt(crit)}`
+      if (val >= warn) return `>${fmt(warn)}`
     }
     return ''
   }
@@ -226,16 +234,16 @@ export default function PerformanceTestPage() {
                     <td className="px-4 py-3">
                       {r.download != null ? (
                         <div>
-                          <span className={`text-sm font-mono ${thColor(r.download, dlTh(r), dlTh(r) * 0.5, true)}`}>{r.download} Mbps</span>
-                          <span className="text-[9px] text-gray-500 ml-1">{thText(r.download, dlTh(r), dlTh(r) * 0.5, 'Mbps', true)}</span>
+                          <span className={`text-sm font-mono ${thColor(r.download, calcTh('Download_Speed', r.speed_limit, r.speed_profile) ?? 0, calcCrit('Download_Speed', r.speed_limit, r.speed_profile) ?? 0, true)}`}>{r.download} Mbps</span>
+                          <span className="text-[9px] text-gray-500 ml-1">{thText(r.download, calcTh('Download_Speed', r.speed_limit, r.speed_profile) ?? 0, calcCrit('Download_Speed', r.speed_limit, r.speed_profile) ?? 0, 'Mbps', true)}</span>
                         </div>
                       ) : <span className="text-xs text-red-400">Failed</span>}
                     </td>
                     <td className="px-4 py-3">
                       {r.upload != null ? (
                         <div>
-                          <span className={`text-sm font-mono ${thColor(r.upload, ulTh(r), ulTh(r) * 0.5, true)}`}>{r.upload} Mbps</span>
-                          <span className="text-[9px] text-gray-500 ml-1">{thText(r.upload, ulTh(r), ulTh(r) * 0.5, 'Mbps', true)}</span>
+                          <span className={`text-sm font-mono ${thColor(r.upload, calcTh('Upload_Speed', r.speed_limit, r.speed_profile) ?? 0, calcCrit('Upload_Speed', r.speed_limit, r.speed_profile) ?? 0, true)}`}>{r.upload} Mbps</span>
+                          <span className="text-[9px] text-gray-500 ml-1">{thText(r.upload, calcTh('Upload_Speed', r.speed_limit, r.speed_profile) ?? 0, calcCrit('Upload_Speed', r.speed_limit, r.speed_profile) ?? 0, 'Mbps', true)}</span>
                         </div>
                       ) : <span className="text-xs text-red-400">Failed</span>}
                     </td>
