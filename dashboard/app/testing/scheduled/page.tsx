@@ -8,6 +8,7 @@ interface ScheduledTask {
   id: number; title: string; test_type: string; cron_time: string; started_at: string
   is_active: boolean; group_id: number | null; device_id: number | null; next_run: string
   created_at: string; group_name?: string; device_count?: number; nop_city?: string
+  completed_count?: number; failed_count?: number; total_count?: number
 }
 
 const CRON_PRESETS = [
@@ -228,6 +229,26 @@ export default function ScheduledPage() {
                 </span>
               )}
               <span className="text-gray-400">Next: {task.next_run ? new Date(task.next_run).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : '-'} WIB</span>
+            </div>
+            {/* Status */}
+            <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-500 border-t border-white/5 pt-2">
+              <span className={`flex items-center gap-1 ${task.is_active ? 'text-emerald-400' : 'text-gray-500'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${task.is_active ? 'bg-emerald-400' : 'bg-gray-500'}`} />
+                {task.is_active ? 'Active' : 'Inactive'}
+              </span>
+              {task.total_count !== undefined && task.total_count > 0 && (
+                <>
+                  <span className="text-cyan-400">{task.total_count}x dispatched</span>
+                  <span className="text-green-400">{task.completed_count || 0} ok</span>
+                  {(task.failed_count || 0) > 0 && <span className="text-red-400">{task.failed_count} fail</span>}
+                  <span className={task.completed_count === task.total_count ? 'text-emerald-400' : 'text-amber-400'}>
+                    {task.completed_count === task.total_count ? '✓ Data tersimpan' : '⏳ Ada yg pending'}
+                  </span>
+                </>
+              )}
+              {(!task.total_count || task.total_count === 0) && task.is_active && (
+                <span className="text-gray-500">Menunggu jadwal berikutnya</span>
+              )}
             </div>
           </div>
         ))}
