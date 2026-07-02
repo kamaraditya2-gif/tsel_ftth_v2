@@ -83,6 +83,23 @@ export default function ScheduledPage() {
     } catch (e) {
       // proceed anyway if count check fails
     }
+
+    // Check duplicate: same test_type + region
+    try {
+      const dupRes = await fetch(`/api/tasks?task_type=scheduled&limit=100`)
+      const dupData = await dupRes.json()
+      const existing = (dupData.data || dupData.tasks || []).filter((t: any) =>
+        t.id !== editing?.id &&
+        t.group_id === targetGroupId &&
+        t.test_type?.split(',').map((x: string) => x.trim()).sort().join(',') === [...form.test_types].sort().join(',')
+      )
+      if (existing.length > 0) {
+        alert('Schedule task dengan region dan test type yang sama sudah ada: "' + existing[0].title + '". Hapus atau nonaktifkan task yang sudah ada terlebih dahulu.')
+        return
+      }
+    } catch (e) {
+      // proceed anyway if duplicate check fails
+    }
     const body: any = {
       title: form.title,
       task_type: 'scheduled',
