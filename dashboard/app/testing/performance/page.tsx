@@ -50,17 +50,14 @@ export default function PerformanceTestPage() {
     fetch('/api/admin/threshold?status=active').then(r => r.json()).then(d => setThresholds(Array.isArray(d) ? d : [])).catch(() => {})
   }, [])
 
-  const getThreshold = (alarmName: string, speedName?: string) => {
+  const getThreshold = (alarmName: string) => {
     const t = thresholds.filter(th => th.alarm_name === alarmName)
-    if (t.length === 0) return null
-    if (t.length === 1) return t[0]
-    const match = speedName ? t.find(th => th.profile?.toLowerCase() === speedName.toLowerCase()) : null
-    return match || t[0]
+    return t.length > 0 ? t[0] : null
   }
 
-  const thresholdColor = (value: number | null, alarmName: string, speedName?: string): string => {
+  const thresholdColor = (value: number | null, alarmName: string): string => {
     if (value === null || value === undefined) return 'text-gray-500'
-    const th = getThreshold(alarmName, speedName)
+    const th = getThreshold(alarmName)
     if (!th) return 'text-gray-500'
     if (th.threshold_type === 'UPPER') {
       if (value >= th.critical_value) return 'text-red-400'
@@ -72,8 +69,8 @@ export default function PerformanceTestPage() {
     return 'text-emerald-400'
   }
 
-  const thresholdText = (value: number | null, alarmName: string, speedName?: string): string => {
-    const th = getThreshold(alarmName, speedName)
+  const thresholdText = (value: number | null, alarmName: string): string => {
+    const th = getThreshold(alarmName)
     if (!th) return ''
     if (th.threshold_type === 'UPPER') {
       if (value !== null && value >= th.critical_value) return `>${th.critical_value}${th.unit}`
@@ -223,16 +220,16 @@ export default function PerformanceTestPage() {
                     <td className="px-4 py-3">
                       {r.download != null ? (
                         <div>
-                          <span className={`text-sm font-mono ${thresholdColor(r.download, 'Download_Speed', r.speed_name)}`}>{r.download} Mbps</span>
-                          {thresholdText(r.download, 'Download_Speed', r.speed_name) && <span className="text-[9px] text-gray-500 ml-1">{thresholdText(r.download, 'Download_Speed', r.speed_name)}</span>}
+                          <span className={`text-sm font-mono ${thresholdColor(r.download, 'Download_Speed')}`}>{r.download} Mbps</span>
+                          {thresholdText(r.download, 'Download_Speed') && <span className="text-[9px] text-gray-500 ml-1">{thresholdText(r.download, 'Download_Speed')}</span>}
                         </div>
                       ) : <span className="text-xs text-red-400">Failed</span>}
                     </td>
                     <td className="px-4 py-3">
                       {r.upload != null ? (
                         <div>
-                          <span className={`text-sm font-mono ${thresholdColor(r.upload, 'Upload_Speed', r.speed_name)}`}>{r.upload} Mbps</span>
-                          {thresholdText(r.upload, 'Upload_Speed', r.speed_name) && <span className="text-[9px] text-gray-500 ml-1">{thresholdText(r.upload, 'Upload_Speed', r.speed_name)}</span>}
+                          <span className={`text-sm font-mono ${thresholdColor(r.upload, 'Upload_Speed')}`}>{r.upload} Mbps</span>
+                          {thresholdText(r.upload, 'Upload_Speed') && <span className="text-[9px] text-gray-500 ml-1">{thresholdText(r.upload, 'Upload_Speed')}</span>}
                         </div>
                       ) : <span className="text-xs text-red-400">Failed</span>}
                     </td>
