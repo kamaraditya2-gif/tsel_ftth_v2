@@ -156,7 +156,7 @@ export default function ScheduledPage() {
           </h1>
           <p className="text-gray-400 mt-1">Schedule recurring ping/speed tests</p>
         </div>
-        <button onClick={() => { setEditing(null); setForm({ title: '', test_types: ['ping', 'upload', 'download'], cron_preset: '*/15 * * * *', is_active: true, region_id: '', nop_city: '', start_date: '', start_time: '' }); setShowModal(true) }}
+        <button onClick={() => { const now = new Date().toLocaleString('sv-SE').replace(' ', 'T').substring(0, 16); setEditing(null); setForm({ title: '', test_types: ['ping', 'upload', 'download'], cron_preset: '*/15 * * * *', is_active: true, region_id: '', nop_city: '', start_date: now, start_time: '' }); setShowModal(true) }}
           className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition">
           <Plus className="w-4 h-4" /> Add Schedule
         </button>
