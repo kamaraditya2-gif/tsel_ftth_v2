@@ -177,6 +177,7 @@ export default function ScheduledPage() {
               <span className="text-purple-400 font-semibold">{task.device_count || 1} ONT</span>
               <span className="text-gray-400">{task.test_type.replace(/,/g, ', ')}</span>
               <span className="text-cyan-400">{task.cron_time ? getCronLabel(task.cron_time) : '-'}</span>
+              <span className="text-gray-400">Start: {task.started_at ? new Date(task.started_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : '-'}</span>
               {task.next_run && (
                 <span className={getNextRunStatus(task.next_run).color}>
                   {getNextRunStatus(task.next_run).label}
