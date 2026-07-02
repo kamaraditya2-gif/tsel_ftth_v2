@@ -35,39 +35,39 @@ export async function GET(request: Request) {
       SELECT
         d.id, d.device_name, d.serial_number, d.manufacturer as brand, d.cpe_type as ont_type,
         p.ping_igw as latency, p.ping_ebr as latency_ebr,
-        p.packet_loss_igw as packet_loss, p.executed_at as ping_time,
-        sd.download_speed as download, sd.executed_at as download_time,
-        su.upload_speed as upload, su.executed_at as upload_time,
-        tr.traceroute_raw, tr.total_hops, tr.executed_at as traceroute_time,
-        GREATEST(p.executed_at, sd.executed_at, su.executed_at, tr.executed_at) as last_test_time,
+        p.packet_loss_igw as packet_loss, p.created_at as ping_time,
+        sd.download_speed as download, sd.created_at as download_time,
+        su.upload_speed as upload, su.created_at as upload_time,
+        tr.traceroute_raw, tr.total_hops, tr.created_at as traceroute_time,
+        GREATEST(p.created_at, sd.created_at, su.created_at, tr.created_at) as last_test_time,
         CASE
           WHEN p.id IS NOT NULL OR sd.id IS NOT NULL OR su.id IS NOT NULL OR tr.id IS NOT NULL THEN 'completed'
           ELSE 'no_data'
         END as status
       FROM devices_ont d
       LEFT JOIN LATERAL (
-        SELECT id, ping_igw, ping_ebr, packet_loss_igw, packet_loss_ebr, executed_at
+        SELECT id, ping_igw, ping_ebr, packet_loss_igw, packet_loss_ebr, executed_at, created_at
         FROM test_results_ping
         WHERE device_id = d.id
-        ORDER BY executed_at DESC LIMIT 1
+        ORDER BY created_at DESC LIMIT 1
       ) p ON true
       LEFT JOIN LATERAL (
-        SELECT id, download_speed, executed_at
+        SELECT id, download_speed, executed_at, created_at
         FROM test_results_speed_download
         WHERE device_id = d.id
-        ORDER BY executed_at DESC LIMIT 1
+        ORDER BY created_at DESC LIMIT 1
       ) sd ON true
       LEFT JOIN LATERAL (
-        SELECT id, upload_speed, executed_at
+        SELECT id, upload_speed, executed_at, created_at
         FROM test_results_speed_upload
         WHERE device_id = d.id
-        ORDER BY executed_at DESC LIMIT 1
+        ORDER BY created_at DESC LIMIT 1
       ) su ON true
       LEFT JOIN LATERAL (
-        SELECT id, traceroute_raw, total_hops, executed_at
+        SELECT id, traceroute_raw, total_hops, executed_at, created_at
         FROM test_results_traceroute
         WHERE device_id = d.id
-        ORDER BY executed_at DESC LIMIT 1
+        ORDER BY created_at DESC LIMIT 1
       ) tr ON true
       ${joins}
       WHERE (p.id IS NOT NULL OR sd.id IS NOT NULL OR su.id IS NOT NULL OR tr.id IS NOT NULL)

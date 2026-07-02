@@ -271,7 +271,7 @@ const worker = new Worker(QUEUE_NAME, async (job) => {
                   taskId, deviceId, queueJobId, runId,
                   result.ping_igw, result.ping_ebr,
                   result.packet_loss_igw, result.packet_loss_ebr,
-                  result.success, executedAt, executedAt
+                  result.success, executedAt, new Date()
                 ]
               );
             }
@@ -295,7 +295,7 @@ const worker = new Worker(QUEUE_NAME, async (job) => {
                 [
                   taskId, deviceId, queueJobId, runId,
                   JSON.stringify(hops), totalHops, totalRtt,
-                  result.success, executedAt, executedAt
+                  result.success, executedAt, new Date()
                 ]
               );
             }
@@ -313,7 +313,7 @@ const worker = new Worker(QUEUE_NAME, async (job) => {
                    executed_at = EXCLUDED.executed_at`,
                 [
                   taskId, deviceId, queueJobId, runId,
-                  result.download_speed, result.success, executedAt, executedAt
+                  result.download_speed, result.success, executedAt, new Date()
                 ]
               );
             }
@@ -331,7 +331,7 @@ const worker = new Worker(QUEUE_NAME, async (job) => {
                    executed_at = EXCLUDED.executed_at`,
                 [
                   taskId, deviceId, queueJobId, runId,
-                  result.upload_speed, result.success, executedAt, executedAt
+                  result.upload_speed, result.success, executedAt, new Date()
                 ]
               );
             }
