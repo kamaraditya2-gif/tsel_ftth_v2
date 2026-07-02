@@ -229,6 +229,7 @@ export default function PerformanceTestPage() {
               <thead>
                 <tr className="border-b border-slate-700 bg-slate-800/80">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Device</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Alias</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Brand</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Latency</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Download</th>
@@ -242,15 +243,17 @@ export default function PerformanceTestPage() {
               </thead>
               <tbody className="divide-y divide-slate-700/50">
                 {loading ? (
-                  <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
+                  <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
                 ) : results.length === 0 ? (
-                  <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">No results found</td></tr>
+                  <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-400">No results found</td></tr>
                 ) : results.map((r: any, i: number) => (
                   <tr key={r.id || i} className="hover:bg-slate-700/30 transition-colors">
                     <td className="px-4 py-3">
                       <p className="text-sm text-white">{r.device_name || r.serial_number || '-'}</p>
                       <p className="text-xs text-gray-400">{r.serial_number || ''}</p>
-                      {r.alias_device && <p className="text-[10px] text-cyan-400 mt-0.5">{r.alias_device}</p>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-xs text-cyan-400">{r.alias_device || '-'}</p>
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-sm text-white">{r.brand || '-'}</p>
