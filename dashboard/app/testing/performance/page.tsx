@@ -50,34 +50,40 @@ export default function PerformanceTestPage() {
     fetch('/api/admin/threshold?status=active').then(r => r.json()).then(d => setThresholds(Array.isArray(d) ? d : [])).catch(() => {})
   }, [])
 
-  const getThreshold = (alarmName: string) => {
-    const t = thresholds.filter(th => th.alarm_name === alarmName)
+  const getTh = (alarmName: string) => {
+    const t = thresholds.filter((th: any) => th.alarm_name === alarmName)
     return t.length > 0 ? t[0] : null
   }
 
-  const thresholdColor = (value: number | null, alarmName: string): string => {
-    if (value === null || value === undefined) return 'text-gray-500'
-    const th = getThreshold(alarmName)
-    if (!th) return 'text-gray-500'
-    if (th.threshold_type === 'UPPER') {
-      if (value >= th.critical_value) return 'text-red-400'
-      if (value >= th.warning_value) return 'text-amber-400'
-    } else {
-      if (value <= th.critical_value) return 'text-red-400'
-      if (value <= th.warning_value) return 'text-amber-400'
+  const fmtTh = (val: number | null | undefined, unit: string) => val != null ? `${val}${unit}` : ''
+
+  const dlTh = (r: any) => r.download_threshold != null ? r.download_threshold : getTh('Download_Speed')?.warning_value
+  const ulTh = (r: any) => r.upload_threshold != null ? r.upload_threshold : getTh('Upload_Speed')?.warning_value
+  const latTh = () => getTh('Latency')?.warning_value ?? 50
+  const latCrit = () => getTh('Latency')?.critical_value ?? 100
+  const plTh = () => getTh('Packet_Loss')?.warning_value ?? 2
+  const plCrit = () => getTh('Packet_Loss')?.critical_value ?? 5
+
+  const thColor = (val: number | null, warn: number, crit: number, lower: boolean) => {
+    if (val == null) return 'text-gray-500'
+    if (lower) {
+      if (val <= crit) return 'text-red-400'
+      if (val <= warn) return 'text-amber-400'
+      return 'text-emerald-400'
     }
+    if (val >= crit) return 'text-red-400'
+    if (val >= warn) return 'text-amber-400'
     return 'text-emerald-400'
   }
 
-  const thresholdText = (value: number | null, alarmName: string): string => {
-    const th = getThreshold(alarmName)
-    if (!th) return ''
-    if (th.threshold_type === 'UPPER') {
-      if (value !== null && value >= th.critical_value) return `>${th.critical_value}${th.unit}`
-      if (value !== null && value >= th.warning_value) return `>${th.warning_value}${th.unit}`
+  const thText = (val: number | null, warn: number, crit: number, unit: string, lower: boolean) => {
+    if (val == null) return ''
+    if (lower) {
+      if (val <= crit) return `<${fmtTh(crit, unit)}`
+      if (val <= warn) return `<${fmtTh(warn, unit)}`
     } else {
-      if (value !== null && value <= th.critical_value) return `<${th.critical_value}${th.unit}`
-      if (value !== null && value <= th.warning_value) return `<${th.warning_value}${th.unit}`
+      if (val >= crit) return `>${fmtTh(crit, unit)}`
+      if (val >= warn) return `>${fmtTh(warn, unit)}`
     }
     return ''
   }
@@ -211,8 +217,8 @@ export default function PerformanceTestPage() {
                     <td className="px-4 py-3">
                       {r.latency != null ? (
                         <div>
-                          <span className={`text-sm font-mono ${thresholdColor(r.latency, 'Latency')}`}>{r.latency} ms</span>
-                          {thresholdText(r.latency, 'Latency') && <span className="text-[9px] text-gray-500 ml-1">{thresholdText(r.latency, 'Latency')}</span>}
+                          <span className={`text-sm font-mono ${thColor(r.latency, latTh(), latCrit(), false)}`}>{r.latency} ms</span>
+                          <span className="text-[9px] text-gray-500 ml-1">{thText(r.latency, latTh(), latCrit(), 'ms', false)}</span>
                         </div>
                       ) : <span className="text-xs text-red-400">Failed</span>}
                       {r.latency_ebr != null && <div className="text-[10px] text-gray-500 mt-0.5">EBR: {r.latency_ebr} ms</div>}
@@ -220,24 +226,24 @@ export default function PerformanceTestPage() {
                     <td className="px-4 py-3">
                       {r.download != null ? (
                         <div>
-                          <span className={`text-sm font-mono ${thresholdColor(r.download, 'Download_Speed')}`}>{r.download} Mbps</span>
-                          {thresholdText(r.download, 'Download_Speed') && <span className="text-[9px] text-gray-500 ml-1">{thresholdText(r.download, 'Download_Speed')}</span>}
+                          <span className={`text-sm font-mono ${thColor(r.download, dlTh(r), dlTh(r) * 0.5, true)}`}>{r.download} Mbps</span>
+                          <span className="text-[9px] text-gray-500 ml-1">{thText(r.download, dlTh(r), dlTh(r) * 0.5, 'Mbps', true)}</span>
                         </div>
                       ) : <span className="text-xs text-red-400">Failed</span>}
                     </td>
                     <td className="px-4 py-3">
                       {r.upload != null ? (
                         <div>
-                          <span className={`text-sm font-mono ${thresholdColor(r.upload, 'Upload_Speed')}`}>{r.upload} Mbps</span>
-                          {thresholdText(r.upload, 'Upload_Speed') && <span className="text-[9px] text-gray-500 ml-1">{thresholdText(r.upload, 'Upload_Speed')}</span>}
+                          <span className={`text-sm font-mono ${thColor(r.upload, ulTh(r), ulTh(r) * 0.5, true)}`}>{r.upload} Mbps</span>
+                          <span className="text-[9px] text-gray-500 ml-1">{thText(r.upload, ulTh(r), ulTh(r) * 0.5, 'Mbps', true)}</span>
                         </div>
                       ) : <span className="text-xs text-red-400">Failed</span>}
                     </td>
                     <td className="px-4 py-3">
                       {r.packet_loss != null ? (
                         <div>
-                          <span className={`text-sm font-mono ${thresholdColor(r.packet_loss, 'Packet_Loss')}`}>{r.packet_loss}%</span>
-                          {thresholdText(r.packet_loss, 'Packet_Loss') && <span className="text-[9px] text-gray-500 ml-1">{thresholdText(r.packet_loss, 'Packet_Loss')}</span>}
+                          <span className={`text-sm font-mono ${thColor(r.packet_loss, plTh(), plCrit(), false)}`}>{r.packet_loss}%</span>
+                          <span className="text-[9px] text-gray-500 ml-1">{thText(r.packet_loss, plTh(), plCrit(), '%', false)}</span>
                         </div>
                       ) : <span className="text-xs text-red-400">Failed</span>}
                     </td>
