@@ -54,13 +54,25 @@ export default function ReportsV2Page() {
 
   useEffect(() => { fetchReport() }, [activeReport, filters, locFilters])
 
+  const q = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`
+  const fmtHeaders = (cols: string[]) => cols.map(h => q(h.replace(/_/g, ' '))).join(';')
+  const fmtRow = (cols: string[], obj: any) => cols.map(h => q(obj[h])).join(';')
+
   const exportCSV = () => {
     if (reportData.length === 0) return
     const headers = Object.keys(reportData[0])
-    let csv = headers.join(',') + '\n'
     const detailHeaders = ['device_name', 'serial_number', 'brand', 'ont_type', 'region_name', 'nop_name', 'indihome_id', 'status', 'latency', 'download', 'upload']
+    let csv = ''
+    csv += 'LAPORAN ' + activeReport.replace(/-/g, ' ').toUpperCase() + '\n'
+    csv += 'Dibuat: ' + new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + '\n\n'
+    csv += '=== RINGKASAN ===\n'
+    csv += fmtHeaders(headers) + '\n'
     reportData.forEach(r => {
-      csv += headers.map(h => r[h]).join(',') + '\n'
+      csv += fmtRow(headers, r) + '\n'
+    })
+    csv += '\n=== DETAIL DEVICE ===\n'
+    csv += fmtHeaders(detailHeaders) + '\n'
+    reportData.forEach(r => {
       const relatedDevices = ((() => {
         switch (activeReport) {
           case 'alarm-area': return allDevices.filter(d => d.area_name === r.area)
@@ -70,20 +82,16 @@ export default function ReportsV2Page() {
           case 'alarm-ont-type': return allDevices.filter(d => d.cpe_type === r.ont_type)
           default: return []
         }
-      })()).slice(0, 10)
-      if (relatedDevices.length > 0) {
-        csv += detailHeaders.join(',') + '\n'
-        relatedDevices.forEach((d: any) => {
-          csv += detailHeaders.map(h => d[h] ?? '').join(',') + '\n'
-        })
-        csv += '\n'
-      }
+      })()).slice(0, 50)
+      relatedDevices.forEach((d: any) => {
+        csv += fmtRow(detailHeaders, d) + '\n'
+      })
     })
-    const blob = new Blob([csv], { type: 'text/csv' })
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${activeReport}-report.csv`
+    a.download = `Laporan_${activeReport}_${new Date().toISOString().substring(0, 10)}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
