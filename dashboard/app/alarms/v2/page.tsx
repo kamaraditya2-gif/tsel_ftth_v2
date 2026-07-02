@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Bell, AlertTriangle, AlertCircle, ChevronDown, ChevronUp, RefreshCw, MessageSquare, Send, Ticket, Play, Clock, X } from 'lucide-react'
 import LocationFilter from '@/components/LocationFilter'
 
@@ -13,7 +14,8 @@ interface DeviceAlarm {
 }
 interface Comment { id: number; device_id: number; parent_id: number | null; comment: string; created_by: string; created_at: string }
 
-export default function AlarmsV2Page() {
+function AlarmsV2Page() {
+  const searchParams = useSearchParams()
   const [data, setData] = useState<DeviceAlarm[]>([]); const [cleared, setCleared] = useState<DeviceAlarm[]>([])
   const [total, setTotal] = useState(0); const [totalCleared, setTotalCleared] = useState(0)
   const [loading, setLoading] = useState(true); const [expandedId, setExpandedId] = useState<number | null>(null)
@@ -49,7 +51,15 @@ export default function AlarmsV2Page() {
       setRootCauses(r.root_causes || [])
     } catch (e) { console.error(e) } finally { setLoading(false) }
   }
-  useEffect(() => { fetchAlarms() }, [])
+  useEffect(() => {
+    const sev = searchParams.get('severity') || ''
+    const tb = searchParams.get('tab') || 'active'
+    if (sev) setFilterSeverity(sev)
+    if (tb) setTab(tb)
+    const initialFilters = sev ? { severity: sev } : {}
+    setFilters(initialFilters)
+    fetchAlarms(initialFilters, locFilters)
+  }, [])
 
   const fetchAlarmHistory = async (deviceId: number) => {
     setHistoryLoading(true)
@@ -314,4 +324,8 @@ export default function AlarmsV2Page() {
       )}
     </div>
   )
+}
+
+export default function AlarmsV2PageWrapper() {
+  return <Suspense fallback={<div className="p-8 text-gray-400">Loading...</div>}><AlarmsV2Page /></Suspense>
 }

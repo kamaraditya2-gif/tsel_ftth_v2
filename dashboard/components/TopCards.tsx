@@ -39,7 +39,7 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
   const clrPacketLoss = cleared?.byType?.packet_loss || 0
   const clrTotal = cleared?.total || 0
 
-  const goAlarms = (tab?: string) => router.push(`/alarms/v2${tab === 'cleared' ? '?tab=cleared' : ''}`)
+  const goAlarms = (tab?: string, severity?: string) => router.push(`/alarms/v2?tab=${tab || ''}&severity=${severity || ''}`)
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
       {/* Latency */}
@@ -66,8 +66,8 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
           })}
         </div>
         <div className="grid grid-cols-3 gap-0.5 text-[9px] pt-1 border-t border-slate-700/50">
-          <div><span className="text-gray-500">Critical:</span> <span className="text-red-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms()}>{actCritical}</span></div>
-          <div><span className="text-gray-500">Warning:</span> <span className="text-amber-400 cursor-pointer hover:underline" onClick={() => goAlarms()}>{actWarning}</span></div>
+          <div><span className="text-gray-500">Critical:</span> <span className="text-red-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms('active', 'critical')}>{actCritical}</span></div>
+          <div><span className="text-gray-500">Warning:</span> <span className="text-amber-400 cursor-pointer hover:underline" onClick={() => goAlarms('active', 'warning')}>{actWarning}</span></div>
           <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400 cursor-pointer hover:underline" onClick={() => goAlarms('cleared')}>{clrCritical + clrWarning}</span></div>
         </div>
       </div>
@@ -96,7 +96,7 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
           })}
         </div>
         <div className="grid grid-cols-3 gap-0.5 text-[9px] pt-1 border-t border-slate-700/50">
-          <div><span className="text-gray-500">Alarm:</span> <span className="text-amber-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms()}>{actSpeed}</span></div>
+          <div><span className="text-gray-500">Alarm:</span> <span className="text-amber-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms('active')}>{actSpeed}</span></div>
           <div><span className="text-gray-500">DL:</span> <span className="text-white">{dashboardData?.avgDownload || 0}</span></div>
           <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400 cursor-pointer hover:underline" onClick={() => goAlarms('cleared')}>{clrSpeed}</span></div>
         </div>
@@ -157,7 +157,7 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
         </div>
         <div className="grid grid-cols-3 gap-0.5 text-[9px] pt-1 border-t border-slate-700/50">
           <div><span className="text-gray-500">Alarm:</span> <span className="text-purple-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms()}>{actTotal}</span></div>
-          <div><span className="text-gray-500">Critical:</span> <span className="text-red-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms()}>{actCritical}</span></div>
+          <div><span className="text-gray-500">Critical:</span> <span className="text-red-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms('active', 'critical')}>{actCritical}</span></div>
           <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400 cursor-pointer hover:underline" onClick={() => goAlarms('cleared')}>{clrTotal}</span></div>
         </div>
       </div>
