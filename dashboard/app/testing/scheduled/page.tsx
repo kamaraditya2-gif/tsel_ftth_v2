@@ -60,6 +60,10 @@ export default function ScheduledPage() {
   }
 
   const handleSave = async () => {
+    if (!form.test_types.length || form.test_types.every(t => !t.trim())) {
+      alert('Pilih minimal satu test type')
+      return
+    }
     let targetGroupId = form.region_id ? Number(form.region_id) : null
     if (!targetGroupId) {
       alert('Pilih region untuk target device')
@@ -184,7 +188,7 @@ export default function ScheduledPage() {
                 <span className="font-semibold text-white">{task.title}</span>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { setEditing(task); setForm({ title: task.title, test_types: task.test_type.split(','), cron_preset: task.cron_time, is_active: task.is_active, region_id: (task.group_id && task.group_id <= 34 ? task.group_id as any : ''), nop_city: task.nop_city || '', start_date: task.started_at ? (task.started_at.endsWith('Z') ? new Date(task.started_at).toLocaleString('sv-SE').replace(' ', 'T').substring(0, 16) : task.started_at.substring(0, 16)) : '', start_time: '' }); setShowModal(true) }}
+                <button onClick={() => { setEditing(task); setForm({ title: task.title, test_types: task.test_type.split(',').filter((t: string) => t.trim()), cron_preset: task.cron_time, is_active: task.is_active, region_id: (task.group_id && task.group_id <= 34 ? task.group_id as any : ''), nop_city: task.nop_city || '', start_date: task.started_at ? (task.started_at.endsWith('Z') ? new Date(task.started_at).toLocaleString('sv-SE').replace(' ', 'T').substring(0, 16) : task.started_at.substring(0, 16)) : '', start_time: '' }); setShowModal(true) }}
                   className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs">Edit</button>
                 <button onClick={() => handleToggleActive(task)}
                   className={`px-3 py-1 rounded-lg text-xs ${task.is_active ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'}`}>
