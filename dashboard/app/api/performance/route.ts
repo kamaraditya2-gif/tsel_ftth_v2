@@ -40,6 +40,7 @@ export async function GET(request: Request) {
     const result = await client.query(`
       SELECT
         d.id, d.device_name, d.serial_number, d.manufacturer as brand, d.cpe_type as ont_type,
+        sg.name as speed_name,
         p.ping_igw as latency, p.ping_ebr as latency_ebr,
         p.packet_loss_igw as packet_loss, p.created_at as ping_time,
         sd.download_speed as download, sd.created_at as download_time,
@@ -51,6 +52,7 @@ export async function GET(request: Request) {
           ELSE 'no_data'
         END as status
       FROM devices_ont d
+      LEFT JOIN speed_group sg ON d.speed_id = sg.id
       LEFT JOIN LATERAL (
         SELECT id, ping_igw, ping_ebr, packet_loss_igw, packet_loss_ebr, executed_at, created_at
         FROM test_results_ping
