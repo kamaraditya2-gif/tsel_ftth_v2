@@ -1,0 +1,56 @@
+-- Seeder untuk Devices ONT
+-- Data devices ONT dari aplikasi dashboard
+
+INSERT INTO devices_ont (id, device_name, serial_number, mac_address, ip_address, status, group_id, speed_id, indihome_id, cpe_type, manufacturer, model, alias_device, cluster_nop_id, lat, lng, downstream_server_id, created_at, updated_at) VALUES
+(1, 'ZTEGC455885D', 'ZTEGC455885D', NULL, '8.8.8.8', 'online', 103, 2, '122844311796', 'F670L', 'ZTE Corporation', 'F670L', 'PAK SBY', 62, 5.550000, 95.316700, 1, NOW(), NOW()),
+(2, 'ZTEGCE792399', 'ZTEGCE792399', NULL, '1.1.1.1', 'online', 112, 4, '122119303764', 'F670L', 'ZTE Corporation', 'F670L', NULL, 92, -6.966700, 110.416700, 5, NOW(), NOW()),
+(3, 'ZTEGCE7E3896', 'ZTEGCE7E3896', NULL, '8.8.4.4', 'online', 112, 2, '122844313171', 'F670L', 'ZTE Corporation', 'F670L', NULL, 68, 1.083300, 104.033300, 10, NOW(), NOW()),
+(4, 'ZTEGCE950D8D', 'ZTEGCE950D8D', NULL, '9.9.9.9', 'online', 112, 4, '122844312401', 'F670L', 'ZTE Corporation', 'F670L', NULL, 100, -7.257500, 112.752800, 6, NOW(), NOW()),
+(5, 'ZTEGCEFD6B22', 'ZTEGCEFD6B22', NULL, '149.112.112.112', 'online', 103, 3, '122119209846', 'F670L', 'ZTE Corporation', 'F670L', NULL, 63, 3.587800, 98.673000, 1, NOW(), NOW()),
+(6, 'ZTEGCF8A906C', 'ZTEGCF8A906C', NULL, '208.67.222.222', 'online', 103, 3, '122844203774', 'F670L', 'ZTE Corporation', 'F670L', NULL, 64, 3.595200, 98.672200, 1, NOW(), NOW()),
+(7, 'ZTEGCF8F688D', 'ZTEGCF8F688D', NULL, '1.0.0.1', 'online', 103, 2, '121119201099', 'F670L', 'ZTE Corporation', 'F670L', NULL, 75, -5.450000, 105.266700, 2, NOW(), NOW()),
+(8, 'ZTEGD05ADC60', 'ZTEGD05ADC60', NULL, '208.67.220.220', 'online', 103, 2, '122844315763', 'F670L', 'ZTE Corporation', 'F670L', NULL, 101, -8.650000, 115.216700, 7, NOW(), NOW()),
+(9, 'ZTEGD05B3A06', 'ZTEGD05B3A06', NULL, '94.140.14.14', 'online', 103, 1, '122844316182', 'F670L', 'ZTE Corporation', 'F670L', NULL, 98, -7.979700, 112.630400, 6, NOW(), NOW()),
+(10, 'ZTEGD06280A5', 'ZTEGD06280A5', NULL, '94.140.15.15', 'online', 103, 2, '121302208652', 'F670L', 'ZTE Corporation', 'F670L', NULL, 114, -5.117917, 119.429042, 9, NOW(), NOW()),
+(11, 'ZTEGD066D0CA', 'ZTEGD066D0CA', NULL, '185.228.168.9', 'online', 103, 2, '122119307327', 'F670L', 'ZTE Corporation', 'F670L', NULL, 93, -7.570000, 110.826000, 5, NOW(), NOW()),
+(12, 'ZTEGD083B667', 'ZTEGD083B667', NULL, '185.228.169.9', 'online', 103, 2, '122303208915', 'F670L', 'ZTE Corporation', 'F670L', NULL, 97, -7.630000, 111.530000, 6, NOW(), NOW()),
+(13, 'ZTEGD083D5B7', 'ZTEGD083D5B7', NULL, '193.17.47.1', 'online', 103, 2, '122844316738', 'F670L', 'ZTE Corporation', 'F670L', NULL, 105, -1.266700, 116.833300, 8, NOW(), NOW()),
+(14, 'ZTEGD10AC4C0', 'ZTEGD10AC4C0', NULL, '8.8.8.8', 'online', 103, 2, '121302228578', 'F670L', 'ZTE Corporation', 'F670L', NULL, 109, -0.033300, 109.333300, 8, NOW(), NOW()),
+(15, 'ZTEGD10B11C1', 'ZTEGD10B11C1', NULL, '1.1.1.1', 'online', 103, 3, '122119303204', 'F670L', 'ZTE Corporation', 'F670L', NULL, 114, -5.133300, 119.416700, 9, NOW(), NOW()),
+(16, 'ZTEGD19F940D', 'ZTEGD19F940D', NULL, '77.88.8.8', 'online', 103, 2, '122844318441', 'F670L', 'ZTE Corporation', 'F670L', NULL, 67, 1.733300, 98.783300, 1, NOW(), NOW()),
+(17, 'ZTEGD1ACE2AC', 'ZTEGD1ACE2AC', NULL, '77.88.8.1', 'online', 103, 3, '122119304429', 'F670L', 'ZTE Corporation', 'F670L', NULL, 110, -0.500000, 117.150000, 8, NOW(), NOW()),
+(18, 'ZTEGD252C976', 'ZTEGD252C976', NULL, '156.154.70.1', 'online', 103, 2, '122119306880', 'F670L', 'ZTE Corporation', 'F670L', NULL, 115, 1.483300, 124.850000, 9, NOW(), NOW()),
+(19, 'ZTEGD328DB10', 'ZTEGD328DB10', NULL, '156.154.71.1', 'online', 103, 2, '121844200736', 'F670L', 'ZTE Corporation', 'F670L', NULL, 119, -3.700000, 128.183300, 11, NOW(), NOW()),
+(20, 'ZTEGD4A04572', 'ZTEGD4A04572', NULL, '199.85.126.10', 'online', 103, 2, '122844320180', 'F670L', 'ZTE Corporation', 'F670L', NULL, 122, -7.533300, 140.700000, 11, NOW(), NOW()),
+(21, 'ZTEGD4A0499A', 'ZTEGD4A0499A', NULL, '199.85.127.10', 'online', 103, 2, '122844329328', 'F670L', 'ZTE Corporation', 'F670L', NULL, 107, -1.883300, 113.533300, 8, NOW(), NOW()),
+(22, 'ZTEGD4A65B6F', 'ZTEGD4A65B6F', NULL, '64.6.64.6', 'online', 103, 1, '122302215581', 'F670L', 'ZTE Corporation', 'F670L', NULL, 78, -5.936973, 106.620100, 3, NOW(), NOW()),
+(23, 'ZTEGD4ABD0C1', 'ZTEGD4ABD0C1', NULL, '8.8.8.8', 'online', 103, 1, '122119202064', 'F670L', 'ZTE Corporation', 'F670L', NULL, 79, -6.208087, 106.821800, 3, NOW(), NOW()),
+(24, 'ZTEGD4B2954C', 'ZTEGD4B2954C', NULL, '84.200.69.80', 'online', 103, 1, '122302286956', 'F670L', 'ZTE Corporation', 'F670L', NULL, 80, -5.995337, 106.790746, 3, NOW(), NOW()),
+(25, 'ZTEGD4B2BD04', 'ZTEGD4B2BD04', NULL, '84.200.70.40', 'online', 103, 1, '122844318842', 'F670L', 'ZTE Corporation', 'F670L', NULL, 102, -8.583300, 116.116700, 7, NOW(), NOW()),
+(26, 'ZTEGD5D17BBF', 'ZTEGD5D17BBF', NULL, '195.46.39.39', 'online', 103, 1, '122844209308', 'F670L', 'ZTE Corporation', 'F670L', NULL, 76, -2.983300, 104.750000, 2, NOW(), NOW()),
+(27, 'ZTEGD6D38FAD', 'ZTEGD6D38FAD', NULL, '195.46.39.40', 'online', 103, 2, '122844247531', 'F670L', 'ZTE Corporation', 'F670L', NULL, 82, -6.006204, 106.627914, 12, NOW(), NOW()),
+(28, 'ZTEGD6D813AB', 'ZTEGD6D813AB', NULL, '8.8.4.4', 'online', 103, 4, '122119203374', 'F670L', 'ZTE Corporation', 'F670L', NULL, 80, -6.228224, 106.755425, 3, NOW(), NOW()),
+(29, 'ZTEGD6D9B386', 'ZTEGD6D9B386', NULL, '1.1.1.1', 'online', 103, 1, '122844335729', 'F670L', 'ZTE Corporation', 'F670L', NULL, 120, -2.592000, 140.701400, 11, NOW(), NOW()),
+(30, 'ZTEGD7706EDA', 'ZTEGD7706EDA', NULL, '9.9.9.9', 'online', 103, 1, '122844233362', 'F670L', 'ZTE Corporation', 'F670L', NULL, 78, -6.195172, 106.901685, 3, NOW(), NOW())
+ON CONFLICT (id) DO UPDATE SET
+    device_name = EXCLUDED.device_name,
+    serial_number = EXCLUDED.serial_number,
+    mac_address = EXCLUDED.mac_address,
+    ip_address = EXCLUDED.ip_address,
+    status = EXCLUDED.status,
+    group_id = EXCLUDED.group_id,
+    speed_id = EXCLUDED.speed_id,
+    indihome_id = EXCLUDED.indihome_id,
+    cpe_type = EXCLUDED.cpe_type,
+    manufacturer = EXCLUDED.manufacturer,
+    model = EXCLUDED.model,
+    alias_device = EXCLUDED.alias_device,
+    cluster_nop_id = EXCLUDED.cluster_nop_id,
+    lat = EXCLUDED.lat,
+    lng = EXCLUDED.lng,
+    downstream_server_id = EXCLUDED.downstream_server_id,
+    created_at = EXCLUDED.created_at,
+    updated_at = EXCLUDED.updated_at;
+
+-- Reset sequence agar id berikutnya tidak konflik
+SELECT setval('devices_ont_id_seq', COALESCE((SELECT MAX(id) FROM devices_ont), 1));

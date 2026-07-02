@@ -64,6 +64,12 @@ Network `mojojojo_network` dibuat otomatis oleh compose (tidak perlu `docker net
 
 Hanya untuk instalasi baru dengan data kosong. Import schema lengkap:
 
+**Windows/PowerShell:**
+```powershell
+Get-Content schema.sql | docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database
+```
+
+**Linux/Mac/Git Bash:**
 ```bash
 docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database < schema.sql
 ```
@@ -585,13 +591,10 @@ docker compose -f docker-compose-nginx.yml down
 Jika masih menggunakan file lama (docker-compose-infra.yml dan docker-compose-app.yml):
 
 ```bash
-# Start infrastructure
-docker compose -f docker-compose-infra.yml up -d
+# Start infrastructure + application (harus bersamaan karena ada dependensi)
+docker compose -f docker-compose-infra.yml -f docker-compose-app.yml up -d
 
-# Start application
-docker compose -f docker-compose-app.yml up -d
-
-# Start nginx
+# Start nginx (opsional)
 docker compose -f docker-compose-nginx.yml up -d
 ```
 
@@ -1013,6 +1016,34 @@ Semua nilai di atas dapat di-override lewat file `.env`:
 - Redis password: Minimal 16 karakter, kombinasi huruf besar/kecil, angka, dan simbol
 - Admin password: Minimal 12 karakter, kombinasi huruf besar/kecil, angka, dan simbol
 - Gunakan password generator atau password manager untuk generate secure passwords
+
+### Reset Admin Password
+
+Jika perlu mereset password admin yang sudah ada:
+
+**Windows/PowerShell:**
+```powershell
+# Update password admin menjadi admin123
+Get-Content migrations\update_admin_password.sql | docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database
+```
+
+**Linux/Mac/Git Bash:**
+```bash
+# Update password admin menjadi admin123
+docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database < migrations/update_admin_password.sql
+```
+
+**Custom Password:**
+Untuk mengubah ke password custom, generate bcrypt hash terlebih dahulu:
+```bash
+# Di dalam dashboard container
+docker exec -it mojojojo_dashboard node -e "const bcrypt = require('bcrypt'); bcrypt.hash('your_password', 10).then(h => console.log(h))"
+```
+
+Kemudian update di database:
+```sql
+UPDATE users SET password = '$2b$10$...' WHERE username = 'admin';
+```
 
 ## License
 

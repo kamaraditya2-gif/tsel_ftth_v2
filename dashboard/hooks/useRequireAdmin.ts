@@ -10,7 +10,8 @@ export function useRequireAdmin() {
         const res = await fetch('/api/user-role')
         const data = await res.json()
         
-        if (data.role_name !== 'Administrator') {
+        const adminRoles = ['admin', 'Administrator', 'Admin']
+        if (!adminRoles.includes(data.role_name)) {
           router.push('/')
         }
       } catch (error) {

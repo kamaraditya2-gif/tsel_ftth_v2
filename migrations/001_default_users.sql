@@ -34,19 +34,19 @@ END $$;
 -- Insert default roles if they don't exist
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM roles WHERE name = 'Administrator') THEN
+    IF NOT EXISTS (SELECT 1 FROM roles WHERE name = 'admin') THEN
         INSERT INTO roles (name, description) VALUES
-        ('Administrator', 'Full access to all features');
+        ('admin', 'Full access to all features');
     END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM roles WHERE name = 'Admin') THEN
+
+    IF NOT EXISTS (SELECT 1 FROM roles WHERE name = 'operator') THEN
         INSERT INTO roles (name, description) VALUES
-        ('Admin', 'Can manage devices and tasks');
+        ('operator', 'Can manage devices and tasks');
     END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM roles WHERE name = 'User') THEN
+
+    IF NOT EXISTS (SELECT 1 FROM roles WHERE name = 'viewer') THEN
         INSERT INTO roles (name, description) VALUES
-        ('User', 'Read-only access to dashboard');
+        ('viewer', 'Read-only access to dashboard');
     END IF;
 END $$;
 
@@ -56,19 +56,19 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin') THEN
         -- Password: admin123 (bcrypt hash)
         INSERT INTO users (username, password, role_id, email, full_name, is_active) VALUES
-        ('admin', '$2b$10$v/ULSFrsxPlB8noPulB8neKRGE3fTAm0dSTqR8WW79D4Lsmo4v3QW', 
-         (SELECT id FROM roles WHERE name = 'Administrator' LIMIT 1), 
-         'admin@mojojojo.local', 
-         'Administrator', 
+        ('admin', '$2b$10$ReHCkVPOEEKjLBRCyDTcXeS/.ilZoGJbDzgStdynUzNEtZuxmVhJe',
+         (SELECT id FROM roles WHERE name = 'admin' LIMIT 1),
+         'admin@mojojojo.local',
+         'Administrator',
          true);
     END IF;
 END $$;
 
--- Update existing admin user to have Administrator role and full_name
+-- Update existing admin user to have admin role and full_name
 DO $$
 BEGIN
-    UPDATE users 
-    SET role_id = (SELECT id FROM roles WHERE name = 'Administrator' LIMIT 1),
+    UPDATE users
+    SET role_id = (SELECT id FROM roles WHERE name = 'admin' LIMIT 1),
         full_name = 'Administrator'
     WHERE username = 'admin' AND full_name IS NULL;
 END $$;

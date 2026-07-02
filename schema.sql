@@ -388,7 +388,7 @@ INSERT INTO roles (name, description) VALUES
 
 -- Insert default admin user (password: admin123 - should be hashed in production)
 INSERT INTO users (username, password, role_id, email) VALUES
-('admin', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 1, 'admin@mojojojo.local');
+('admin', '$2b$10$ReHCkVPOEEKjLBRCyDTcXeS/.ilZoGJbDzgStdynUzNEtZuxmVhJe', 1, 'admin@mojojojo.local');
 -- Note: The password above is bcrypt hash for 'admin123'
 
 -- Insert sample group
