@@ -51,3 +51,4 @@ nginx/ssl/
 *.tsbuildinfo
 
 keys.txt
+dashboard/public/tiles/

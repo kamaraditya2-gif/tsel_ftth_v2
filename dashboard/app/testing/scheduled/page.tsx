@@ -241,6 +241,48 @@ export default function ScheduledPage() {
         <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded bg-white/5 text-gray-300 disabled:opacity-50">Next</button>
       </div>}
 
+      {/* Gantt Chart */}
+      <details className="group mt-6">
+        <summary className="flex items-center gap-2 cursor-pointer text-xs text-gray-400 hover:text-gray-200 select-none mb-2">
+          <Clock className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="font-semibold uppercase tracking-wider">24h Schedule Timeline</span>
+          <svg className="w-3 h-3 ml-auto transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        </summary>
+        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md p-4 overflow-x-auto">
+          {tasks.filter(t => t.is_active).length === 0 ? (
+            <div className="text-center py-6 text-gray-500 text-xs">No active scheduled tasks</div>
+          ) : (
+            <div className="min-w-[600px] space-y-3">
+              <div className="flex border-b border-white/10 pb-1">
+                <div className="w-28 shrink-0" />
+                {Array.from({ length: 24 }, (_, i) => (
+                  <div key={i} className="flex-1 text-[8px] text-gray-500 text-center">{String(i).padStart(2, '0')}:00</div>
+                ))}
+              </div>
+              {tasks.filter(t => t.is_active).map(task => {
+                const start = task.started_at ? new Date(task.started_at) : new Date()
+                const startWib = new Date(start.getTime() + 7 * 60 * 60 * 1000)
+                const hour = startWib.getHours() + startWib.getMinutes() / 60
+                const int = task.cron_time?.startsWith('*/') ? parseInt(task.cron_time.substring(2)) : 60
+                const duration = Math.min(int, 240) / 60
+                const leftPct = (hour / 24) * 100
+                const widthPct = Math.max((duration / 24) * 100, 2)
+                const colors = ['bg-cyan-500', 'bg-emerald-500', 'bg-purple-500', 'bg-amber-500', 'bg-rose-500']
+                return (
+                  <div key={task.id} className="flex items-center gap-2">
+                    <div className="w-28 shrink-0 text-[9px] text-gray-300 truncate" title={task.title}>{task.title}</div>
+                    <div className="flex-1 h-5 relative bg-white/5 rounded overflow-hidden">
+                      <div className={`absolute h-full rounded ${colors[task.id % colors.length]} opacity-80`}
+                        style={{ left: `${leftPct}%`, width: `${widthPct}%` }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </details>
+
       {/* Modal */}
       {showModal && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div className="bg-gray-900 rounded-2xl border border-gray-700 max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
