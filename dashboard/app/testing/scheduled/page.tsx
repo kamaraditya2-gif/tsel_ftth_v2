@@ -30,7 +30,7 @@ export default function ScheduledPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<ScheduledTask | null>(null)
-  const [form, setForm] = useState({ title: '', test_types: ['ping', 'upload', 'download'], cron_preset: '*/15 * * * *', is_active: true, region_id: '' as number | '', nop_city: '' })
+  const [form, setForm] = useState({ title: '', test_types: ['ping', 'upload', 'download'], cron_preset: '*/15 * * * *', is_active: true, region_id: '' as number | '', nop_city: '', started_at: '' })
   const [downstreamServers, setDownstreamServers] = useState<any[]>([])
   const [nopCities, setNopCities] = useState<any[]>([])
 
@@ -65,6 +65,7 @@ export default function ScheduledPage() {
       group_id: targetGroupId,
       device_id: null,
       nop_city: form.nop_city || null,
+      started_at: form.started_at ? new Date(form.started_at).toISOString() : null,
     }
 
     let res
@@ -132,7 +133,7 @@ export default function ScheduledPage() {
           </h1>
           <p className="text-gray-400 mt-1">Schedule recurring ping/speed tests</p>
         </div>
-        <button onClick={() => { setEditing(null); setForm({ title: '', test_types: ['ping', 'upload', 'download'], cron_preset: '*/15 * * * *', is_active: true, region_id: '', nop_city: '' }); setShowModal(true) }}
+        <button onClick={() => { setEditing(null); setForm({ title: '', test_types: ['ping', 'upload', 'download'], cron_preset: '*/15 * * * *', is_active: true, region_id: '', nop_city: '', started_at: '' }); setShowModal(true) }}
           className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition">
           <Plus className="w-4 h-4" /> Add Schedule
         </button>
@@ -160,7 +161,7 @@ export default function ScheduledPage() {
                 <span className="font-semibold text-white">{task.title}</span>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { setEditing(task); setForm({ title: task.title, test_types: task.test_type.split(','), cron_preset: task.cron_time, is_active: task.is_active, region_id: (task.group_id && task.group_id <= 34 ? task.group_id as any : ''), nop_city: task.nop_city || '' }); setShowModal(true) }}
+                <button onClick={() => { setEditing(task); setForm({ title: task.title, test_types: task.test_type.split(','), cron_preset: task.cron_time, is_active: task.is_active, region_id: (task.group_id && task.group_id <= 34 ? task.group_id as any : ''), nop_city: task.nop_city || '', started_at: task.started_at || '' }); setShowModal(true) }}
                   className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs">Edit</button>
                 <button onClick={() => handleToggleActive(task)}
                   className={`px-3 py-1 rounded-lg text-xs ${task.is_active ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'}`}>
@@ -228,6 +229,13 @@ export default function ScheduledPage() {
                   <option key={p.cron} value={p.cron}>{p.label}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Start Time */}
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Start Date & Time</label>
+              <input type="datetime-local" value={form.started_at} onChange={e => setForm({ ...form, started_at: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm" />
             </div>
 
             {/* Region Filter */}
