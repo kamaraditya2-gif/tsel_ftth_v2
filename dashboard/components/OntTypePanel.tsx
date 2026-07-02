@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import {
-  Wifi, WifiOff, Download, Upload, Zap, Activity, AlertTriangle, TrendingUp
+  Wifi, WifiOff, Download, Upload, Zap, Activity, AlertTriangle, TrendingUp, FileText
 } from 'lucide-react'
 import OntArchitectureDiagram from './OntArchitectureDiagram'
 
@@ -116,27 +116,22 @@ export default function OntTypePanel({ areaId, regionalId, nopId }: OntTypePanel
           <div className="lg:w-3/5 p-3 space-y-2 overflow-y-auto max-h-[400px] lg:max-h-[540px]">
             {selected && (
               <>
-                {/* Datasheet PDF / Architecture Diagram */}
-                <div className="bg-[#0f0f1a]/80 rounded-lg border border-white/5 overflow-hidden" style={{ height: 300 }}>
-                  {datasheetUrls[selected.name] ? (
-                    <embed
-                      src={datasheetUrls[selected.name]}
-                      type="application/pdf"
-                      width="100%"
-                      height="100%"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <OntArchitectureDiagram
-                        manufacturer={selected.name}
-                        model={selected.name}
-                        pingIgw={selected.avg_igw_latency}
-                        pingEbr={selected.avg_ebr_latency}
-                        status={selected.online_devices > 0 ? 'online' : 'offline'}
-                      />
-                    </div>
-                  )}
+                {/* Architecture Diagram */}
+                <div className="bg-[#0f0f1a]/80 rounded-lg border border-white/5 p-2 flex justify-center">
+                  <OntArchitectureDiagram
+                    manufacturer={selected.name}
+                    model={selected.name}
+                    pingIgw={selected.avg_igw_latency}
+                    pingEbr={selected.avg_ebr_latency}
+                    status={selected.online_devices > 0 ? 'online' : 'offline'}
+                  />
                 </div>
+                {datasheetUrls[selected.name] && (
+                  <a href={datasheetUrls[selected.name]} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-xs transition-colors">
+                    <FileText className="w-3.5 h-3.5" /> View Datasheet
+                  </a>
+                )}
 
                 {/* Tech Spec Summary */}
                 <div className="grid grid-cols-2 gap-1.5">

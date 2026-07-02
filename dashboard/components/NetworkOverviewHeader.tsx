@@ -243,62 +243,69 @@ export default function NetworkOverviewHeader({ areaId, regionalId, nopId }: Net
         ))}
       </div>
 
-      {/* ===== TREND CHARTS ===== */}
+      {/* ===== TREND CHARTS (collapsed) ===== */}
       {trends.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <div className="bg-[#0a0b16] rounded-lg border border-white/10 p-3">
-            <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Activity className="w-3 h-3 text-cyan-400" />
-              Avg Latency Trend (24h)
-            </h4>
-            <ResponsiveContainer width="100%" height={100}>
-              <AreaChart data={trends}>
-                <defs>
-                  <linearGradient id="igwGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="ebrGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                <XAxis dataKey="hour" stroke="#4b5563" fontSize={8} tickLine={false} />
-                <YAxis stroke="#4b5563" fontSize={8} tickLine={false} />
-                <Tooltip contentStyle={{ background: '#1a1b2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} itemStyle={{ color: '#e5e7eb', fontSize: '10px' }} labelStyle={{ color: '#9ca3af', fontSize: '9px' }} />
-                <Area type="monotone" dataKey="avg_ping_igw" stroke="#22d3ee" strokeWidth={1.5} fill="url(#igwGrad)" name="IGW" dot={false} />
-                <Area type="monotone" dataKey="avg_ping_ebr" stroke="#a855f7" strokeWidth={1.5} fill="url(#ebrGrad)" name="EBR" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
+        <details className="group mt-2">
+          <summary className="flex items-center gap-2 cursor-pointer text-[10px] text-gray-500 hover:text-gray-300 select-none">
+            <Activity className="w-3 h-3 text-cyan-400" />
+            <span className="font-semibold uppercase tracking-wider">Trends</span>
+            <svg className="w-3 h-3 ml-auto transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </summary>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+            <div className="bg-[#0a0b16] rounded-lg border border-white/10 p-3">
+              <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Activity className="w-3 h-3 text-cyan-400" />
+                Avg Latency Trend (24h)
+              </h4>
+              <ResponsiveContainer width="100%" height={100}>
+                <AreaChart data={trends}>
+                  <defs>
+                    <linearGradient id="igwGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="ebrGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                  <XAxis dataKey="hour" stroke="#4b5563" fontSize={8} tickLine={false} />
+                  <YAxis stroke="#4b5563" fontSize={8} tickLine={false} />
+                  <Tooltip contentStyle={{ background: '#1a1b2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} itemStyle={{ color: '#e5e7eb', fontSize: '10px' }} labelStyle={{ color: '#9ca3af', fontSize: '9px' }} />
+                  <Area type="monotone" dataKey="avg_ping_igw" stroke="#22d3ee" strokeWidth={1.5} fill="url(#igwGrad)" name="IGW" dot={false} />
+                  <Area type="monotone" dataKey="avg_ping_ebr" stroke="#a855f7" strokeWidth={1.5} fill="url(#ebrGrad)" name="EBR" dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="bg-[#0a0b16] rounded-lg border border-white/10 p-3">
+              <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Download className="w-3 h-3 text-emerald-400" />
+                Avg Speed Trend (24h)
+              </h4>
+              <ResponsiveContainer width="100%" height={100}>
+                <AreaChart data={trends}>
+                  <defs>
+                    <linearGradient id="dlGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="ulGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                  <XAxis dataKey="hour" stroke="#4b5563" fontSize={8} tickLine={false} />
+                  <YAxis stroke="#4b5563" fontSize={8} tickLine={false} />
+                  <Tooltip contentStyle={{ background: '#1a1b2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} itemStyle={{ color: '#e5e7eb', fontSize: '10px' }} labelStyle={{ color: '#9ca3af', fontSize: '9px' }} />
+                  <Area type="monotone" dataKey="avg_download_speed" stroke="#10b981" strokeWidth={1.5} fill="url(#dlGrad)" name="Download" dot={false} />
+                  <Area type="monotone" dataKey="avg_upload_speed" stroke="#f59e0b" strokeWidth={1.5} fill="url(#ulGrad)" name="Upload" dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-          <div className="bg-[#0a0b16] rounded-lg border border-white/10 p-3">
-            <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Download className="w-3 h-3 text-emerald-400" />
-              Avg Speed Trend (24h)
-            </h4>
-            <ResponsiveContainer width="100%" height={100}>
-              <AreaChart data={trends}>
-                <defs>
-                  <linearGradient id="dlGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="ulGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                <XAxis dataKey="hour" stroke="#4b5563" fontSize={8} tickLine={false} />
-                <YAxis stroke="#4b5563" fontSize={8} tickLine={false} />
-                <Tooltip contentStyle={{ background: '#1a1b2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} itemStyle={{ color: '#e5e7eb', fontSize: '10px' }} labelStyle={{ color: '#9ca3af', fontSize: '9px' }} />
-                <Area type="monotone" dataKey="avg_download_speed" stroke="#10b981" strokeWidth={1.5} fill="url(#dlGrad)" name="Download" dot={false} />
-                <Area type="monotone" dataKey="avg_upload_speed" stroke="#f59e0b" strokeWidth={1.5} fill="url(#ulGrad)" name="Upload" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        </details>
       )}
     </div>
   )
