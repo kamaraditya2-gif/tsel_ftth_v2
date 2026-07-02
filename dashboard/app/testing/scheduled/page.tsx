@@ -161,7 +161,7 @@ export default function ScheduledPage() {
                 <span className="font-semibold text-white">{task.title}</span>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { setEditing(task); setForm({ title: task.title, test_types: task.test_type.split(','), cron_preset: task.cron_time, is_active: task.is_active, region_id: (task.group_id && task.group_id <= 34 ? task.group_id as any : ''), nop_city: task.nop_city || '', start_date: task.started_at ? new Date(task.started_at).toLocaleDateString('sv-SE') : '', start_time: task.started_at ? new Date(task.started_at).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', hour12: false }) : '' }); setShowModal(true) }}
+                <button onClick={() => { setEditing(task); setForm({ title: task.title, test_types: task.test_type.split(','), cron_preset: task.cron_time, is_active: task.is_active, region_id: (task.group_id && task.group_id <= 34 ? task.group_id as any : ''), nop_city: task.nop_city || '', start_date: task.started_at ? task.started_at.substring(0, 10) : '', start_time: task.started_at ? task.started_at.substring(11, 16) : '' }); setShowModal(true) }}
                   className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs">Edit</button>
                 <button onClick={() => handleToggleActive(task)}
                   className={`px-3 py-1 rounded-lg text-xs ${task.is_active ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'}`}>
@@ -241,8 +241,8 @@ export default function ScheduledPage() {
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm" />
               </div>
               <div>
-                <label className="text-xs text-gray-400 block mb-1">Start Time</label>
-                <input type="time" value={form.start_time} onChange={e => setForm({ ...form, start_time: e.target.value })}
+                <label className="text-xs text-gray-400 block mb-1">Start Time (HH:MM, 24h)</label>
+                <input type="text" placeholder="13:30" value={form.start_time} onChange={e => setForm({ ...form, start_time: e.target.value })}
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm" />
               </div>
             </div>
