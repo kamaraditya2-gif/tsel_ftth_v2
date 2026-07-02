@@ -182,7 +182,7 @@ export default function ScheduledPage() {
                   {getNextRunStatus(task.next_run).label}
                 </span>
               )}
-              <span className="text-gray-400">Next: {task.next_run ? new Date(task.next_run).toLocaleString('en-US', { timeZone: 'Asia/Jakarta', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'} WIB</span>
+              <span className="text-gray-400">Next: {task.next_run ? new Date(task.next_run).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : '-'} WIB</span>
             </div>
           </div>
         ))}
