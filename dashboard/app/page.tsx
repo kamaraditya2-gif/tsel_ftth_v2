@@ -232,16 +232,28 @@ export default function DashboardPage() {
 
   const fetchAlarmStats = async () => {
     try {
-      const p = new URLSearchParams({ timeRange })
-      if (filterLocStr.areaIds) p.append('areaIds', filterLocStr.areaIds)
-      else if (selectedArea) p.append('areaId', selectedArea.toString())
-      if (filterLocStr.regionalIds) p.append('regionalIds', filterLocStr.regionalIds)
-      else if (selectedRegional) p.append('regionalId', selectedRegional.toString())
-      if (filterLocStr.nopIds) p.append('nopIds', filterLocStr.nopIds)
-      else if (selectedNopCity) p.append('nopId', selectedNopCity.toString())
-      const res = await fetch(`/api/alarms/stats?${p.toString()}`)
+      const p = new URLSearchParams()
+      if (filterLocStr.areaIds) p.set('area_ids', filterLocStr.areaIds)
+      else if (selectedArea) p.set('area_id', selectedArea.toString())
+      if (filterLocStr.regionalIds) p.set('regional_ids', filterLocStr.regionalIds)
+      else if (selectedRegional) p.set('regional_id', selectedRegional.toString())
+      if (filterLocStr.nopIds) p.set('nop_ids', filterLocStr.nopIds)
+      else if (selectedNopCity) p.set('nop_id', selectedNopCity.toString())
+      const res = await fetch(`/api/alarms/check?${p.toString()}`)
       const data = await res.json()
-      if (data && data.active && typeof data.active.total === 'number') setAlarmStats(data)
+      const alarms = data.alarms || []
+      const cleared = data.cleared || []
+      const build = (list: any[]) => {
+        let total = 0; const byType: Record<string, number> = {}; const bySeverity: Record<string, number> = {}
+        list.forEach((d: any) => {
+          d.alarms?.forEach((a: any) => {
+            total++; byType[a.alarm_type] = (byType[a.alarm_type] || 0) + 1
+            bySeverity[a.severity] = (bySeverity[a.severity] || 0) + 1
+          })
+        })
+        return { total, byType, bySeverity }
+      }
+      setAlarmStats({ active: build(alarms), cleared: build(cleared) })
     } catch (error) {
       console.error('Failed to fetch alarm stats:', error)
     }
