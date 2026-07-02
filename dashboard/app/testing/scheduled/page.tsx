@@ -65,7 +65,7 @@ export default function ScheduledPage() {
       group_id: targetGroupId,
       device_id: null,
       nop_city: form.nop_city || null,
-      started_at: form.start_date ? new Date(form.start_date).toISOString() : null,
+      started_at: form.start_date ? form.start_date + ':00' : null,
     }
 
     let res
