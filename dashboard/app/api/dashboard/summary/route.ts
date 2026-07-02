@@ -397,7 +397,7 @@ export async function GET(request: Request) {
         ${whereClauseWithTime}
       GROUP BY d.id, d.device_name, d.serial_number, d.indihome_id, g.name, sg.name, sg.download_threshold
       HAVING AVG(sd.download_speed) < sg.download_threshold
-      ORDER BY (sg.download_threshold - AVG(sd.download_speed)) DESC
+      ORDER BY AVG(sd.download_speed) ASC
       LIMIT 5
     `, filterParams)
 
@@ -421,7 +421,7 @@ export async function GET(request: Request) {
         ${whereClauseWithTime}
       GROUP BY d.id, d.device_name, d.serial_number, d.indihome_id, g.name, sg.name, sg.upload_threshold
       HAVING AVG(su.upload_speed) < sg.upload_threshold
-      ORDER BY (sg.upload_threshold - AVG(su.upload_speed)) DESC
+      ORDER BY AVG(su.upload_speed) ASC
       LIMIT 5
     `, filterParams)
 
