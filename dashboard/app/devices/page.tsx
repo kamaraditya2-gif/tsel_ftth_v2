@@ -85,6 +85,11 @@ function DevicesPageContent() {
   const [selectedSpeed, setSelectedSpeed] = useState<number | 'none' | null>(null)
   const [selectedRegion, setSelectedRegion] = useState<number | 'none' | null>(null)
   const [selectedManufacturer, setSelectedManufacturer] = useState<string | null>(null)
+  const [filterStatus, setFilterStatus] = useState<string>('')
+  const [filterOntType, setFilterOntType] = useState<string>('')
+  const [filterModel, setFilterModel] = useState<string>('')
+  const [filterIp, setFilterIp] = useState<string>('')
+  const [filterIndihome, setFilterIndihome] = useState<string>('')
   const [selectedArea, setSelectedArea] = useState<number | null>(null)
   const [selectedNopCity, setSelectedNopCity] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -345,15 +350,20 @@ function DevicesPageContent() {
   useEffect(() => {
     let filtered = devices
 
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase()
-      filtered = filtered.filter(device =>
-        device.device_name.toLowerCase().includes(term) ||
-        device.serial_number.toLowerCase().includes(term) ||
-        device.indihome_id?.toLowerCase().includes(term) ||
-        device.ip_address?.toLowerCase().includes(term)
-      )
-    }
+  if (searchTerm) {
+    const term = searchTerm.toLowerCase()
+    filtered = filtered.filter(device =>
+      device.device_name.toLowerCase().includes(term) ||
+      device.serial_number.toLowerCase().includes(term) ||
+      device.indihome_id?.toLowerCase().includes(term) ||
+      device.ip_address?.toLowerCase().includes(term)
+    )
+  }
+  if (filterStatus) filtered = filtered.filter(d => d.status === filterStatus)
+  if (filterOntType) filtered = filtered.filter(d => d.cpe_type === filterOntType)
+  if (filterModel) filtered = filtered.filter(d => d.model?.toLowerCase().includes(filterModel.toLowerCase()))
+  if (filterIp) filtered = filtered.filter(d => d.ip_address?.toLowerCase().includes(filterIp.toLowerCase()))
+  if (filterIndihome) filtered = filtered.filter(d => d.indihome_id?.toLowerCase().includes(filterIndihome.toLowerCase()))
 
     if (selectedGroup !== null) {
       if (selectedGroup === 'none') {
@@ -394,7 +404,7 @@ function DevicesPageContent() {
 
     setFilteredDevices(filtered)
     setCurrentPage(1)
-  }, [searchTerm, selectedGroup, selectedSpeed, selectedRegion, selectedManufacturer, selectedArea, selectedNopCity, devices, nopClusters])
+  }, [searchTerm, selectedGroup, selectedSpeed, selectedRegion, selectedManufacturer, filterStatus, filterOntType, filterModel, filterIp, filterIndihome, selectedArea, selectedNopCity, devices, nopClusters])
 
   const formatDate = (date: string | null) => {
     if (!date) return '-'
@@ -773,58 +783,64 @@ function DevicesPageContent() {
       )}
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-visible">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search devices..."
-                value={searchTerm}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-2">
+          {/* Row 1 */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input type="text" placeholder="Search name/serial/IP..." value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
             </div>
             <LocationFilter onFilterChange={(f) => { setSelectedArea(f.areaIds[0] ?? null); setSelectedRegion(f.regionalIds[0] ?? null); setSelectedNopCity(f.nopIds[0] ?? null) }} />
-            <select
-              value={selectedSpeed === 'none' ? 'none' : (selectedSpeed || '')}
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+              <option value="">All Status</option>
+              <option value="online">Online</option>
+              <option value="offline">Offline</option>
+            </select>
+            <select value={selectedSpeed === 'none' ? 'none' : (selectedSpeed || '')}
               onChange={(e) => {
-                const value = e.target.value
-                if (value === 'none') {
-                  setSelectedSpeed('none')
-                } else if (value === '') {
-                  setSelectedSpeed(null)
-                } else {
-                  setSelectedSpeed(parseInt(value))
-                }
+                const v = e.target.value
+                if (v === 'none') setSelectedSpeed('none')
+                else if (v === '') setSelectedSpeed(null)
+                else setSelectedSpeed(parseInt(v))
               }}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
               <option value="">All Speeds</option>
-              {speedGroups.map((speed) => (
-                <option key={speed.id} value={speed.id}>
-                  {speed.name}
-                </option>
-              ))}
+              {speedGroups.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               <option value="none">No Speed</option>
             </select>
-            <select
-              value={selectedManufacturer || ''}
-              onChange={(e) => setSelectedManufacturer(e.target.value || null)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
+          </div>
+          {/* Row 2 */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <select value={selectedManufacturer || ''} onChange={e => setSelectedManufacturer(e.target.value || null)}
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
               <option value="">All Brands</option>
               {devices.reduce<string[]>((acc, d) => {
                 if (d.manufacturer && !acc.includes(d.manufacturer)) acc.push(d.manufacturer)
                 return acc
-              }, []).sort().map(brand => (
-                <option key={brand} value={brand}>{brand}</option>
-              ))}
+              }, []).sort().map(b => <option key={b} value={b}>{b}</option>)}
             </select>
-            <button
-              onClick={exportToCSV}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-            >
+            <select value={filterOntType} onChange={e => setFilterOntType(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+              <option value="">All ONT Types</option>
+              {devices.reduce<string[]>((acc, d) => {
+                if (d.cpe_type && !acc.includes(d.cpe_type)) acc.push(d.cpe_type)
+                return acc
+              }, []).sort().map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <input type="text" placeholder="Model..." value={filterModel}
+              onChange={e => setFilterModel(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white w-28" />
+            <input type="text" placeholder="IP..." value={filterIp}
+              onChange={e => setFilterIp(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white w-32" />
+            <input type="text" placeholder="IndiHome..." value={filterIndihome}
+              onChange={e => setFilterIndihome(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white w-32" />
+            <button onClick={exportToCSV}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg ml-auto">
               <Download className="w-4 h-4" />
               Export
             </button>
