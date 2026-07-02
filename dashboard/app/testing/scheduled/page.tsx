@@ -56,6 +56,20 @@ export default function ScheduledPage() {
       alert('Pilih region untuk target device')
       return
     }
+
+    // Check if region has any devices
+    try {
+      const params = new URLSearchParams({ regional_id: targetGroupId.toString(), limit: '1' })
+      if (form.nop_city) params.set('nop_id', form.nop_city.toString())
+      const countRes = await fetch(`/api/devices?${params}`)
+      const countData = await countRes.json()
+      if (!Array.isArray(countData) || countData.length === 0) {
+        alert('Tidak ada ONT di region ini. Tidak bisa membuat scheduled task.')
+        return
+      }
+    } catch (e) {
+      // proceed anyway if count check fails
+    }
     const body: any = {
       title: form.title,
       task_type: 'scheduled',
