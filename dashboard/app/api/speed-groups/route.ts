@@ -7,11 +7,11 @@ export async function GET() {
     client = await pool.connect()
     
     const res = await client.query(`
-      SELECT sg.id, sg.name, sg.speed_limit, sg.upload_threshold, sg.download_threshold, sg.description, sg.created_at, sg.updated_at,
+      SELECT sg.id, sg.name, sg.speed_limit, sg.profile, sg.description, sg.created_at, sg.updated_at,
              COUNT(d.id) as device_count
       FROM speed_group sg
       LEFT JOIN devices_ont d ON sg.id = d.speed_id
-      GROUP BY sg.id, sg.name, sg.speed_limit, sg.upload_threshold, sg.download_threshold, sg.description, sg.created_at, sg.updated_at
+      GROUP BY sg.id, sg.name, sg.speed_limit, sg.profile, sg.description, sg.created_at, sg.updated_at
       ORDER BY sg.speed_limit ASC NULLS LAST
     `)
     
@@ -29,13 +29,13 @@ export async function POST(request: Request) {
   let client
   try {
     const body = await request.json()
-    const { name, speed_limit, upload_threshold, download_threshold, description } = body
+    const { name, speed_limit, profile, description } = body
     
     client = await pool.connect()
     
     const res = await client.query(
-      'INSERT INTO speed_group (name, speed_limit, upload_threshold, download_threshold, description) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, speed_limit, upload_threshold, download_threshold, description',
-      [name, speed_limit, upload_threshold, download_threshold, description]
+      'INSERT INTO speed_group (name, speed_limit, profile, description) VALUES ($1, $2, $3, $4) RETURNING id, name, speed_limit, profile, description',
+      [name, speed_limit, profile, description]
     )
     
     return NextResponse.json(res.rows[0])

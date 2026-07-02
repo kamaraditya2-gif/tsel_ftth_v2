@@ -5,14 +5,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   let client
   try {
     const body = await request.json()
-    const { name, speed_limit, upload_threshold, download_threshold, description } = body
+    const { name, speed_limit, profile, description } = body
     const id = parseInt(params.id)
     
     client = await pool.connect()
     
     const res = await client.query(
-      'UPDATE speed_group SET name = $1, speed_limit = $2, upload_threshold = $3, download_threshold = $4, description = $5, updated_at = NOW() WHERE id = $6 RETURNING id, name, speed_limit, upload_threshold, download_threshold, description',
-      [name, speed_limit, upload_threshold, download_threshold, description, id]
+      'UPDATE speed_group SET name = $1, speed_limit = $2, profile = $3, description = $4, updated_at = NOW() WHERE id = $5 RETURNING id, name, speed_limit, profile, description',
+      [name, speed_limit, profile, description, id]
     )
     
     if (res.rows.length === 0) {

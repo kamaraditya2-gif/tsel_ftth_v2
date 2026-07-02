@@ -9,12 +9,10 @@ interface SpeedGroup {
   id: number
   name: string
   speed_limit: number | null
-  upload_threshold: number | null
-  download_threshold: number | null
+  profile: string | null
   description: string | null
   device_count: number
   created_at: string
-  updated_at: string
 }
 
 export default function SpeedsPage() {
@@ -28,8 +26,7 @@ export default function SpeedsPage() {
   const [formData, setFormData] = useState({
     name: '',
     speed_limit: '',
-    upload_threshold: '',
-    download_threshold: '',
+    profile: '',
     description: ''
   })
   const [message, setMessage] = useState('')
@@ -101,8 +98,7 @@ export default function SpeedsPage() {
     setFormData({
       name: '',
       speed_limit: '',
-      upload_threshold: '',
-      download_threshold: '',
+      profile: '',
       description: ''
     })
     setMessage('')
@@ -114,8 +110,7 @@ export default function SpeedsPage() {
     setFormData({
       name: group.name,
       speed_limit: group.speed_limit?.toString() || '',
-      upload_threshold: group.upload_threshold?.toString() || '',
-      download_threshold: group.download_threshold?.toString() || '',
+      profile: group.profile || '',
       description: group.description || ''
     })
     setMessage('')
@@ -152,8 +147,6 @@ export default function SpeedsPage() {
           body: JSON.stringify({
             ...formData,
             speed_limit: formData.speed_limit ? parseFloat(formData.speed_limit) : null,
-            upload_threshold: formData.upload_threshold ? parseFloat(formData.upload_threshold) : null,
-            download_threshold: formData.download_threshold ? parseFloat(formData.download_threshold) : null
           })
         })
       } else {
@@ -163,8 +156,6 @@ export default function SpeedsPage() {
           body: JSON.stringify({
             ...formData,
             speed_limit: formData.speed_limit ? parseFloat(formData.speed_limit) : null,
-            upload_threshold: formData.upload_threshold ? parseFloat(formData.upload_threshold) : null,
-            download_threshold: formData.download_threshold ? parseFloat(formData.download_threshold) : null
           })
         })
       }
@@ -246,10 +237,7 @@ export default function SpeedsPage() {
                   Speed Limit (<span className="normal-case">Mbps</span>)
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Upload Threshold (<span className="normal-case">Mbps</span>)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Download Threshold (<span className="normal-case">Mbps</span>)
+                  Profile
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Device Count
@@ -278,11 +266,13 @@ export default function SpeedsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {group.speed_limit || '-'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {group.upload_threshold || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {group.download_threshold || '-'}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                      group.profile === 'Platinum' ? 'bg-purple-100 text-purple-700' :
+                      group.profile === 'Gold' ? 'bg-yellow-100 text-yellow-700' :
+                      group.profile === 'Silver' ? 'bg-gray-100 text-gray-700' :
+                      group.profile === 'Bronze' ? 'bg-amber-100 text-amber-700' : ''
+                    }`}>{group.profile || '-'}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <button
@@ -372,28 +362,15 @@ export default function SpeedsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Upload Threshold (Mbps)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.upload_threshold}
-                  onChange={(e) => setFormData({ ...formData, upload_threshold: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Download Threshold (Mbps)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.download_threshold}
-                  onChange={(e) => setFormData({ ...formData, download_threshold: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Profile</label>
+                <select value={formData.profile} onChange={(e) => setFormData({ ...formData, profile: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                  <option value="">Select profile</option>
+                  <option value="Bronze">Bronze</option>
+                  <option value="Silver">Silver</option>
+                  <option value="Gold">Gold</option>
+                  <option value="Platinum">Platinum</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -503,22 +480,8 @@ export default function SpeedsPage() {
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Upload Threshold
-                  </label>
-                  <p className="text-sm text-gray-900 dark:text-white">
-                    {selectedGroupForDetail.upload_threshold || '-'} Mbps
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Download Threshold
-                  </label>
-                  <p className="text-sm text-gray-900 dark:text-white">
-                    {selectedGroupForDetail.download_threshold || '-'} Mbps
-                  </p>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Profile</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedGroupForDetail.profile || '-'}</p>
                 </div>
               </div>
               <div>
