@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import {
-  Wifi, WifiOff, Download, Upload, Zap, Activity, AlertTriangle, TrendingUp, FileText
+  Wifi, WifiOff, Download, Upload, Zap, Activity, AlertTriangle, TrendingUp
 } from 'lucide-react'
 import OntArchitectureDiagram from './OntArchitectureDiagram'
 
@@ -92,7 +92,15 @@ export default function OntTypePanel({ areaId, regionalId, nopId }: OntTypePanel
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-200">{ont.name}</span>
+                  {datasheetUrls[ont.name] ? (
+                    <a href={datasheetUrls[ont.name]} target="_blank" rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      className="text-sm font-semibold text-blue-400 hover:text-blue-300 underline underline-offset-2">
+                      {ont.name}
+                    </a>
+                  ) : (
+                    <span className="text-sm font-semibold text-gray-200">{ont.name}</span>
+                  )}
                   <span className="text-[10px] text-gray-500 font-mono">{ont.total_devices} devices</span>
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-[10px]">
@@ -126,12 +134,7 @@ export default function OntTypePanel({ areaId, regionalId, nopId }: OntTypePanel
                     status={selected.online_devices > 0 ? 'online' : 'offline'}
                   />
                 </div>
-                {datasheetUrls[selected.name] && (
-                  <a href={datasheetUrls[selected.name]} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-xs transition-colors">
-                    <FileText className="w-3.5 h-3.5" /> View Datasheet
-                  </a>
-                )}
+
 
                 {/* Tech Spec Summary */}
                 <div className="grid grid-cols-2 gap-1.5">
