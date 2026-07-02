@@ -246,6 +246,15 @@ export default function ScheduledPage() {
               </div>
             </div>
 
+            {/* Start Date & Time */}
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Start Date & Time</label>
+              <input type="datetime-local" value={form.start_date}
+                disabled={!!editing}
+                onChange={e => setForm({ ...form, start_date: e.target.value, start_time: '' })}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed" />
+            </div>
+
             {/* Cron Presets */}
             <div>
               <label className="text-xs text-gray-400 block mb-1">Interval</label>
@@ -255,15 +264,6 @@ export default function ScheduledPage() {
                   <option key={p.cron} value={p.cron}>{p.label}</option>
                 ))}
               </select>
-            </div>
-
-            {/* Start Date & Time */}
-            <div>
-              <label className="text-xs text-gray-400 block mb-1">Start Date & Time</label>
-              <input type="datetime-local" value={form.start_date}
-                min={new Date().toLocaleString('sv-SE').replace(' ', 'T').substring(0, 16)}
-                onChange={e => setForm({ ...form, start_date: e.target.value, start_time: '' })}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm" />
             </div>
 
             {/* Region Filter */}
