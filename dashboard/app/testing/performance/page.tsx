@@ -66,9 +66,11 @@ export default function PerformanceTestPage() {
     return speedLimit * (th.critical_value / 100)
   }
 
-  const latTh = () => getTh('Latency')?.warning_value ?? 50
-  const latCrit = () => getTh('Latency')?.critical_value ?? 100
-  const plTh = () => getTh('Packet_Loss')?.warning_value ?? 2
+  const igwTh = () => getTh('Latency_IGW')?.warning_value ?? getTh('Latency')?.warning_value ?? 30
+  const igwCrit = () => getTh('Latency_IGW')?.critical_value ?? getTh('Latency')?.critical_value ?? 60
+  const ebrTh = () => getTh('Latency_EBR')?.warning_value ?? getTh('Latency')?.warning_value ?? 80
+  const ebrCrit = () => getTh('Latency_EBR')?.critical_value ?? getTh('Latency')?.critical_value ?? 150
+  const plTh = () => getTh('Packet_Loss')?.warning_value ?? 3
   const plCrit = () => getTh('Packet_Loss')?.critical_value ?? 5
 
   const thColor = (val: number | null, warn: number, crit: number, lower: boolean) => {
@@ -225,11 +227,16 @@ export default function PerformanceTestPage() {
                     <td className="px-4 py-3">
                       {r.latency != null ? (
                         <div>
-                          <span className={`text-sm font-mono ${thColor(r.latency, latTh(), latCrit(), false)}`}>{r.latency} ms</span>
-                          <span className="text-[9px] text-gray-500 ml-1">{thText(r.latency, latTh(), latCrit(), 'ms', false)}</span>
+                          <span className={`text-sm font-mono ${thColor(r.latency, igwTh(), igwCrit(), false)}`}>{r.latency} ms</span>
+                          <span className="text-[9px] text-gray-500 ml-1">{thText(r.latency, igwTh(), igwCrit(), 'ms', false)}</span>
                         </div>
                       ) : <span className="text-xs text-red-400">Failed</span>}
-                      {r.latency_ebr != null && <div className="text-[10px] text-gray-500 mt-0.5">EBR: {r.latency_ebr} ms</div>}
+                      {r.latency_ebr != null && (
+                        <div className="text-[10px] mt-0.5">
+                          <span className={`font-mono ${thColor(r.latency_ebr, ebrTh(), ebrCrit(), false)}`}>EBR: {r.latency_ebr} ms</span>
+                          <span className="text-[9px] text-gray-500 ml-1">{thText(r.latency_ebr, ebrTh(), ebrCrit(), 'ms', false)}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {r.download != null ? (
