@@ -194,20 +194,13 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
     )
 
     if (validDevices.length > 0) {
-      if (nopId) {
-        const avgLat = validDevices.reduce((s, d) => s + Number(d.lat), 0) / validDevices.length
-        const avgLng = validDevices.reduce((s, d) => s + Number(d.lng), 0) / validDevices.length
-        map.jumpTo({ center: [avgLng, avgLat], zoom: 17 })
-      } else {
-        const lngs = validDevices.map(d => Number(d.lng))
-        const lats = validDevices.map(d => Number(d.lat))
-        const bounds: [[number, number], [number, number]] = [
-          [Math.min(...lngs), Math.min(...lats)],
-          [Math.max(...lngs), Math.max(...lats)],
-        ]
-        const maxZ = regionalId ? 13 : areaId ? 11 : 7
-        map.fitBounds(bounds, { padding: 30, maxZoom: maxZ })
-      }
+      const lngs = validDevices.map(d => Number(d.lng))
+      const lats = validDevices.map(d => Number(d.lat))
+      const bounds: [[number, number], [number, number]] = [
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)],
+      ]
+      map.fitBounds(bounds, { padding: 50, maxZoom: 16 })
 
       // Connection lines (downstream mode)
       if (dataSource === 'downstream') {
