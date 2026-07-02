@@ -57,8 +57,28 @@ export default function ReportsV2Page() {
   const exportCSV = () => {
     if (reportData.length === 0) return
     const headers = Object.keys(reportData[0])
-    const rows = reportData.map(r => headers.map(h => r[h]).join(','))
-    const csv = [headers.join(','), ...rows].join('\n')
+    let csv = headers.join(',') + '\n'
+    const detailHeaders = ['device_name', 'serial_number', 'brand', 'ont_type', 'region_name', 'nop_name', 'indihome_id', 'status', 'latency', 'download', 'upload']
+    reportData.forEach(r => {
+      csv += headers.map(h => r[h]).join(',') + '\n'
+      const relatedDevices = ((() => {
+        switch (activeReport) {
+          case 'alarm-area': return allDevices.filter(d => d.area_name === r.area)
+          case 'alarm-regional': return allDevices.filter(d => d.region_name === r.regional)
+          case 'alarm-nop': return allDevices.filter(d => d.nop_name === r.nop)
+          case 'alarm-brand': return allDevices.filter(d => (d.manufacturer || '').toLowerCase() === (r.brand || '').toLowerCase())
+          case 'alarm-ont-type': return allDevices.filter(d => d.cpe_type === r.ont_type)
+          default: return []
+        }
+      })()).slice(0, 10)
+      if (relatedDevices.length > 0) {
+        csv += detailHeaders.join(',') + '\n'
+        relatedDevices.forEach((d: any) => {
+          csv += detailHeaders.map(h => d[h] ?? '').join(',') + '\n'
+        })
+        csv += '\n'
+      }
+    })
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
