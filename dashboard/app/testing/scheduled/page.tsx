@@ -34,10 +34,19 @@ export default function ScheduledPage() {
   const [downstreamServers, setDownstreamServers] = useState<any[]>([])
   const [nopCities, setNopCities] = useState<any[]>([])
 
+  const [regionCounts, setRegionCounts] = useState<Record<number, number>>({})
+
   useEffect(() => {
     fetchTasks()
     fetch('/api/downstream-servers').then(r => r.json()).then(d => setDownstreamServers(d.servers || []))
     fetch('/api/nop-cities').then(r => r.json()).then(d => setNopCities(d.cities || []))
+    fetch('/api/location/counts').then(r => r.json()).then(d => {
+      const counts: Record<number, number> = {}
+      ;(d.data || []).forEach((item: any) => {
+        counts[item.regional_id] = (counts[item.regional_id] || 0) + Number(item.device_count)
+      })
+      setRegionCounts(counts)
+    }).catch(() => {})
   }, [page, search])
 
   const fetchTasks = async () => {
@@ -266,7 +275,7 @@ export default function ScheduledPage() {
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
                 <option value="">All Regions</option>
                 {downstreamServers.map(s => (
-                  <option key={s.id} value={s.id}>{s.name} — {s.province}</option>
+                  <option key={s.id} value={s.id}>{s.name} — {s.province} ({regionCounts[s.id] || 0} ONT)</option>
                 ))}
               </select>
             </div>
