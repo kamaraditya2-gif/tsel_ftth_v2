@@ -530,7 +530,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Location Cascading */}
-          <LocationFilter onFilterChange={(a,r,n) => { setSelectedArea(a); setSelectedRegional(r); setSelectedNopCity(n) }} />
+          <LocationFilter onFilterChange={(f) => { setSelectedArea(f.areaIds[0] ?? null); setSelectedRegional(f.regionalIds[0] ?? null); setSelectedNopCity(f.nopIds[0] ?? null) }} />
 
           {/* Speed Group Dropdown */}
           <div className="relative" id="speed-group-dropdown">

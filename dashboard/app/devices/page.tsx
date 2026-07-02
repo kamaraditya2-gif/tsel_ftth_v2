@@ -785,7 +785,7 @@ function DevicesPageContent() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
-            <LocationFilter onFilterChange={(a,r,n) => { setSelectedArea(a); setSelectedRegion(r); setSelectedNopCity(n) }} />
+            <LocationFilter onFilterChange={(f) => { setSelectedArea(f.areaIds[0] ?? null); setSelectedRegion(f.regionalIds[0] ?? null); setSelectedNopCity(f.nopIds[0] ?? null) }} />
             <select
               value={selectedSpeed === 'none' ? 'none' : (selectedSpeed || '')}
               onChange={(e) => {

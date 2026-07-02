@@ -45,8 +45,8 @@ export default function AlarmsV2Page() {
   useEffect(() => { fetchAlarms() }, [])
 
   const handleFilterChange = (f: any) => { setFilters(f); fetchAlarms(f, locFilters) }
-  const handleLocationChange = (a: number | null, r: number | null, n: number | null) => {
-    const nl = { areaId: a, regionalId: r, nopId: n }
+  const handleLocationChange = (loc: { areaIds: number[]; regionalIds: number[]; nopIds: number[] }) => {
+    const nl = { areaId: loc.areaIds[0] ?? null, regionalId: loc.regionalIds[0] ?? null, nopId: loc.nopIds[0] ?? null }
     setLocFilters(nl)
     fetchAlarms(filters, nl)
   }

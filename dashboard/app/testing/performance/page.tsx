@@ -102,8 +102,8 @@ export default function PerformanceTestPage() {
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
-          <LocationFilter onFilterChange={(a,r,n) => {
-            const nl = { areaId: a, regionalId: r, nopId: n }
+          <LocationFilter onFilterChange={(f) => {
+            const nl = { areaId: f.areaIds[0] ?? null, regionalId: f.regionalIds[0] ?? null, nopId: f.nopIds[0] ?? null }
             setLocFilters(nl)
             fetchResults(filters, nl)
           }} />

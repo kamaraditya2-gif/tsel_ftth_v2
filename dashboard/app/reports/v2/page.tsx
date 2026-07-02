@@ -115,8 +115,8 @@ export default function ReportsV2Page() {
 
         {/* Filter */}
         <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-md p-4">
-          <LocationFilter onFilterChange={(a,r,n) => {
-            setLocFilters({ areaId: a, regionalId: r, nopId: n })
+          <LocationFilter onFilterChange={(f) => {
+            setLocFilters({ areaId: f.areaIds[0] ?? null, regionalId: f.regionalIds[0] ?? null, nopId: f.nopIds[0] ?? null })
           }} />
         </div>
 
