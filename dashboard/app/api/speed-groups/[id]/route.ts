@@ -7,12 +7,19 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const body = await request.json()
     const { name, speed_limit, profile, description } = body
     const id = parseInt(params.id)
+    const pct: Record<string, { dl: number; ul: number }> = {
+      Bronze: { dl: 20, ul: 10 }, Silver: { dl: 40, ul: 20 },
+      Gold: { dl: 60, ul: 30 }, Platinum: { dl: 80, ul: 40 }
+    }
+    const p = profile && speed_limit ? pct[profile] : null
+    const download_threshold = p ? speed_limit * p.dl / 100 : null
+    const upload_threshold = p ? speed_limit * p.ul / 100 : null
     
     client = await pool.connect()
     
     const res = await client.query(
-      'UPDATE speed_group SET name = $1, speed_limit = $2, profile = $3, description = $4, updated_at = NOW() WHERE id = $5 RETURNING id, name, speed_limit, profile, description',
-      [name, speed_limit, profile, description, id]
+      'UPDATE speed_group SET name = $1, speed_limit = $2, profile = $3, download_threshold = $4, upload_threshold = $5, description = $6, updated_at = NOW() WHERE id = $7 RETURNING id, name, speed_limit, profile, download_threshold, upload_threshold, description',
+      [name, speed_limit, profile, download_threshold, upload_threshold, description, id]
     )
     
     if (res.rows.length === 0) {

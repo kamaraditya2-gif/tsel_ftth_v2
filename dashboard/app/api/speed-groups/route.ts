@@ -25,17 +25,29 @@ export async function GET() {
 }
 
 // POST - Create new speed group
+function calcThresholds(speedLimit: number | null, profile: string | null) {
+  if (!speedLimit || !profile) return { download_threshold: null, upload_threshold: null }
+  const pct: Record<string, { dl: number; ul: number }> = {
+    Bronze: { dl: 20, ul: 10 }, Silver: { dl: 40, ul: 20 },
+    Gold: { dl: 60, ul: 30 }, Platinum: { dl: 80, ul: 40 }
+  }
+  const p = pct[profile]
+  if (!p) return { download_threshold: null, upload_threshold: null }
+  return { download_threshold: speedLimit * p.dl / 100, upload_threshold: speedLimit * p.ul / 100 }
+}
+
 export async function POST(request: Request) {
   let client
   try {
     const body = await request.json()
     const { name, speed_limit, profile, description } = body
+    const { download_threshold, upload_threshold } = calcThresholds(speed_limit, profile)
     
     client = await pool.connect()
     
     const res = await client.query(
-      'INSERT INTO speed_group (name, speed_limit, profile, description) VALUES ($1, $2, $3, $4) RETURNING id, name, speed_limit, profile, description',
-      [name, speed_limit, profile, description]
+      'INSERT INTO speed_group (name, speed_limit, profile, download_threshold, upload_threshold, description) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, speed_limit, profile, download_threshold, upload_threshold, description',
+      [name, speed_limit, profile, download_threshold, upload_threshold, description]
     )
     
     return NextResponse.json(res.rows[0])
