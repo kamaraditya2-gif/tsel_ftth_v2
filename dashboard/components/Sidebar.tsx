@@ -33,7 +33,7 @@ const menuItems = [
     { name: 'Worker', href: '/admin/worker', icon: Workflow },
     { name: 'Regionals', href: '/regional', icon: MapPin },
     { name: 'Speeds', href: '/speeds', icon: Gauge },
-    { name: 'Download Data', href: '/admin/download-data', icon: Download },
+    { name: 'Download Raw Data', href: '/admin/download-data', icon: Download },
     { name: 'Health', href: '/admin/health', icon: Activity },
     { name: 'Users', href: '/admin/users', icon: UserCircle },
     { name: 'Roles', href: '/admin/roles', icon: Users },

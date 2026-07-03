@@ -1,23 +1,30 @@
 'use client'
 
-import { useState } from 'react'
-import { Download, Search, Clock, Activity, MapPin } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Download, Clock, Activity, MapPin } from 'lucide-react'
 
 export default function DownloadDataPage() {
   const [type, setType] = useState('ping')
   const [days, setDays] = useState(1)
   const [search, setSearch] = useState('')
+  const [selectedRegion, setSelectedRegion] = useState('')
+  const [downstreamServers, setDownstreamServers] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState<number | null>(null)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/downstream-servers').then(r => r.json()).then(d => setDownstreamServers(d.servers || [])).catch(() => {})
+  }, [])
 
   const download = async () => {
     setLoading(true)
     setError('')
     setTotal(null)
     try {
-      const params = new URLSearchParams({ type, days: days.toString() })
-      if (search.trim()) params.set('search', search.trim())
+    const params = new URLSearchParams({ type, days: days.toString() })
+    if (selectedRegion) params.set('region_id', selectedRegion)
+    if (search.trim()) params.set('search', search.trim())
       const res = await fetch(`/api/admin/download-data?${params}`)
       const data = await res.json()
       if (data.error) { setError(data.error); return }
@@ -59,8 +66,8 @@ export default function DownloadDataPage() {
             <Download className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Data Export</h1>
-            <p className="text-xs text-gray-400">Download ping / traceroute test results</p>
+            <h1 className="text-xl font-bold text-white">Download Raw Data</h1>
+            <p className="text-xs text-gray-400">Download ping / traceroute test results by region</p>
           </div>
         </div>
 
@@ -102,15 +109,18 @@ export default function DownloadDataPage() {
             </div>
           </div>
 
-          {/* Search */}
+          {/* Region Filter */}
           <div>
-            <label className="text-xs text-gray-400 block mb-1.5">Filter by Device</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <input type="text" placeholder="Serial number or device name..." value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm" />
-            </div>
+            <label className="text-xs text-gray-400 block mb-1.5 flex items-center gap-1">
+              <MapPin className="w-3 h-3" /> Filter by Region
+            </label>
+            <select value={selectedRegion} onChange={e => setSelectedRegion(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm">
+              <option value="">All Regions</option>
+              {downstreamServers.map(s => (
+                <option key={s.id} value={s.id}>{s.name} — {s.province}</option>
+              ))}
+            </select>
           </div>
 
           {/* Download */}

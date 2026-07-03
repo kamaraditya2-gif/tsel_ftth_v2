@@ -7,6 +7,7 @@ export async function GET(request: Request) {
     const type = searchParams.get('type') || 'ping'
     const days = parseInt(searchParams.get('days') || '1')
     const search = searchParams.get('search') || ''
+    const regionId = searchParams.get('region_id')
 
     if (days < 1 || days > 7) {
       return NextResponse.json({ error: 'Days must be between 1 and 7' }, { status: 400 })
@@ -15,6 +16,12 @@ export async function GET(request: Request) {
     const client = await pool.connect()
     let result
 
+    const params: any[] = []
+    let pIdx = 1
+    let whereExtra = ''
+    if (search) { whereExtra += ` AND (d.serial_number ILIKE $${pIdx} OR d.device_name ILIKE $${pIdx})`; params.push(`%${search}%`); pIdx++ }
+    if (regionId) { whereExtra += ` AND d.downstream_server_id = $${pIdx}`; params.push(parseInt(regionId)); pIdx++ }
+
     if (type === 'ping') {
       const q = `
         SELECT p.id, p.device_id, d.serial_number, d.device_name, d.manufacturer, d.cpe_type,
@@ -22,12 +29,11 @@ export async function GET(request: Request) {
           p.success, p.executed_at
         FROM test_results_ping p
         JOIN devices_ont d ON p.device_id = d.id
-        WHERE p.executed_at >= NOW() - INTERVAL '${days} days'
-          ${search ? `AND (d.serial_number ILIKE $1 OR d.device_name ILIKE $1)` : ''}
+        WHERE p.executed_at >= NOW() - INTERVAL '${days} days' ${whereExtra}
         ORDER BY p.executed_at DESC
         LIMIT 50000
       `
-      result = await client.query(q, search ? [`%${search}%`] : [])
+      result = await client.query(q, params)
     } else if (type === 'traceroute') {
       const q = `
         SELECT t.id, t.device_id, d.serial_number, d.device_name, d.manufacturer, d.cpe_type,
@@ -35,12 +41,11 @@ export async function GET(request: Request) {
           t.traceroute_raw
         FROM test_results_traceroute t
         JOIN devices_ont d ON t.device_id = d.id
-        WHERE t.executed_at >= NOW() - INTERVAL '${days} days'
-          ${search ? `AND (d.serial_number ILIKE $1 OR d.device_name ILIKE $1)` : ''}
+        WHERE t.executed_at >= NOW() - INTERVAL '${days} days' ${whereExtra}
         ORDER BY t.executed_at DESC
         LIMIT 50000
       `
-      result = await client.query(q, search ? [`%${search}%`] : [])
+      result = await client.query(q, params)
     } else {
       client.release()
       return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
