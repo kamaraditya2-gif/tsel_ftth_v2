@@ -32,11 +32,20 @@ export default function DownloadDataPage() {
 
       const headers = type === 'ping'
         ? ['ID', 'Serial', 'Device', 'Brand', 'ONT Type', 'Ping IGW (ms)', 'Ping EBR (ms)', 'Packet Loss IGW (%)', 'Packet Loss EBR (%)', 'Success', 'Executed At']
-        : ['ID', 'Serial', 'Device', 'Brand', 'ONT Type', 'Total Hops', 'Total RTT (ms)', 'Success', 'Executed At']
+        : ['ID', 'Serial', 'Device', 'Brand', 'ONT Type', 'Total Hops', 'Total RTT (ms)', 'Route', 'Success', 'Executed At']
 
+      const parseHops = (raw: any) => {
+        if (!raw) return ''
+        try {
+          const hops = typeof raw === 'string' ? JSON.parse(raw) : raw
+          return (Array.isArray(hops) ? hops : []).map((h: any, i: number) =>
+            `Hop${i + 1}:${h.ip || h.address || '-'}(${h.rtt || h.rtt_ms || '-'})`
+          ).join(' | ')
+        } catch { return '' }
+      }
       const mapRow = (r: any) => type === 'ping'
         ? [r.id, r.serial_number, r.device_name, r.manufacturer, r.cpe_type, r.ping_igw, r.ping_ebr, r.packet_loss_igw, r.packet_loss_ebr, r.success ? 'Yes' : 'No', r.executed_at]
-        : [r.id, r.serial_number, r.device_name, r.manufacturer, r.cpe_type, r.total_hops, r.total_rtt_ms, r.success ? 'Yes' : 'No', r.executed_at]
+        : [r.id, r.serial_number, r.device_name, r.manufacturer, r.cpe_type, r.total_hops, r.total_rtt_ms, parseHops(r.traceroute_raw), r.success ? 'Yes' : 'No', r.executed_at]
 
       const q = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`
       let csv = headers.map(h => q(h)).join(';') + '\n'
