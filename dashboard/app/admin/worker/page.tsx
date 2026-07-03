@@ -79,6 +79,7 @@ export default function WorkerPage() {
 
   const LOG_TABS = [
     { id: 'all', label: 'All', color: 'text-gray-300' },
+    { id: 'api', label: 'API', color: 'text-yellow-400' },
     { id: 'fping', label: 'FPING', color: 'text-rose-400' },
     { id: 'fast', label: 'FAST', color: 'text-blue-400' },
     { id: 'dl', label: 'DL', color: 'text-purple-400' },
@@ -100,6 +101,11 @@ export default function WorkerPage() {
 
   const filteredLogs = useMemo(() =>
     selectedLogTab === 'all' ? workerLogs
+    : selectedLogTab === 'api' ? workerLogs.filter(l =>
+        l.includes('Request:') || l.includes('Response:') || l.includes('URL:') ||
+        l.includes('Host:') || l.includes('payload') || l.includes('request data') ||
+        l.includes('Traceroute URL') || l.includes('Download URL') || l.includes('Upload URL')
+      )
     : selectedLogTab === 'regional' ? regionalLogs
     : workerLogs.filter(l => getContainerType(l) === selectedLogTab),
     [workerLogs, regionalLogs, selectedLogTab]
