@@ -13,7 +13,7 @@ export default function RootCauseAnalytics({ data }: { data: RootCauseData }) {
   const l2 = data?.l2 || []
   const l1Total = l1.reduce((s, i) => s + i.count, 0)
   const l2Max = Math.max(...l2.map(i => i.count), 1)
-  const categories = l2.reduce<string[]>((acc, i) => acc.includes(i.category) ? acc : [...acc, i.category], [])
+  const l2Sorted = [...l2].sort((a, b) => b.count - a.count)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -25,8 +25,8 @@ export default function RootCauseAnalytics({ data }: { data: RootCauseData }) {
         ) : (
           <>
             <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Pie data={l1} dataKey="count" nameKey="name" cx="50%" cy="50%" outerRadius={70} innerRadius={30} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                <PieChart>
+                <Pie data={l1} dataKey="count" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
                   {l1.map((_, i) => <Cell key={i} fill={L1_COLORS[i % L1_COLORS.length]} />)}
                 </Pie>
               </PieChart>
@@ -49,19 +49,14 @@ export default function RootCauseAnalytics({ data }: { data: RootCauseData }) {
         {l2.length === 0 ? (
           <div className="h-[200px] flex items-center justify-center text-xs text-gray-500">No data</div>
         ) : (
-          <div className="space-y-3 max-h-[220px] overflow-y-auto">
-            {categories.map(cat => (
-              <div key={cat}>
-                <p className="text-[9px] text-gray-500 uppercase mb-1">{cat}</p>
-                {l2.filter(i => i.category === cat).map((item, i) => (
-                  <div key={item.name} className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] text-gray-300 w-28 truncate">{item.name}</span>
-                    <div className="flex-1 h-3 bg-white/5 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{ width: `${(item.count / l2Max) * 100}%`, backgroundColor: L2_COLORS[i % L2_COLORS.length] }} />
-                    </div>
-                    <span className="text-[10px] text-gray-400 w-5 text-right">{item.count}</span>
-                  </div>
-                ))}
+          <div className="space-y-1 max-h-[220px] overflow-y-auto">
+            {l2Sorted.map((item, i) => (
+              <div key={item.name + item.category} className="flex items-center gap-2 py-0.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <span className="text-[10px] text-gray-300 w-28 truncate shrink-0" title={`${item.name} (${item.category})`}>{item.name}</span>
+                <div className="flex-1 h-4 bg-white/5 rounded overflow-hidden">
+                  <div className="h-full rounded transition-all" style={{ width: `${(item.count / l2Max) * 100}%`, backgroundColor: L2_COLORS[i % L2_COLORS.length] }} />
+                </div>
+                <span className="text-[10px] text-gray-400 w-6 text-right shrink-0">{item.count}</span>
               </div>
             ))}
           </div>
