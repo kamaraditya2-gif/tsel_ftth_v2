@@ -115,9 +115,9 @@ export default function NetworkDiagram({ upstream, downstream }: NetworkDiagramP
         </text>
         <circle cx="120" cy="70" r="3" fill="#6366f1" opacity="0.8" />
 
-        {/* EBR node */}
+        {/* BNG node */}
         <rect x="320" y="100" width="100" height="60" rx="10" fill="url(#gradEbr)" stroke="#f59e0b" strokeWidth="1.5" />
-        <text x="370" y="122" textAnchor="middle" fill="#fcd34d" fontSize="13" fontWeight="bold" filter="url(#glow)">EBR</text>
+        <text x="370" y="122" textAnchor="middle" fill="#fcd34d" fontSize="13" fontWeight="bold" filter="url(#glow)">BNG</text>
         <text x="370" y="138" textAnchor="middle" fill="#64748b" fontSize="9">Edge Router</text>
         <text x="370" y="150" textAnchor="middle" fill="#f59e0b" fontSize="9">{u.avgEbrLatency || 0} ms</text>
         <circle cx="370" cy="100" r="3" fill="#f59e0b" opacity="0.8" />
@@ -140,7 +140,7 @@ export default function NetworkDiagram({ upstream, downstream }: NetworkDiagramP
         <text x="470" y="140" textAnchor="middle" fill="#6ee7b7" fontSize="10" fontWeight="bold" filter="url(#glow)">File Server</text>
         <text x="470" y="155" textAnchor="middle" fill="#64748b" fontSize="8">Speed / Latency Test</text>
 
-        {/* File Server below EBR */}
+        {/* File Server below BNG */}
         <rect x="320" y="170" width="100" height="50" rx="10" fill="url(#gradFs)" stroke="#10b981" strokeWidth="1.5" />
         <text x="370" y="190" textAnchor="middle" fill="#6ee7b7" fontSize="10" fontWeight="bold" filter="url(#glow)">File Server</text>
         <text x="370" y="205" textAnchor="middle" fill="#64748b" fontSize="8">Latency / Packet Loss</text>
@@ -167,13 +167,13 @@ export default function NetworkDiagram({ upstream, downstream }: NetworkDiagramP
         {/* Direction label */}
         <rect x="85" y="157" width="200" height="20" rx="4" fill={mode === 'upstream' ? 'rgba(59,130,246,0.1)' : 'rgba(16,185,129,0.1)'} />
         <text x="185" y="170" textAnchor="middle" fill={mode === 'upstream' ? '#60a5fa' : '#34d399'} fontSize="9">
-          {mode === 'upstream' ? '▲ ONT initiates test → IGW/EBR → File Server' : '▼ File Server initiates ping → IGW/EBR → ONT'}
+          {mode === 'upstream' ? '▲ ONT initiates test → IGW/BNG → File Server' : '▼ File Server initiates ping → IGW/BNG → ONT'}
         </text>
       </svg>
 
       <div className="flex items-center justify-center gap-3 text-[8px] text-gray-500 mt-1">
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-500" /> ONT</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> EBR</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> BNG</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> IGW</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> File Server</span>
       </div>
