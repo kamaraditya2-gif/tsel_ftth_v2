@@ -59,13 +59,23 @@ async function getTotalPendingJobs() {
     legacyQueue.getJobCounts('waiting', 'active', 'delayed'),
   ]);
   
-  const total = 
+  const active = 
     (fast.waiting || 0) + (fast.active || 0) + (fast.delayed || 0) +
     (download.waiting || 0) + (download.active || 0) + (download.delayed || 0) +
-    (upload.waiting || 0) + (upload.active || 0) + (upload.delayed || 0) +
-    (legacy.waiting || 0) + (legacy.active || 0) + (legacy.delayed || 0);
+    (upload.waiting || 0) + (upload.active || 0) + (upload.delayed || 0);
+  const legacyTotal = (legacy.waiting || 0) + (legacy.active || 0) + (legacy.delayed || 0);
+  
+  // Auto-clean legacy queue if it has accumulated stale jobs
+  if (legacyTotal > 10000) {
+    try {
+      await legacyQueue.drain();
+      console.log(`   🧹 Auto-drained legacy queue (had ${legacyTotal} stale jobs)`);
+    } catch (e) {
+      console.error('   Failed to drain legacy queue:', e.message);
+    }
+  }
     
-  return { total, fast, download, upload, legacy };
+  return { total: active, fast, download, upload, legacy };
 }
 
 // Jalankan pengecekan setiap menit
