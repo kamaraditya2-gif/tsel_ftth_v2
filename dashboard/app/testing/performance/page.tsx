@@ -231,6 +231,7 @@ export default function PerformanceTestPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Device</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Alias</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Brand</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Speed Plan</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Latency</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Download</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Upload</th>
@@ -243,9 +244,9 @@ export default function PerformanceTestPage() {
               </thead>
               <tbody className="divide-y divide-slate-700/50">
                 {loading ? (
-                  <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
+                  <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
                 ) : results.length === 0 ? (
-                  <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-400">No results found</td></tr>
+                  <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">No results found</td></tr>
                 ) : results.map((r: any, i: number) => (
                   <tr key={r.id || i} className="hover:bg-slate-700/30 transition-colors">
                     <td className="px-4 py-3">
@@ -258,6 +259,10 @@ export default function PerformanceTestPage() {
                     <td className="px-4 py-3">
                       <p className="text-sm text-white">{r.brand || '-'}</p>
                       <p className="text-xs text-gray-400">{r.ont_type || ''}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-sm text-white">{r.speed_name || '-'}</p>
+                      {r.speed_limit && <p className="text-xs text-gray-400">{r.speed_limit} Mbps</p>}
                     </td>
                     <td className="px-4 py-3">
                       {r.latency != null ? (
