@@ -142,6 +142,12 @@ cron.schedule('* * * * *', async () => {
             }
           });
 
+          // Mark as processing immediately so we don't re-dispatch
+          await client.query(
+            `UPDATE queue_jobs SET status = 'processing', started_at = NOW() WHERE id = $1 AND status = 'pending'`,
+            [job.id]
+          );
+
           console.log(`[${timestamp}]   Dispatched pending job ${job.id} (${job.test_type}) to ${queue.name} (Task: ${job.task_name || 'N/A'})`);
         } catch (error) {
           console.error(`   Error dispatching pending job ${job.id}:`, error.message);
