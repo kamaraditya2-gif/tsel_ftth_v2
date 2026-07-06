@@ -61,6 +61,23 @@ export default function PingChart({ data, type = 'ping', unit: customUnit }: Pin
     return null
   }
 
+  const renderLegend = (props: any) => {
+    const { payload } = props
+    if (!payload) return null
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 24, paddingTop: 10 }}>
+        {payload.map((entry: any, i: number) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <svg width="20" height="10" viewBox="0 0 20 10">
+              <line x1="0" y1="5" x2="20" y2="5" stroke={entry.color} strokeWidth="2.5" strokeDasharray="4 2" />
+            </svg>
+            <span style={{ fontSize: 12, color: '#6b7280' }}>{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div style={{ height: 350 }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -84,7 +101,7 @@ export default function PingChart({ data, type = 'ping', unit: customUnit }: Pin
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend 
-              iconType="circle"
+              content={renderLegend}
               wrapperStyle={{ paddingTop: '10px' }}
             />
             {/* MIN-MAX range lines */}
@@ -215,7 +232,7 @@ export default function PingChart({ data, type = 'ping', unit: customUnit }: Pin
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend 
-              iconType="circle"
+              content={renderLegend}
               wrapperStyle={{ paddingTop: '10px' }}
             />
             {/* MIN-MAX range lines */}
