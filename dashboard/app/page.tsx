@@ -78,6 +78,7 @@ export default function DashboardPage() {
   const [alarmStats, setAlarmStats] = useState<any>(null)
   const [showPhase3, setShowPhase3] = useState(false)
   const [filterLocStr, setFilterLocStr] = useState({ areaIds: '', regionalIds: '', nopIds: '' })
+  const [filterResetKey, setFilterResetKey] = useState(0)
   const [userData, setUserData] = useState<{ username: string; full_name: string } | null>(null)
 
   useEffect(() => {
@@ -553,7 +554,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Location Cascading */}
-          <LocationFilter onFilterChange={(f) => {
+          <LocationFilter key={filterResetKey} onFilterChange={(f) => {
             setSelectedArea(f.areaIds[0] ?? null);
             setSelectedRegional(f.regionalIds[0] ?? null);
             setSelectedNopCity(f.nopIds[0] ?? null);
@@ -674,7 +675,7 @@ export default function DashboardPage() {
             )}
           </div>
           {(filterLocStr.areaIds || filterLocStr.regionalIds || filterLocStr.nopIds || selectedSpeedGroup || selectedManufacturer || selectedOntModel) && (
-            <button onClick={() => { setSelectedArea(null); setSelectedRegional(null); setSelectedNopCity(null); setSelectedSpeedGroup(null); setSelectedManufacturer(null); setSelectedOntModel(null); setFilterLocStr({ areaIds: '', regionalIds: '', nopIds: '' }) }}
+            <button onClick={() => { setSelectedArea(null); setSelectedRegional(null); setSelectedNopCity(null); setSelectedSpeedGroup(null); setSelectedManufacturer(null); setSelectedOntModel(null); setFilterLocStr({ areaIds: '', regionalIds: '', nopIds: '' }); setFilterResetKey(k => k + 1) }}
               className="px-2 py-1 rounded text-[10px] bg-white/10 hover:bg-red-500/30 text-gray-400 hover:text-red-300 transition-colors">
               ✕ Clear Filter
             </button>
