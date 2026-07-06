@@ -429,9 +429,9 @@ export async function GET(request: Request) {
     let speedPackages: { name: string; count: number }[] = []
     try {
       const spRes = await client.query(`
-        SELECT COALESCE(sg.name, 'No Package') as name, COUNT(*) as count
+        SELECT COALESCE(sg.name, 'No Package') as name, sg.speed_limit, COUNT(*) as count
         FROM devices_ont d LEFT JOIN speed_group sg ON d.speed_id = sg.id
-        GROUP BY sg.name ORDER BY sg.speed_limit ASC NULLS LAST
+        GROUP BY sg.name, sg.speed_limit ORDER BY sg.speed_limit ASC NULLS LAST
       `)
       speedPackages = spRes.rows.map(r => ({ name: r.name, count: parseInt(r.count) }))
     } catch (e) { /* ignore */ }
