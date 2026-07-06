@@ -443,7 +443,7 @@ export async function GET(request: Request) {
         SELECT COUNT(*) as cnt FROM (SELECT 1 FROM devices_ont d LEFT JOIN test_results_speed_download sd ON sd.device_id = d.id AND sd.executed_at > NOW() - INTERVAL '${interval}' ${whereClauseWithTime} GROUP BY d.id HAVING COUNT(sd.id) > 0) sub
       `, filterParams)
       const dlTested = parseInt(dlRes.rows[0]?.cnt || 0)
-      const totalDev = parseInt(totalDevices)
+      const totalDev = totalDevices
       const dlAboveRes = await client.query(`SELECT COUNT(*) as cnt FROM (SELECT d.id, MAX(sd.download_speed) as speed, MAX(sg.download_threshold) as th FROM devices_ont d LEFT JOIN test_results_speed_download sd ON sd.device_id = d.id AND sd.executed_at > NOW() - INTERVAL '${interval}' LEFT JOIN speed_group sg ON sg.id = d.speed_id ${whereClauseWithTime} GROUP BY d.id HAVING MAX(sd.download_speed) IS NOT NULL AND MAX(sg.download_threshold) IS NOT NULL) sub WHERE speed >= th`, filterParams)
       const dlBelowRes = await client.query(`SELECT COUNT(*) as cnt FROM (SELECT d.id, MAX(sd.download_speed) as speed, MAX(sg.download_threshold) as th FROM devices_ont d LEFT JOIN test_results_speed_download sd ON sd.device_id = d.id AND sd.executed_at > NOW() - INTERVAL '${interval}' LEFT JOIN speed_group sg ON sg.id = d.speed_id ${whereClauseWithTime} GROUP BY d.id HAVING MAX(sd.download_speed) IS NOT NULL AND MAX(sg.download_threshold) IS NOT NULL) sub WHERE speed < th`, filterParams)
       const ulRes = await client.query(`SELECT COUNT(*) as cnt FROM (SELECT 1 FROM devices_ont d LEFT JOIN test_results_speed_upload su ON su.device_id = d.id AND su.executed_at > NOW() - INTERVAL '${interval}' ${whereClauseWithTime} GROUP BY d.id HAVING COUNT(su.id) > 0) sub`, filterParams)
