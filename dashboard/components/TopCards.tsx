@@ -147,17 +147,19 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
           <Server className="w-3 h-3 text-purple-400" />
           <span className="text-[10px] font-bold text-white uppercase">Devices</span>
         </div>
-        <div className="flex items-center justify-between mb-1 px-1">
-          <span className="text-base font-bold text-white">{dashboardData?.totalDevices || 0}</span>
-          <span className="text-[9px] text-purple-300/70">Total</span>
-        </div>
-        <div className="space-y-1 mb-1">
-          {(dashboardData?.speedPackages || []).map((pkg: any, i: number) => (
-            <div key={i} className="flex items-center justify-between px-1 py-0.5 bg-slate-700/30 rounded">
-              <span className="text-[9px] text-white font-medium">{pkg.name}</span>
-              <span className="text-[9px] text-purple-300 font-semibold">{pkg.count}</span>
-            </div>
-          ))}
+        <div className="flex items-start justify-between mb-1 px-1 gap-2">
+          <div className="text-center">
+            <div className="text-lg font-bold text-white">{dashboardData?.totalDevices || 0}</div>
+            <div className="text-[9px] text-purple-300/70">Total</div>
+          </div>
+          <div className="text-right">
+            {(dashboardData?.speedPackages || []).map((pkg: any, i: number) => (
+              <div key={i} className="flex items-center gap-2 justify-end">
+                <span className="text-[9px] text-gray-300">{pkg.name}</span>
+                <span className="text-[9px] text-purple-300 font-semibold w-5 text-right">{pkg.count}</span>
+              </div>
+            ))}
+          </div>
         </div>
         <div className="grid grid-cols-3 gap-0.5 text-[9px] pt-1 border-t border-slate-700/50">
           <div><span className="text-gray-500">Alarm:</span> <span className="text-purple-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms()}>{actTotal}</span></div>
