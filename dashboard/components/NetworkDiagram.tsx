@@ -57,7 +57,7 @@ export default function NetworkDiagram({ upstream, downstream }: NetworkDiagramP
       </div>
 
       {/* SVG Topology */}
-      <svg viewBox="0 0 900 200" className="w-full" style={{ maxHeight: '180px' }}>
+      <svg viewBox="0 0 900 250" className="w-full" style={{ maxHeight: '250px' }}>
         <defs>
           <linearGradient id="gradOnt" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
@@ -93,16 +93,16 @@ export default function NetworkDiagram({ upstream, downstream }: NetworkDiagramP
             <path d="M 180,100 L 320,100" stroke="rgba(99,102,241,0.3)" strokeWidth="2" strokeDasharray="6,4" fill="none" />
             <path d="M 320,100 L 420,70 L 520,70" stroke="rgba(59,130,246,0.3)" strokeWidth="2" strokeDasharray="6,4" fill="none" />
             <path d="M 320,100 L 420,130 L 520,130" stroke="rgba(245,158,11,0.3)" strokeWidth="2" strokeDasharray="6,4" fill="none" />
-            <path d="M 520,70 L 620,70" stroke="rgba(16,185,129,0.3)" strokeWidth="2" strokeDasharray="6,4" fill="none" />
-            <path d="M 520,130 L 620,130" stroke="rgba(16,185,129,0.3)" strokeWidth="2" strokeDasharray="6,4" fill="none" />
+            <path d="M 470,100 L 470,120" stroke="rgba(16,185,129,0.3)" strokeWidth="2" strokeDasharray="6,4" fill="none" />
+            <path d="M 370,160 L 370,170" stroke="rgba(16,185,129,0.3)" strokeWidth="2" strokeDasharray="6,4" fill="none" />
             <polygon points="175,95 185,100 175,105" fill="rgba(99,102,241,0.6)" />
             <polygon points="515,65 525,70 515,75" fill="rgba(59,130,246,0.6)" />
             <polygon points="515,125 525,130 515,135" fill="rgba(245,158,11,0.6)" />
           </>
         ) : (
           <>
-            <path d="M 680,70 L 520,70 L 420,100 L 320,100 L 180,100" stroke="rgba(16,185,129,0.3)" strokeWidth="2" strokeDasharray="6,4" fill="none" />
-            <path d="M 680,130 L 520,130 L 420,100 L 320,100 L 180,100" stroke="rgba(16,185,129,0.3)" strokeWidth="2" strokeDasharray="6,4" fill="none" />
+            <path d="M 470,120 L 470,100 L 420,100 L 370,100 L 320,100 L 180,100" stroke="rgba(16,185,129,0.3)" strokeWidth="2" strokeDasharray="6,4" fill="none" />
+            <path d="M 370,170 L 370,100 L 320,100 L 180,100" stroke="rgba(16,185,129,0.3)" strokeWidth="2" strokeDasharray="6,4" fill="none" />
             <polygon points="185,95 175,100 185,105" fill="rgba(16,185,129,0.6)" />
           </>
         )}
@@ -115,9 +115,9 @@ export default function NetworkDiagram({ upstream, downstream }: NetworkDiagramP
         </text>
         <circle cx="120" cy="70" r="3" fill="#6366f1" opacity="0.8" />
 
-        {/* EBR/BNG node */}
+        {/* EBR node */}
         <rect x="320" y="100" width="100" height="60" rx="10" fill="url(#gradEbr)" stroke="#f59e0b" strokeWidth="1.5" />
-        <text x="370" y="122" textAnchor="middle" fill="#fcd34d" fontSize="13" fontWeight="bold" filter="url(#glow)">EBR/BNG</text>
+        <text x="370" y="122" textAnchor="middle" fill="#fcd34d" fontSize="13" fontWeight="bold" filter="url(#glow)">EBR</text>
         <text x="370" y="138" textAnchor="middle" fill="#64748b" fontSize="9">Edge Router</text>
         <text x="370" y="150" textAnchor="middle" fill="#f59e0b" fontSize="9">{u.avgEbrLatency || 0} ms</text>
         <circle cx="370" cy="100" r="3" fill="#f59e0b" opacity="0.8" />
@@ -135,15 +135,15 @@ export default function NetworkDiagram({ upstream, downstream }: NetworkDiagramP
           Δ {Math.abs((Number(u.avgLatency)||0)-(Number(u.avgEbrLatency)||0))} ms
         </text>
 
-        {/* File Server node */}
-        <rect x="630" y="40" width="110" height="60" rx="10" fill="url(#gradFs)" stroke="#10b981" strokeWidth="1.5" />
-        <text x="685" y="62" textAnchor="middle" fill="#6ee7b7" fontSize="11" fontWeight="bold" filter="url(#glow)">File Server</text>
-        <text x="685" y="78" textAnchor="middle" fill="#64748b" fontSize="9">Speed / Latency Test</text>
+        {/* File Server below IGW */}
+        <rect x="420" y="120" width="100" height="50" rx="10" fill="url(#gradFs)" stroke="#10b981" strokeWidth="1.5" />
+        <text x="470" y="140" textAnchor="middle" fill="#6ee7b7" fontSize="10" fontWeight="bold" filter="url(#glow)">File Server</text>
+        <text x="470" y="155" textAnchor="middle" fill="#64748b" fontSize="8">Speed / Latency Test</text>
 
-        {/* File Server 2 */}
-        <rect x="630" y="100" width="110" height="60" rx="10" fill="url(#gradFs)" stroke="#10b981" strokeWidth="1.5" />
-        <text x="685" y="122" textAnchor="middle" fill="#6ee7b7" fontSize="11" fontWeight="bold" filter="url(#glow)">File Server</text>
-        <text x="685" y="138" textAnchor="middle" fill="#64748b" fontSize="9">Latency / Packet Loss</text>
+        {/* File Server below EBR */}
+        <rect x="320" y="170" width="100" height="50" rx="10" fill="url(#gradFs)" stroke="#10b981" strokeWidth="1.5" />
+        <text x="370" y="190" textAnchor="middle" fill="#6ee7b7" fontSize="10" fontWeight="bold" filter="url(#glow)">File Server</text>
+        <text x="370" y="205" textAnchor="middle" fill="#64748b" fontSize="8">Latency / Packet Loss</text>
 
         {/* Values overlay */}
         {mode === 'upstream' ? (
