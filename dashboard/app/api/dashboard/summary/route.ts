@@ -477,30 +477,12 @@ export async function GET(request: Request) {
       }
     } catch (e) { /* ignore */ }
 
-    // Ping test progress & stats
-    let pingProgress = { tested: 0, total: 0, successRate: 0, avgPacketLoss: 0 }
-    try {
-      const pp = await client.query(`
-        SELECT
-          COUNT(DISTINCT p.device_id) as tested, (SELECT COUNT(*) FROM devices_ont) as total,
-          ROUND(COUNT(*) FILTER (WHERE p.success = true)::numeric / NULLIF(COUNT(*), 0) * 100, 1) as sr,
-          COALESCE(ROUND(AVG(p.packet_loss_igw)::numeric, 1), 0) as avg_pl
-        FROM devices_ont d
-        LEFT JOIN test_results_ping p ON p.device_id = d.id AND p.executed_at > NOW() - INTERVAL '${interval}'
-        ${whereClauseWithTime}
-      `, filterParams)
-      const p = pp.rows[0]
-      pingProgress = {
-        tested: parseInt(p.tested), total: parseInt(p.total),
-        successRate: Number(p.sr || 0), avgPacketLoss: Number(p.avg_pl || 0),
-      }
-    } catch (e) { /* ignore */ }
-
     return NextResponse.json({
       totalDevices,
       speedPackages,
       speedProgress,
       pingProgress,
+      deviceStatus: {
         total: parseInt(deviceStatus.total),
         online: parseInt(deviceStatus.online),
         offline: parseInt(deviceStatus.offline)
