@@ -26,7 +26,7 @@ function PieCanvas({ data, colors }: { data: RCItem[]; colors: string[] }) {
 
     const cx = w / 2
     const cy = h / 2
-    const r = Math.min(cx, cy) - 8
+    const r = Math.min(cx, cy) - 4
     const total = data.reduce((s, i) => s + i.count, 0)
     let startAngle = -Math.PI / 2
 
@@ -43,25 +43,19 @@ function PieCanvas({ data, colors }: { data: RCItem[]; colors: string[] }) {
 
       // label
       const midAngle = startAngle + sliceAngle / 2
-      const lr = r * 0.65
+      const lr = r * 0.6
       const lx = cx + Math.cos(midAngle) * lr
       const ly = cy + Math.sin(midAngle) * lr
       ctx.fillStyle = '#fff'
-      ctx.font = 'bold 11px system-ui, sans-serif'
+      ctx.font = 'bold 12px system-ui, sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      if (sliceAngle > 0.15) {
+      if (sliceAngle > 0.08) {
         ctx.fillText(`${(item.count / total * 100).toFixed(0)}%`, lx, ly)
       }
 
       startAngle += sliceAngle
     })
-
-    // center hole
-    ctx.beginPath()
-    ctx.arc(cx, cy, r * 0.4, 0, Math.PI * 2)
-    ctx.fillStyle = '#1e293b'
-    ctx.fill()
   }, [data, colors])
 
   if (data.length === 0) return null
@@ -69,7 +63,7 @@ function PieCanvas({ data, colors }: { data: RCItem[]; colors: string[] }) {
   return (
     <canvas
       ref={canvasRef}
-      style={{ width: '100%', height: 180 }}
+      style={{ width: '100%', height: 220 }}
     />
   )
 }
