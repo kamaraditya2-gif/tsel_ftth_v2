@@ -52,7 +52,6 @@ export async function GET(request: NextRequest) {
       FROM queue_jobs qj
       WHERE qj.device_id = $1
         AND qj.execution_type = 'ondemand'
-        AND qj.created_at >= NOW() - INTERVAL '5 minutes'
       ORDER BY qj.created_at DESC
       LIMIT 4
     `, [deviceIdNum])
