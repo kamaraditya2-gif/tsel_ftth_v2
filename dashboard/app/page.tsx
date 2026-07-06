@@ -554,7 +554,7 @@ export default function DashboardPage() {
 
           {/* User Welcome */}
           {userData && (
-            <span className="ml-auto text-xs text-gray-400 hidden xl:block">
+            <span className="ml-auto text-xs text-gray-400 whitespace-nowrap">
               Welcome, <span className="text-white font-medium">{userData.full_name || userData.username}</span>
             </span>
           )}
