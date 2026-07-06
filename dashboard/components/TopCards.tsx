@@ -35,8 +35,8 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-      {/* Latency + Packet Loss */}
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-orange-500/20 p-2 shadow-lg shadow-orange-500/10">
+      {/* Latency */}
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-orange-500/20 p-2 shadow-lg shadow-orange-500/10" title="Ping test results via ACS (IGW = Internet Gateway, EBR = Edge Router). Test Progress = ONT yang sudah dites ping.">
         <div className="flex items-center gap-1.5 mb-1">
           <Clock className="w-3.5 h-3.5 text-orange-400" />
           <span className="text-xs font-bold text-white uppercase">Latency</span>
@@ -72,7 +72,7 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
       </div>
 
       {/* Speed */}
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-cyan-500/20 p-2 shadow-lg shadow-cyan-500/10">
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-cyan-500/20 p-2 shadow-lg shadow-cyan-500/10" title="Speed test results. Above/Below = ONT yang speednya di atas/di bawah threshold paket langganan. SR = success rate test.">
         <div className="flex items-center gap-1.5 mb-1">
           <Network className="w-3.5 h-3.5 text-cyan-400" />
           <span className="text-xs font-bold text-white uppercase">Speed</span>
@@ -109,7 +109,7 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
       </div>
 
       {/* Packet Loss — merged into Latency, show summary here */}
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-pink-500/20 p-2 shadow-lg shadow-pink-500/10">
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-pink-500/20 p-2 shadow-lg shadow-pink-500/10" title="Packet loss dari ping test ACS. Menunjukkan rata-rata packet loss dan jumlah alarm terkait.">
         <div className="flex items-center gap-1.5 mb-1">
           <AlertCircle className="w-3.5 h-3.5 text-pink-400" />
           <span className="text-xs font-bold text-white uppercase">Packet Loss</span>
@@ -139,7 +139,7 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
       </div>
 
       {/* Devices */}
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-purple-500/20 p-2 shadow-lg shadow-purple-500/10">
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-purple-500/20 p-2 shadow-lg shadow-purple-500/10" title="Overview semua device. Test Success Rate = persentase job test berhasil. Up/Down = status koneksi device.">
         <div className="flex items-center gap-1.5 mb-1">
           <Server className="w-3.5 h-3.5 text-purple-400" />
           <span className="text-xs font-bold text-white uppercase">Devices</span>
