@@ -227,7 +227,7 @@ function AlarmsV2Page() {
                           {/* L1 Category */}
                           <select value={selectedL1} onChange={e => { setSelectedL1(e.target.value); setSelectedRc(null) }} className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white mb-2">
                             <option value="">Select L1</option>
-                            {[...new Set(rootCauses.map(rc => rc.category))].map(cat => (
+                            {rootCauses.reduce<string[]>((acc, rc) => acc.includes(rc.category) ? acc : [...acc, rc.category], []).map(cat => (
                               <option key={cat} value={cat}>{cat}</option>
                             ))}
                           </select>
