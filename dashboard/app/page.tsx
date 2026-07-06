@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Activity, Server, Database, Network, Clock, ChevronDown, MapPin, Gauge as GaugeIcon, Download, CheckCircle, XCircle, AlertCircle, Building2, Box, Globe, Bell, AlertTriangle, BarChart3, Thermometer, ZapOff, Wifi, Cpu, HardDrive, TrendingUp } from 'lucide-react'
 import PingChart from '@/components/PingChart'
 import SkeletonCard from '@/components/SkeletonCard'
-import ThresholdChart from '@/components/ThresholdChart'
+
 import TopDevicesCard from '@/components/TopDevicesCard'
 import KPIBigCard from '@/components/KPIBigCard'
 import TopCards from '@/components/TopCards'
@@ -704,24 +704,6 @@ export default function DashboardPage() {
           alarmStats={alarmStats}
           filterParams={filterLocStr}
         />
-      )}
-
-      {/* Speed Threshold Comparison */}
-      {dashboardData && (
-        <div className="mb-6">
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl shadow-indigo-500/10 border border-indigo-500/20">
-                <ThresholdChart
-                  timeRange={timeRange}
-                  areaIds={filterLocStr.areaIds || undefined}
-                  regionalIds={filterLocStr.regionalIds || undefined}
-                  nopIds={filterLocStr.nopIds || undefined}
-                  areaId={selectedArea ? selectedArea.toString() : undefined}
-                  regionalId={selectedRegional ? selectedRegional.toString() : undefined}
-                  nopId={selectedNopCity ? selectedNopCity.toString() : undefined}
-                  speedGroupId={selectedSpeedGroup ? selectedSpeedGroup.toString() : undefined}
-                />
-          </div>
-        </div>
       )}
 
       {/* Network Diagram */}
