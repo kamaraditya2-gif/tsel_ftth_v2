@@ -552,13 +552,6 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* User Welcome */}
-          {userData && (
-            <span className="ml-auto text-xs text-gray-400 whitespace-nowrap">
-              Welcome, <span className="text-white font-medium">{userData.full_name || userData.username}</span>
-            </span>
-          )}
-
           {/* Location Cascading */}
           <LocationFilter onFilterChange={(f) => {
             setSelectedArea(f.areaIds[0] ?? null);
@@ -693,6 +686,11 @@ export default function DashboardPage() {
               timeZone: 'Asia/Jakarta'
             })}
           </div>
+          {userData && (
+            <span className="text-xs text-gray-400 whitespace-nowrap">
+              Welcome, <span className="text-white font-medium">{userData.full_name || userData.username}</span>
+            </span>
+          )}
         </div>
       </div>
 
