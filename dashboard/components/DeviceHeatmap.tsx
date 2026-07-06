@@ -98,73 +98,42 @@ function PopupContent({
 }) {
   const fmt = (v: number | null, suffix = '') => v !== null ? Number(v).toFixed(1) + suffix : '-'
 
-  return (
-    <div style={{ minWidth: 240, maxWidth: 320, fontFamily: 'system-ui, sans-serif', fontSize: 12, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
-      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4, overflowWrap: 'break-word' }}>{device.serial_number}</div>
-      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8, overflowWrap: 'break-word' }}>
-        {device.indihome_id || ''}{device.regional_name ? ' · ' + device.regional_name : ''}
-      </div>
+  const cell = { padding: '1px 2px', color: '#374151', textAlign: 'right' as const, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }
+  const label = { padding: '1px 2px', color: '#6b7280', whiteSpace: 'nowrap' as const }
 
-      <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 11 }}>
-        <colgroup><col style={{ width: '40%' }} /><col style={{ width: '60%' }} /></colgroup>
+  const vc = (v: number | null, threshold: number | null, suffix: string) => {
+    const bad = v !== null && threshold !== null && Number(v) < Number(threshold)
+    return <span style={{ fontWeight: bad ? 'bold' : 'normal', color: bad ? '#ef4444' : '#374151' }}>{v !== null ? Number(v).toFixed(1) + suffix : '-'}</span>
+  }
+  const pc = (v: number | null, threshold: number) => {
+    const bad = v !== null && Number(v) > threshold
+    return <span style={{ fontWeight: bad ? 'bold' : 'normal', color: bad ? '#ef4444' : '#374151' }}>{v !== null ? Number(v).toFixed(1) + ' ms' : '-'}</span>
+  }
+
+  return (
+    <div style={{ minWidth: 260, maxWidth: 300, fontFamily: 'system-ui, sans-serif', fontSize: 12, overflow: 'hidden' }}>
+      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.serial_number}</div>
+      {device.indihome_id && <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.indihome_id}{device.regional_name ? ' · ' + device.regional_name : ''}</div>}
+
+      <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 10 }}>
+        <colgroup><col style={{ width: '35%' }} /><col style={{ width: '65%' }} /></colgroup>
         <tbody>
           <tr>
-            <td style={{ padding: '2px 4px', color: '#6b7280' }}>Status</td>
-            <td style={{ padding: '2px 4px', textAlign: 'right' }}>
+            <td style={label}>Status</td>
+            <td style={{ ...cell, whiteSpace: 'normal' }}>
               <span style={{
                 background: device.status === 'online' ? '#dcfce7' : '#fee2e2',
                 color: device.status === 'online' ? '#166534' : '#991b1b',
-                padding: '1px 6px', borderRadius: 9999, fontSize: 10, fontWeight: 500
+                padding: '0 5px', borderRadius: 9999, fontSize: 9, fontWeight: 600
               }}>{device.status.toUpperCase()}</span>
             </td>
           </tr>
-          <tr><td style={{ padding: '2px 4px', color: '#6b7280' }}>Speed</td><td style={{ padding: '2px 4px', textAlign: 'right', color: '#374151' }}>{device.speed_name || '-'}</td></tr>
-          <tr>
-            <td style={{ padding: '2px 4px', color: '#6b7280' }}>Ping IGW</td>
-            <td style={{
-              padding: '2px 4px', textAlign: 'right', color: '#374151',
-              fontWeight: device.ping_igw !== null && device.ping_igw > 50 ? 'bold' : 'normal',
-              ...(device.ping_igw !== null && device.ping_igw > 50 ? { color: '#ef4444' } : {})
-            }}>{fmt(device.ping_igw, ' ms')}</td>
-          </tr>
-          <tr>
-            <td style={{ padding: '2px 4px', color: '#6b7280' }}>Download</td>
-            <td style={{
-              padding: '2px 4px', textAlign: 'right', color: '#374151',
-              fontWeight: device.download_speed !== null && device.download_threshold !== null && Number(device.download_speed) < Number(device.download_threshold) ? 'bold' : 'normal',
-              ...(device.download_speed !== null && device.download_threshold !== null && Number(device.download_speed) < Number(device.download_threshold) ? { color: '#ef4444' } : {})
-            }}>
-              {device.download_speed !== null ? Number(device.download_speed).toFixed(1) + ' Mbps' : '-'}
-              {device.download_threshold !== null ? ' / ' + Number(device.download_threshold).toFixed(0) + ' Mbps' : ''}
-            </td>
-          </tr>
-          <tr>
-            <td style={{ padding: '2px 4px', color: '#6b7280' }}>Upload</td>
-            <td style={{
-              padding: '2px 4px', textAlign: 'right', color: '#374151',
-              fontWeight: device.upload_speed !== null && device.upload_threshold !== null && Number(device.upload_speed) < Number(device.upload_threshold) ? 'bold' : 'normal',
-              ...(device.upload_speed !== null && device.upload_threshold !== null && Number(device.upload_speed) < Number(device.upload_threshold) ? { color: '#ef4444' } : {})
-            }}>
-              {device.upload_speed !== null ? Number(device.upload_speed).toFixed(1) + ' Mbps' : '-'}
-              {device.upload_threshold !== null ? ' / ' + Number(device.upload_threshold).toFixed(0) + ' Mbps' : ''}
-            </td>
-          </tr>
-          <tr>
-            <td style={{ padding: '2px 4px', color: '#6b7280' }}>Packet Loss</td>
-            <td style={{
-              padding: '2px 4px', textAlign: 'right', color: '#374151',
-              fontWeight: device.packet_loss_percent !== null && device.packet_loss_percent > 3 ? 'bold' : 'normal',
-              ...(device.packet_loss_percent !== null && device.packet_loss_percent > 3 ? { color: '#ef4444' } : {})
-            }}>{fmt(device.packet_loss_percent, '%')}</td>
-          </tr>
-          <tr>
-            <td style={{ padding: '2px 4px', color: '#6b7280' }}>Direct Latency</td>
-            <td style={{
-              padding: '2px 4px', textAlign: 'right', color: '#374151',
-              fontWeight: device.avg_latency_ms !== null && device.avg_latency_ms > 50 ? 'bold' : 'normal',
-              ...(device.avg_latency_ms !== null && device.avg_latency_ms > 50 ? { color: '#ef4444' } : {})
-            }}>{fmt(device.avg_latency_ms, ' ms')}</td>
-          </tr>
+          <tr><td style={label}>Speed</td><td style={cell}>{device.speed_name || '-'}</td></tr>
+          <tr><td style={label}>Ping IGW</td><td style={cell}>{pc(device.ping_igw, 50)}</td></tr>
+          <tr><td style={label}>Download</td><td style={cell}>{vc(device.download_speed, device.download_threshold, ' Mbps')}{device.download_threshold !== null ? ' / ' + Number(device.download_threshold).toFixed(0) : ''}</td></tr>
+          <tr><td style={label}>Upload</td><td style={cell}>{vc(device.upload_speed, device.upload_threshold, ' Mbps')}{device.upload_threshold !== null ? ' / ' + Number(device.upload_threshold).toFixed(0) : ''}</td></tr>
+          <tr><td style={label}>Packet Loss</td><td style={cell}>{pc(device.packet_loss_percent, 3)}</td></tr>
+          <tr><td style={label}>Direct Latency</td><td style={cell}>{pc(device.avg_latency_ms, 50)}</td></tr>
         </tbody>
       </table>
 
@@ -172,85 +141,55 @@ function PopupContent({
         <button
           onClick={(e) => { e.stopPropagation(); onStartTest() }}
           style={{
-            marginTop: 8, width: '100%', padding: '4px 0', fontSize: 10, fontWeight: 500,
+            marginTop: 6, width: '100%', padding: '3px 0', fontSize: 10, fontWeight: 500,
             background: '#2563eb', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer'
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = '#1d4ed8')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = '#2563eb')}
         >
           On Demand Test
         </button>
       )}
 
       {ondemandState.status === 'requesting' && (
-        <div style={{ marginTop: 10, padding: '8px 0', textAlign: 'center', color: '#2563eb', fontWeight: 500, fontSize: 11 }}>
+        <div style={{ marginTop: 6, padding: '6px 0', textAlign: 'center', color: '#2563eb', fontWeight: 500, fontSize: 10 }}>
           Requesting test...
         </div>
       )}
 
       {ondemandState.status === 'requested' && (
-        <div style={{ marginTop: 10, padding: '8px 0', textAlign: 'center', color: '#2563eb', fontWeight: 500, fontSize: 11 }}>
-          <div style={{ marginBottom: 4 }}>
-            <svg style={{ display: 'inline-block', animation: 'spin 1s linear infinite', width: 16, height: 16 }} viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
-            </svg>
-          </div>
+        <div style={{ marginTop: 6, padding: '6px 0', textAlign: 'center', color: '#2563eb', fontWeight: 500, fontSize: 10 }}>
+          <svg style={{ display: 'inline-block', animation: 'spin 1s linear infinite', width: 12, height: 12, verticalAlign: 'middle', marginRight: 4 }} viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+          </svg>
           On Demand Test Requested
         </div>
       )}
 
       {ondemandState.status === 'checking' && (
-        <div style={{ marginTop: 10, padding: '8px 0', textAlign: 'center', color: '#2563eb', fontWeight: 500, fontSize: 11 }}>
-          <div style={{ marginBottom: 4 }}>
-            <svg style={{ display: 'inline-block', animation: 'spin 1s linear infinite', width: 16, height: 16 }} viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
-            </svg>
-          </div>
+        <div style={{ marginTop: 6, padding: '6px 0', textAlign: 'center', color: '#2563eb', fontWeight: 500, fontSize: 10 }}>
+          <svg style={{ display: 'inline-block', animation: 'spin 1s linear infinite', width: 12, height: 12, verticalAlign: 'middle', marginRight: 4 }} viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+          </svg>
           Fetching results...
         </div>
       )}
 
       {ondemandState.status === 'completed' && ondemandState.results && (
-        <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: '#059669', marginBottom: 4 }}>
-            Latest On-Demand Result
-          </div>
-          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 11, background: '#f0fdf4', borderRadius: 6 }}>
-            <colgroup><col style={{ width: '40%' }} /><col style={{ width: '60%' }} /></colgroup>
+        <div style={{ marginTop: 6 }}>
+          <div style={{ fontSize: 9, fontWeight: 600, color: '#059669', marginBottom: 2 }}>On-Demand Result</div>
+          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 10, background: '#f0fdf4', borderRadius: 4 }}>
+            <colgroup><col style={{ width: '35%' }} /><col style={{ width: '65%' }} /></colgroup>
             <tbody>
-              <tr>
-                <td style={{ padding: '2px 4px', color: '#6b7280', overflowWrap: 'break-word' }}>Ping IGW</td>
-                <td style={{ padding: '2px 4px', textAlign: 'right', color: '#374151', overflowWrap: 'break-word', fontWeight: ondemandState.results.ping_igw !== null && ondemandState.results.ping_igw > 50 ? 'bold' : 'normal' }}>
-                  {ondemandState.results.ping_igw !== null ? Number(ondemandState.results.ping_igw).toFixed(1) + ' ms' : '-'}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ padding: '2px 4px', color: '#6b7280' }}>Download</td>
-                <td style={{ padding: '2px 4px', textAlign: 'right', color: '#374151' }}>
-                  {ondemandState.results.download_speed !== null ? Number(ondemandState.results.download_speed).toFixed(1) + ' Mbps' : '-'}
-                  {ondemandState.results.download_threshold !== null ? ' / ' + Number(ondemandState.results.download_threshold).toFixed(0) + ' Mbps' : ''}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ padding: '2px 4px', color: '#6b7280' }}>Upload</td>
-                <td style={{ padding: '2px 4px', textAlign: 'right', color: '#374151' }}>
-                  {ondemandState.results.upload_speed !== null ? Number(ondemandState.results.upload_speed).toFixed(1) + ' Mbps' : '-'}
-                  {ondemandState.results.upload_threshold !== null ? ' / ' + Number(ondemandState.results.upload_threshold).toFixed(0) + ' Mbps' : ''}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ padding: '2px 4px', color: '#6b7280' }}>Packet Loss</td>
-                <td style={{ padding: '2px 4px', textAlign: 'right', color: '#374151' }}>
-                  {ondemandState.results.packet_loss_igw !== null ? Number(ondemandState.results.packet_loss_igw).toFixed(1) + '%' : '-'}
-                </td>
-              </tr>
+              <tr><td style={label}>Ping IGW</td><td style={cell}>{ondemandState.results.ping_igw !== null ? Number(ondemandState.results.ping_igw).toFixed(1) + ' ms' : '-'}</td></tr>
+              <tr><td style={label}>Download</td><td style={cell}>{ondemandState.results.download_speed !== null ? Number(ondemandState.results.download_speed).toFixed(1) + ' Mbps' : '-'}{ondemandState.results.download_threshold !== null ? ' / ' + Number(ondemandState.results.download_threshold).toFixed(0) : ''}</td></tr>
+              <tr><td style={label}>Upload</td><td style={cell}>{ondemandState.results.upload_speed !== null ? Number(ondemandState.results.upload_speed).toFixed(1) + ' Mbps' : '-'}{ondemandState.results.upload_threshold !== null ? ' / ' + Number(ondemandState.results.upload_threshold).toFixed(0) : ''}</td></tr>
+              <tr><td style={label}>Packet Loss</td><td style={cell}>{ondemandState.results.packet_loss_igw !== null ? Number(ondemandState.results.packet_loss_igw).toFixed(1) + '%' : '-'}</td></tr>
             </tbody>
           </table>
         </div>
       )}
 
       {ondemandState.status === 'failed' && (
-        <div style={{ marginTop: 10, padding: '8px', textAlign: 'center', background: '#fef2f2', borderRadius: 6, color: '#dc2626', fontSize: 11, fontWeight: 500 }}>
+        <div style={{ marginTop: 6, padding: '6px', textAlign: 'center', background: '#fef2f2', borderRadius: 4, color: '#dc2626', fontSize: 10, fontWeight: 500 }}>
           Test Failed
         </div>
       )}
