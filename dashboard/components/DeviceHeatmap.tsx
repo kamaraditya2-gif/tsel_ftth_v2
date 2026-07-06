@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { createRoot, Root } from 'react-dom/client'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -32,6 +33,21 @@ interface DownstreamServer {
   status: string
   icon: string
   color: string
+}
+
+interface OndemandState {
+  status: 'idle' | 'requesting' | 'requested' | 'checking' | 'completed' | 'failed'
+  results?: {
+    ping_igw: number | null
+    ping_ebr: number | null
+    packet_loss_igw: number | null
+    packet_loss_ebr: number | null
+    download_speed: number | null
+    download_threshold: number | null
+    upload_speed: number | null
+    upload_threshold: number | null
+    executed_at: string | null
+  } | null
 }
 
 interface DeviceHeatmapProps {
@@ -71,16 +87,264 @@ function getRadius(status: string): number {
   return status === 'offline' ? 16 : 12
 }
 
+function PopupContent({
+  device,
+  ondemandState,
+  onStartTest
+}: {
+  device: MapDevice
+  ondemandState: OndemandState
+  onStartTest: () => void
+}) {
+  const fmt = (v: number | null, suffix = '') => v !== null ? Number(v).toFixed(1) + suffix : '-'
+
+  return (
+    <div style={{ minWidth: 240, fontFamily: 'system-ui, sans-serif', fontSize: 12 }}>
+      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{device.serial_number}</div>
+      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>
+        {device.indihome_id || ''}{device.regional_name ? ' · ' + device.regional_name : ''}
+      </div>
+
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+        <tbody>
+          <tr>
+            <td style={{ padding: '2px 4px', color: '#6b7280' }}>Status</td>
+            <td style={{ padding: '2px 4px', textAlign: 'right' }}>
+              <span style={{
+                background: device.status === 'online' ? '#dcfce7' : '#fee2e2',
+                color: device.status === 'online' ? '#166534' : '#991b1b',
+                padding: '1px 6px', borderRadius: 9999, fontSize: 10, fontWeight: 500
+              }}>{device.status.toUpperCase()}</span>
+            </td>
+          </tr>
+          <tr><td style={{ padding: '2px 4px', color: '#6b7280' }}>Speed</td><td style={{ padding: '2px 4px', textAlign: 'right', color: '#374151' }}>{device.speed_name || '-'}</td></tr>
+          <tr>
+            <td style={{ padding: '2px 4px', color: '#6b7280' }}>Ping IGW</td>
+            <td style={{
+              padding: '2px 4px', textAlign: 'right', color: '#374151',
+              fontWeight: device.ping_igw !== null && device.ping_igw > 50 ? 'bold' : 'normal',
+              ...(device.ping_igw !== null && device.ping_igw > 50 ? { color: '#ef4444' } : {})
+            }}>{fmt(device.ping_igw, ' ms')}</td>
+          </tr>
+          <tr>
+            <td style={{ padding: '2px 4px', color: '#6b7280' }}>Download</td>
+            <td style={{
+              padding: '2px 4px', textAlign: 'right', color: '#374151',
+              fontWeight: device.download_speed !== null && device.download_threshold !== null && Number(device.download_speed) < Number(device.download_threshold) ? 'bold' : 'normal',
+              ...(device.download_speed !== null && device.download_threshold !== null && Number(device.download_speed) < Number(device.download_threshold) ? { color: '#ef4444' } : {})
+            }}>
+              {device.download_speed !== null ? Number(device.download_speed).toFixed(1) + ' Mbps' : '-'}
+              {device.download_threshold !== null ? ' / ' + Number(device.download_threshold).toFixed(0) + ' Mbps' : ''}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ padding: '2px 4px', color: '#6b7280' }}>Upload</td>
+            <td style={{
+              padding: '2px 4px', textAlign: 'right', color: '#374151',
+              fontWeight: device.upload_speed !== null && device.upload_threshold !== null && Number(device.upload_speed) < Number(device.upload_threshold) ? 'bold' : 'normal',
+              ...(device.upload_speed !== null && device.upload_threshold !== null && Number(device.upload_speed) < Number(device.upload_threshold) ? { color: '#ef4444' } : {})
+            }}>
+              {device.upload_speed !== null ? Number(device.upload_speed).toFixed(1) + ' Mbps' : '-'}
+              {device.upload_threshold !== null ? ' / ' + Number(device.upload_threshold).toFixed(0) + ' Mbps' : ''}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ padding: '2px 4px', color: '#6b7280' }}>Packet Loss</td>
+            <td style={{
+              padding: '2px 4px', textAlign: 'right', color: '#374151',
+              fontWeight: device.packet_loss_percent !== null && device.packet_loss_percent > 3 ? 'bold' : 'normal',
+              ...(device.packet_loss_percent !== null && device.packet_loss_percent > 3 ? { color: '#ef4444' } : {})
+            }}>{fmt(device.packet_loss_percent, '%')}</td>
+          </tr>
+          <tr>
+            <td style={{ padding: '2px 4px', color: '#6b7280' }}>Direct Latency</td>
+            <td style={{
+              padding: '2px 4px', textAlign: 'right', color: '#374151',
+              fontWeight: device.avg_latency_ms !== null && device.avg_latency_ms > 50 ? 'bold' : 'normal',
+              ...(device.avg_latency_ms !== null && device.avg_latency_ms > 50 ? { color: '#ef4444' } : {})
+            }}>{fmt(device.avg_latency_ms, ' ms')}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      {ondemandState.status === 'idle' && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onStartTest() }}
+          style={{
+            marginTop: 10, width: '100%', padding: '6px 0', fontSize: 11, fontWeight: 600,
+            background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer'
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = '#1d4ed8')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = '#2563eb')}
+        >
+          On Demand Test
+        </button>
+      )}
+
+      {ondemandState.status === 'requesting' && (
+        <div style={{ marginTop: 10, padding: '8px 0', textAlign: 'center', color: '#2563eb', fontWeight: 500, fontSize: 11 }}>
+          Requesting test...
+        </div>
+      )}
+
+      {ondemandState.status === 'requested' && (
+        <div style={{ marginTop: 10, padding: '8px 0', textAlign: 'center', color: '#2563eb', fontWeight: 500, fontSize: 11 }}>
+          <div style={{ marginBottom: 4 }}>
+            <svg style={{ display: 'inline-block', animation: 'spin 1s linear infinite', width: 16, height: 16 }} viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+            </svg>
+          </div>
+          On Demand Test Requested
+        </div>
+      )}
+
+      {ondemandState.status === 'checking' && (
+        <div style={{ marginTop: 10, padding: '8px 0', textAlign: 'center', color: '#2563eb', fontWeight: 500, fontSize: 11 }}>
+          <div style={{ marginBottom: 4 }}>
+            <svg style={{ display: 'inline-block', animation: 'spin 1s linear infinite', width: 16, height: 16 }} viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+            </svg>
+          </div>
+          Fetching results...
+        </div>
+      )}
+
+      {ondemandState.status === 'completed' && ondemandState.results && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: '#059669', marginBottom: 4 }}>
+            Latest On-Demand Result
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, background: '#f0fdf4', borderRadius: 6 }}>
+            <tbody>
+              <tr>
+                <td style={{ padding: '2px 4px', color: '#6b7280' }}>Ping IGW</td>
+                <td style={{ padding: '2px 4px', textAlign: 'right', color: '#374151', fontWeight: ondemandState.results.ping_igw !== null && ondemandState.results.ping_igw > 50 ? 'bold' : 'normal' }}>
+                  {ondemandState.results.ping_igw !== null ? Number(ondemandState.results.ping_igw).toFixed(1) + ' ms' : '-'}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ padding: '2px 4px', color: '#6b7280' }}>Download</td>
+                <td style={{ padding: '2px 4px', textAlign: 'right', color: '#374151' }}>
+                  {ondemandState.results.download_speed !== null ? Number(ondemandState.results.download_speed).toFixed(1) + ' Mbps' : '-'}
+                  {ondemandState.results.download_threshold !== null ? ' / ' + Number(ondemandState.results.download_threshold).toFixed(0) + ' Mbps' : ''}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ padding: '2px 4px', color: '#6b7280' }}>Upload</td>
+                <td style={{ padding: '2px 4px', textAlign: 'right', color: '#374151' }}>
+                  {ondemandState.results.upload_speed !== null ? Number(ondemandState.results.upload_speed).toFixed(1) + ' Mbps' : '-'}
+                  {ondemandState.results.upload_threshold !== null ? ' / ' + Number(ondemandState.results.upload_threshold).toFixed(0) + ' Mbps' : ''}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ padding: '2px 4px', color: '#6b7280' }}>Packet Loss</td>
+                <td style={{ padding: '2px 4px', textAlign: 'right', color: '#374151' }}>
+                  {ondemandState.results.packet_loss_igw !== null ? Number(ondemandState.results.packet_loss_igw).toFixed(1) + '%' : '-'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {ondemandState.status === 'failed' && (
+        <div style={{ marginTop: 10, padding: '8px', textAlign: 'center', background: '#fef2f2', borderRadius: 6, color: '#dc2626', fontSize: 11, fontWeight: 500 }}>
+          Test Failed
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 export default function DeviceHeatmap({ timeRange = '24h', areaId, regionalId, nopId, areaIds, regionalIds, nopIds, speedGroupId, manufacturerId, ontModelId, serverId }: DeviceHeatmapProps) {
   const [devices, setDevices] = useState<MapDevice[]>([])
   const [servers, setServers] = useState<DownstreamServer[]>([])
   const [loading, setLoading] = useState(true)
   const [dataSource, setDataSource] = useState<'upstream' | 'downstream'>('upstream')
+  const [ondemandState, setOndemandState] = useState<OndemandState>({ status: 'idle' })
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markersRef = useRef<maplibregl.Marker[]>([])
   const popupsRef = useRef<maplibregl.Popup[]>([])
   const lineSourceRef = useRef<string | null>(null)
+  const popupRootsRef = useRef<Map<number, { root: Root; popup: maplibregl.Popup }>>(new Map())
+  const selectedDeviceRef = useRef<MapDevice | null>(null)
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollDeviceIdRef = useRef<number | null>(null)
+
+  const triggerOndemandTest = useCallback(async () => {
+    const device = selectedDeviceRef.current
+    if (!device) return
+    const deviceId = device.id
+    setOndemandState({ status: 'requesting' })
+    try {
+      const res = await fetch('/api/devices/map/ondemand', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId })
+      })
+      if (!res.ok) throw new Error('Failed to request test')
+      setOndemandState({ status: 'requested' })
+
+      pollDeviceIdRef.current = deviceId
+
+      // Start polling for results after 3s
+      setTimeout(() => {
+        if (pollDeviceIdRef.current !== deviceId) return
+        setOndemandState({ status: 'checking' })
+        pollTimerRef.current = setInterval(async () => {
+          if (pollDeviceIdRef.current !== deviceId) {
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current)
+            return
+          }
+          try {
+            const pollRes = await fetch(`/api/devices/map/ondemand?deviceId=${deviceId}`)
+            const data = await pollRes.json()
+            if (data.hasResult) {
+              if (pollTimerRef.current) clearInterval(pollTimerRef.current)
+              setOndemandState({ status: 'completed', results: data.results })
+
+              // Update the device in the devices array so marker color refreshes
+              setDevices(prev => prev.map(d => {
+                if (d.id !== deviceId) return d
+                return {
+                  ...d,
+                  ping_igw: data.results.ping_igw ?? d.ping_igw,
+                  download_speed: data.results.download_speed ?? d.download_speed,
+                  download_threshold: data.results.download_threshold ?? d.download_threshold,
+                  upload_speed: data.results.upload_speed ?? d.upload_speed,
+                  upload_threshold: data.results.upload_threshold ?? d.upload_threshold,
+                  packet_loss_percent: data.results.packet_loss_igw ?? d.packet_loss_percent,
+                }
+              }))
+            } else if (data.overallStatus === 'failed') {
+              if (pollTimerRef.current) clearInterval(pollTimerRef.current)
+              setOndemandState({ status: 'failed' })
+            }
+          } catch {
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current)
+            setOndemandState({ status: 'failed' })
+          }
+        }, 3000)
+      }, 3000)
+    } catch {
+      setOndemandState({ status: 'failed' })
+    }
+  }, [])
+
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     async function fetchDevices() {
@@ -139,6 +403,11 @@ export default function DeviceHeatmap({ timeRange = '24h', areaId, regionalId, n
     // Clear existing markers and popups
     markersRef.current.forEach(m => m.remove())
     markersRef.current = []
+    popupRootsRef.current.forEach(({ root, popup }) => {
+      root.unmount()
+      popup.remove()
+    })
+    popupRootsRef.current.clear()
     popupsRef.current.forEach(p => p.remove())
     popupsRef.current = []
 
@@ -164,7 +433,6 @@ export default function DeviceHeatmap({ timeRange = '24h', areaId, regionalId, n
       ]
       map.fitBounds(bounds, { padding: 50, maxZoom: 16 })
 
-      // Connection lines (downstream mode)
       if (dataSource === 'downstream') {
         const selectedServerObj = servers.find((s) => s.id === Number(serverId)) || servers.find((s) => s.status === 'active')
         if (selectedServerObj && selectedServerObj.lat && selectedServerObj.lng) {
@@ -275,24 +543,51 @@ export default function DeviceHeatmap({ timeRange = '24h', areaId, regionalId, n
           .setLngLat([Number(device.lng), Number(device.lat)])
           .addTo(map)
 
-        const popupContent = `
-          <div style="min-width:200px;font-family:system-ui,sans-serif">
-            <div style="font-weight:600;font-size:14px;margin-bottom:4px">${device.serial_number}</div>
-            <div style="font-size:11px;color:#6b7280;margin-bottom:6px">${device.indihome_id || ''}${device.regional_name ? ' · ' + device.regional_name : ''}</div>
-            <table style="width:100%;font-size:11px;border-collapse:collapse">
-              <tr><td style="padding:2px 4px;color:#6b7280">Status</td><td style="padding:2px 4px;text-align:right"><span style="background:${device.status === 'online' ? '#dcfce7' : '#fee2e2'};color:${device.status === 'online' ? '#166534' : '#991b1b'};padding:1px 6px;border-radius:9999px">${device.status.toUpperCase()}</span></td></tr>
-              <tr><td style="padding:2px 4px;color:#6b7280">Speed</td><td style="padding:2px 4px;text-align:right;color:#374151">${device.speed_name || '-'}${device.speed_name ? ' (' + device.speed_name + ')' : ''}</td></tr>
-              <tr><td style="padding:2px 4px;color:#6b7280">Ping IGW</td><td style="padding:2px 4px;text-align:right;color:#374151;font-weight:${device.ping_igw !== null && device.ping_igw > 50 ? 'bold;color:#ef4444' : 'normal'}">${device.ping_igw !== null ? device.ping_igw + ' ms' : '-'}</td></tr>
-              <tr><td style="padding:2px 4px;color:#6b7280">Download</td><td style="padding:2px 4px;text-align:right;color:#374151;font-weight:${device.download_speed !== null && device.download_threshold !== null && Number(device.download_speed) < Number(device.download_threshold) ? 'bold;color:#ef4444' : 'normal'}">${device.download_speed !== null ? Number(device.download_speed).toFixed(1) + ' Mbps' : '-'}${device.download_threshold !== null ? ' / ' + Number(device.download_threshold).toFixed(0) + ' Mbps' : ''}</td></tr>
-              <tr><td style="padding:2px 4px;color:#6b7280">Upload</td><td style="padding:2px 4px;text-align:right;color:#374151;font-weight:${device.upload_speed !== null && device.upload_threshold !== null && Number(device.upload_speed) < Number(device.upload_threshold) ? 'bold;color:#ef4444' : 'normal'}">${device.upload_speed !== null ? Number(device.upload_speed).toFixed(1) + ' Mbps' : '-'}${device.upload_threshold !== null ? ' / ' + Number(device.upload_threshold).toFixed(0) + ' Mbps' : ''}</td></tr>
-              <tr><td style="padding:2px 4px;color:#6b7280">Packet Loss</td><td style="padding:2px 4px;text-align:right;color:#374151;font-weight:${device.packet_loss_percent !== null && device.packet_loss_percent > 3 ? 'bold;color:#ef4444' : 'normal'}">${device.packet_loss_percent !== null ? Number(device.packet_loss_percent).toFixed(1) + '%' : '-'}</td></tr>
-              <tr><td style="padding:2px 4px;color:#6b7280">Direct Latency</td><td style="padding:2px 4px;text-align:right;color:#374151;font-weight:${device.avg_latency_ms !== null && device.avg_latency_ms > 50 ? 'bold;color:#ef4444' : 'normal'}">${device.avg_latency_ms !== null ? Number(device.avg_latency_ms).toFixed(1) + ' ms' : '-'}</td></tr>
-            </table>
-          </div>
-        `
+        // Create popup with DOM content for React rendering
+        const popupContainer = document.createElement('div')
+        const popup = new maplibregl.Popup({ offset: 15, closeButton: true, closeOnClick: false })
+          .setDOMContent(popupContainer)
 
-        const popup = new maplibregl.Popup({ offset: 15 }).setHTML(popupContent)
         marker.setPopup(popup)
+
+        // Handle marker click to render React content into popup
+        el.addEventListener('click', () => {
+          // Close any existing popup for this device
+          const existing = popupRootsRef.current.get(device.id)
+          if (existing) {
+            existing.root.unmount()
+            existing.popup.remove()
+            popupRootsRef.current.delete(device.id)
+          }
+
+          selectedDeviceRef.current = device
+          pollDeviceIdRef.current = null
+          setOndemandState({ status: 'idle' })
+
+          // Render React content when popup opens
+          const root = createRoot(popupContainer)
+          root.render(
+            <PopupContent
+              device={device}
+              ondemandState={{ status: 'idle' }}
+              onStartTest={() => {
+                triggerOndemandTest()
+              }}
+            />
+          )
+          popupRootsRef.current.set(device.id, { root, popup })
+
+          // Clean up root on popup close
+          popup.on('close', () => {
+            const entry = popupRootsRef.current.get(device.id)
+            if (entry) {
+              entry.root.unmount()
+              popupRootsRef.current.delete(device.id)
+            }
+            selectedDeviceRef.current = null
+          })
+        })
+
         markersRef.current.push(marker)
       })
     }
@@ -300,6 +595,11 @@ export default function DeviceHeatmap({ timeRange = '24h', areaId, regionalId, n
     return () => {
       markersRef.current.forEach(m => m.remove())
       markersRef.current = []
+      popupRootsRef.current.forEach(({ root, popup }) => {
+        root.unmount()
+        popup.remove()
+      })
+      popupRootsRef.current.clear()
       popupsRef.current.forEach(p => p.remove())
       popupsRef.current = []
       if (lineSourceRef.current && map) {
@@ -310,7 +610,7 @@ export default function DeviceHeatmap({ timeRange = '24h', areaId, regionalId, n
         lineSourceRef.current = null
       }
     }
-  }, [devices, dataSource, servers, serverId])
+  }, [devices, dataSource, servers, serverId, triggerOndemandTest])
 
   useEffect(() => {
     return () => {
@@ -320,6 +620,23 @@ export default function DeviceHeatmap({ timeRange = '24h', areaId, regionalId, n
       }
     }
   }, [])
+
+  // Re-render React content in open popup when ondemandState changes
+  useEffect(() => {
+    const device = selectedDeviceRef.current
+    if (!device) return
+
+    const entry = popupRootsRef.current.get(device.id)
+    if (!entry) return
+
+    entry.root.render(
+      <PopupContent
+        device={device}
+        ondemandState={ondemandState}
+        onStartTest={() => triggerOndemandTest()}
+      />
+    )
+  }, [ondemandState, triggerOndemandTest])
 
   if (loading) {
     return (
