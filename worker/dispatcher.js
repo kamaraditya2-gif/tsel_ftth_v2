@@ -348,6 +348,13 @@ async function dispatchJobsInChunks(client, deviceIds, task, payloadData) {
   await client.query("DELETE FROM queue_jobs WHERE task_id = $1 AND status = 'pending' AND created_at < NOW() - INTERVAL '1 hour'", [task.id]);
   console.log(`   Deleted stale queue_jobs for task ${task.id}`);
 
+  // Dedup: skip pairs that already have a pending/processing queue_job for this task
+  const existingRes = await client.query(
+    "SELECT device_id, test_type FROM queue_jobs WHERE task_id = $1 AND status IN ('pending','processing')",
+    [task.id]
+  );
+  const existingSet = new Set(existingRes.rows.map(r => `${r.device_id}-${r.test_type}`));
+
   const totalJobs = deviceIds.length * testTypes.length;
   let jobsDispatched = 0;
 
@@ -358,8 +365,15 @@ async function dispatchJobsInChunks(client, deviceIds, task, payloadData) {
     const pairs = [];
     for (const devId of deviceChunk) {
       for (const testType of testTypes) {
-        pairs.push({ devId, testType });
+        const key = `${devId}-${testType}`;
+        if (!existingSet.has(key)) {
+          pairs.push({ devId, testType });
+        }
       }
+    }
+    if (pairs.length === 0) {
+      console.log(`   All device×testType combinations already queued, skipping chunk`);
+      continue;
     }
 
     // Single multi-row INSERT for the whole chunk instead of N×M round-trips.

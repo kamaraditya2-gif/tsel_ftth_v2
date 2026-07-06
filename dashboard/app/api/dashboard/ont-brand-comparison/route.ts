@@ -52,9 +52,6 @@ export async function GET(request: Request) {
         WHERE t.executed_at >= NOW() - INTERVAL '${interval}'
           AND d.manufacturer IS NOT NULL AND d.manufacturer != ''
           AND d.id IN (SELECT id FROM device_filter)
-          AND d.id IN (SELECT id FROM device_filter)
-          AND d.id IN (SELECT id FROM device_filter)
-          AND d.id IN (SELECT id FROM device_filter)
         GROUP BY d.manufacturer
       ),
       upload_stats AS (
@@ -66,9 +63,6 @@ export async function GET(request: Request) {
         JOIN test_results_speed_upload t ON t.device_id = d.id
         WHERE t.executed_at >= NOW() - INTERVAL '${interval}'
           AND d.manufacturer IS NOT NULL AND d.manufacturer != ''
-          AND d.id IN (SELECT id FROM device_filter)
-          AND d.id IN (SELECT id FROM device_filter)
-          AND d.id IN (SELECT id FROM device_filter)
           AND d.id IN (SELECT id FROM device_filter)
         GROUP BY d.manufacturer
       ),
@@ -83,9 +77,6 @@ export async function GET(request: Request) {
         WHERE t.executed_at >= NOW() - INTERVAL '${interval}'
           AND d.manufacturer IS NOT NULL AND d.manufacturer != ''
           AND d.id IN (SELECT id FROM device_filter)
-          AND d.id IN (SELECT id FROM device_filter)
-          AND d.id IN (SELECT id FROM device_filter)
-          AND d.id IN (SELECT id FROM device_filter)
         GROUP BY d.manufacturer
       ),
       packet_loss_stats AS (
@@ -98,9 +89,6 @@ export async function GET(request: Request) {
         JOIN test_results_ping t ON t.device_id = d.id
         WHERE t.executed_at >= NOW() - INTERVAL '${interval}'
           AND d.manufacturer IS NOT NULL AND d.manufacturer != ''
-          AND d.id IN (SELECT id FROM device_filter)
-          AND d.id IN (SELECT id FROM device_filter)
-          AND d.id IN (SELECT id FROM device_filter)
           AND d.id IN (SELECT id FROM device_filter)
         GROUP BY d.manufacturer
       ),

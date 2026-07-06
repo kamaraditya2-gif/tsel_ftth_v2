@@ -1144,7 +1144,7 @@ async function executeDownload(device, queueJobId) {
           }
 
           // Terminal failure states
-          if (ticketStatus === 'Failed' || ticketStatus === 'Error' || downloadStatus === 'Failed') {
+          if (ticketStatus === 'Failed' || ticketStatus === 'Error' || ticketStatus === 'Expired' || downloadStatus === 'Failed') {
             console.log(`Download test failed at check ${attempt}: ticketStatus=${ticketStatus}`);
             break;
           }
@@ -1343,7 +1343,7 @@ async function executeUpload(device, queueJobId) {
           }
 
           // Terminal failure states
-          if (ticketStatus === 'Failed' || ticketStatus === 'Error' || uploadStatus === 'Failed') {
+          if (ticketStatus === 'Failed' || ticketStatus === 'Error' || ticketStatus === 'Expired' || uploadStatus === 'Failed') {
             console.log(`Upload test failed at check ${attempt}: ticketStatus=${ticketStatus}`);
             break;
           }

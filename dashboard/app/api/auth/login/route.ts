@@ -1,69 +1,57 @@
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcrypt'
 import pool from '@/lib/db'
+import { redis, ensureConnected } from '@/lib/redis'
 
-// Simple in-memory rate limiting (for production, use Redis or similar)
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 const MAX_ATTEMPTS = 5
 const LOCKOUT_DURATION = 15 * 60 * 1000 // 15 minutes
 const RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute
 
-// Account lockout tracking
-const accountLockoutMap = new Map<number, { lockoutUntil: number; failedAttempts: number }>()
+async function isRateLimited(identifier: string): Promise<boolean> {
+  try {
+    await ensureConnected()
+    const key = `ratelimit:login:${identifier}`
+    const now = Date.now()
+    const windowStart = now - RATE_LIMIT_WINDOW
+    await redis.zRemRangeByScore(key, 0, windowStart)
+    const count = await redis.zCard(key)
+    if (count >= MAX_ATTEMPTS) return true
+    await redis.zAdd(key, { score: now, value: `${now}` })
+    await redis.expire(key, 120)
+    return false
+  } catch { return false }
+}
+
+async function isAccountLocked(userId: number): Promise<boolean> {
+  try {
+    await ensureConnected()
+    const key = `lockout:user:${userId}`
+    const until = await redis.get(key)
+    if (until && parseInt(until) > Date.now()) return true
+    return false
+  } catch { return false }
+}
+
+async function recordFailedAttempt(userId: number): Promise<void> {
+  try {
+    await ensureConnected()
+    const key = `lockout:user:${userId}`
+    await redis.set(key, (Date.now() + LOCKOUT_DURATION).toString(), { EX: LOCKOUT_DURATION / 1000 })
+  } catch { /* ignore */ }
+}
+
+async function clearLockout(userId: number): Promise<void> {
+  try {
+    await ensureConnected()
+    await redis.del(`lockout:user:${userId}`)
+  } catch { /* ignore */ }
+}
 
 function sanitizeInput(input: string): string {
   return input.trim().replace(/[<>]/g, '')
 }
 
-function isRateLimited(identifier: string): boolean {
-  const now = Date.now()
-  const record = rateLimitMap.get(identifier)
 
-  if (!record) {
-    rateLimitMap.set(identifier, { count: 1, resetTime: now + RATE_LIMIT_WINDOW })
-    return false
-  }
-
-  if (now > record.resetTime) {
-    rateLimitMap.set(identifier, { count: 1, resetTime: now + RATE_LIMIT_WINDOW })
-    return false
-  }
-
-  if (record.count >= MAX_ATTEMPTS) {
-    return true
-  }
-
-  record.count++
-  return false
-}
-
-function isAccountLocked(userId: number): boolean {
-  const lockout = accountLockoutMap.get(userId)
-  if (!lockout) return false
-
-  const now = Date.now()
-  if (now > lockout.lockoutUntil) {
-    accountLockoutMap.delete(userId)
-    return false
-  }
-
-  return true
-}
-
-function recordFailedAttempt(userId: number): void {
-  const lockout = accountLockoutMap.get(userId) || { lockoutUntil: 0, failedAttempts: 0 }
-  lockout.failedAttempts++
-
-  if (lockout.failedAttempts >= MAX_ATTEMPTS) {
-    lockout.lockoutUntil = Date.now() + LOCKOUT_DURATION
-  }
-
-  accountLockoutMap.set(userId, lockout)
-}
-
-function resetFailedAttempts(userId: number): void {
-  accountLockoutMap.delete(userId)
-}
 
 export async function POST(request: Request) {
   let client
@@ -74,7 +62,7 @@ export async function POST(request: Request) {
                'unknown'
 
     // Check rate limit
-    if (isRateLimited(ip)) {
+    if (await isRateLimited(ip)) {
       return NextResponse.json(
         { error: 'Too many login attempts. Please try again later.' },
         { status: 429 }
@@ -132,11 +120,9 @@ export async function POST(request: Request) {
     }
 
     // Check if account is locked
-    if (isAccountLocked(user.id)) {
-      const lockout = accountLockoutMap.get(user.id)
-      const remainingTime = Math.ceil((lockout!.lockoutUntil - Date.now()) / 60000)
+    if (await isAccountLocked(user.id)) {
       return NextResponse.json(
-        { error: `Account locked. Please try again in ${remainingTime} minutes.` },
+        { error: 'Account locked due to too many failed attempts. Please try again later.' },
         { status: 429 }
       )
     }
@@ -144,7 +130,7 @@ export async function POST(request: Request) {
     const passwordMatch = await bcrypt.compare(password, user.password)
 
     if (!passwordMatch) {
-      recordFailedAttempt(user.id)
+      await recordFailedAttempt(user.id)
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
@@ -152,7 +138,7 @@ export async function POST(request: Request) {
     }
 
     // Reset failed attempts on successful login
-    resetFailedAttempts(user.id)
+    await clearLockout(user.id)
 
     // Determine redirect based on role
     const redirectUrl = user.role_name === 'field' ? '/field' : '/'
