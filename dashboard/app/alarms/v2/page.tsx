@@ -112,6 +112,12 @@ function AlarmsV2Page() {
     await fetch('/api/alarms/comments', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ device_id: expandedId, comment: newComment }) })
     setNewComment(''); loadComments(expandedId)
   }
+  const deleteComment = async (id: number) => {
+    if (!confirm('Delete this comment?')) return
+    await fetch('/api/alarms/comments', { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id }) })
+    if (expandedId) loadComments(expandedId)
+  }
+
   const addReply = async (parentId: number) => {
     if (!replyText.trim() || !expandedId) return
     await fetch('/api/alarms/comments', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ device_id: expandedId, comment: replyText, parent_id: parentId }) })
@@ -312,13 +318,15 @@ function AlarmsV2Page() {
                       <div><p className="text-xs text-gray-400 font-semibold uppercase mb-2">Comments</p>
                         <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
                           {comments.filter(c => !c.parent_id).map(c => (
-                            <div key={c.id} className="bg-slate-700/30 rounded-lg p-2">
+                            <div key={c.id} className="bg-slate-700/30 rounded-lg p-2 relative group">
+                              <button onClick={() => deleteComment(c.id)} className="absolute top-1 right-1 p-0.5 rounded hover:bg-slate-600 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
                               <p className="text-sm text-white">{c.comment}</p>
                               <p className="text-[10px] text-gray-500 mt-1">{c.created_by} · {new Date(c.created_at).toLocaleString('id-ID')}</p>
                               <button onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)} className="text-[10px] text-blue-400 mt-1 hover:underline">Reply</button>
                               {replyingTo === c.id && <div className="flex gap-1 mt-1"><input type="text" value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Write reply..." className="flex-1 px-2 py-1 bg-slate-600 rounded text-xs text-white" onKeyDown={e => { if (e.key === 'Enter') addReply(c.id) }} /><button onClick={() => addReply(c.id)} className="px-2 py-1 rounded bg-blue-500/20 text-blue-300 text-xs"><Send className="w-3 h-3" /></button></div>}
                               {comments.filter(r => r.parent_id === c.id).map(r => (
-                                <div key={r.id} className="ml-4 mt-1 pl-2 border-l border-slate-600 bg-slate-700/20 rounded p-1.5">
+                                <div key={r.id} className="ml-4 mt-1 pl-2 border-l border-slate-600 bg-slate-700/20 rounded p-1.5 relative group">
+                                  <button onClick={() => deleteComment(r.id)} className="absolute top-0.5 right-0.5 p-0.5 rounded hover:bg-slate-600 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-2.5 h-2.5" /></button>
                                   <p className="text-xs text-gray-300">{r.comment}</p>
                                   <p className="text-[10px] text-gray-500">{r.created_by} · {new Date(r.created_at).toLocaleString('id-ID')}</p>
                                 </div>

@@ -26,6 +26,22 @@ export async function GET(request: Request) {
   }
 }
 
+export async function DELETE(request: Request) {
+  try {
+    const body = await request.json()
+    const { id } = body
+    if (!id) {
+      return NextResponse.json({ error: 'Comment id is required' }, { status: 400 })
+    }
+    const client = await pool.connect()
+    await client.query('DELETE FROM alarm_comments WHERE id = $1 OR parent_id = $1', [id])
+    client.release()
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Failed to delete comment' }, { status: 500 })
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
