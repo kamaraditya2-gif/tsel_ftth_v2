@@ -673,6 +673,12 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+          {(filterLocStr.areaIds || filterLocStr.regionalIds || filterLocStr.nopIds || selectedSpeedGroup || selectedManufacturer || selectedOntModel) && (
+            <button onClick={() => { setSelectedArea(null); setSelectedRegional(null); setSelectedNopCity(null); setSelectedSpeedGroup(null); setSelectedManufacturer(null); setSelectedOntModel(null); setFilterLocStr({ areaIds: '', regionalIds: '', nopIds: '' }) }}
+              className="px-2 py-1 rounded text-[10px] bg-white/10 hover:bg-red-500/30 text-gray-400 hover:text-red-300 transition-colors">
+              ✕ Clear Filter
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-4 flex-wrap">
           <div className="text-sm text-gray-300">
