@@ -36,6 +36,7 @@ function AlarmsV2Page() {
   const [historyData, setHistoryData] = useState<any[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [filterSeverity, setFilterSeverity] = useState('')
+  const [mttrData, setMttrData] = useState<any>(null)
 
   const fetchAlarms = async (f = filters, loc = locFilters) => {
     setLoading(true)
@@ -187,9 +188,21 @@ function AlarmsV2Page() {
         {/* Tabs */}
         <div className="flex gap-2">
           <button onClick={() => setTab('active')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium ${tab === 'active' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-slate-800/50 text-gray-400 border border-slate-700/50 hover:bg-slate-700/50'}`}><AlertCircle className="w-4 h-4" /> Active ({total})</button>
-          <button onClick={() => setTab('cleared')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium ${tab === 'cleared' ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-slate-800/50 text-gray-400 border border-slate-700/50 hover:bg-slate-700/50'}`}><AlertTriangle className="w-4 h-4" /> Cleared ({totalCleared})</button>
+          <button onClick={() => { setTab('cleared'); fetch('/api/alarms/mttr').then(r => r.json()).then(d => setMttrData(d)).catch(() => {}) }} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium ${tab === 'cleared' ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-slate-800/50 text-gray-400 border border-slate-700/50 hover:bg-slate-700/50'}`}><AlertTriangle className="w-4 h-4" /> Cleared ({totalCleared})</button>
           {ticketPanel && <button onClick={() => setTicketPanel(null)} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/30 text-sm"><X className="w-4 h-4" /> Close Ticket</button>}
         </div>
+
+        {/* MTTR Summary (cleared tab only) */}
+        {tab === 'cleared' && mttrData && (
+          <div className="p-4 rounded-2xl border border-green-500/20 bg-green-500/5 backdrop-blur-md">
+            <div className="flex flex-wrap items-center gap-4 text-xs">
+              <span className="text-gray-400">Resolved (30d): <strong className="text-green-300">{mttrData.total_resolved}</strong></span>
+              <span className="text-gray-400">MTTR: <strong className="text-green-300">{mttrData.avg_duration_seconds ? (() => { let s = mttrData.avg_duration_seconds; const d = Math.floor(s / 86400); s %= 86400; const h = Math.floor(s / 3600); s %= 3600; const m = Math.floor(s / 60); s %= 60; return `${d ? d + 'd ' : ''}${h}h ${m}m`; })() : '-'}</strong></span>
+              <span className="text-gray-400">Min: <strong className="text-green-300">{mttrData.min_duration_seconds ? (() => { let s = mttrData.min_duration_seconds; const d = Math.floor(s / 86400); s %= 86400; const h = Math.floor(s / 3600); s %= 3600; const m = Math.floor(s / 60); s %= 60; return `${d ? d + 'd ' : ''}${h}h ${m}m`; })() : '-'}</strong></span>
+              <span className="text-gray-400">Max: <strong className="text-green-300">{mttrData.max_duration_seconds ? (() => { let s = mttrData.max_duration_seconds; const d = Math.floor(s / 86400); s %= 86400; const h = Math.floor(s / 3600); s %= 3600; const m = Math.floor(s / 60); s %= 60; return `${d ? d + 'd ' : ''}${h}h ${m}m`; })() : '-'}</strong></span>
+            </div>
+          </div>
+        )}
 
         {/* Table */}
         <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-md overflow-hidden">
@@ -342,11 +355,34 @@ function AlarmsV2Page() {
       {/* History Modal */}
       {historyDevice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setHistoryDevice(null)}>
-          <div className="bg-slate-900 rounded-2xl border border-slate-700 p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-slate-900 rounded-2xl border border-slate-700 p-6 max-w-3xl w-full mx-4 max-h-[80vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-white">Alarm History — {historyDevice.device_name}</h3>
               <button onClick={() => setHistoryDevice(null)} className="p-1 rounded-lg hover:bg-slate-700 text-gray-400"><X className="w-5 h-5" /></button>
             </div>
+            {(() => {
+              const resolved = historyData.filter((h: any) => h.source === 'history')
+              const mttr = resolved.length > 0
+                ? resolved.reduce((s: number, h: any) => s + (h.duration_seconds || 0), 0) / resolved.length
+                : 0
+              const fmtDur = (sec: number) => {
+                if (!sec || sec <= 0) return '-'
+                const d = Math.floor(sec / 86400); sec %= 86400
+                const hh = Math.floor(sec / 3600); sec %= 3600
+                const mm = Math.floor(sec / 60); sec %= 60
+                const parts: string[] = []
+                if (d > 0) parts.push(`${d}d`)
+                if (hh > 0) parts.push(`${hh}h`)
+                if (mm > 0) parts.push(`${mm}m`)
+                if (parts.length === 0) parts.push(`${sec}s`)
+                return parts.join(' ')
+              }
+              return resolved.length > 0 ? (
+                <div className="mb-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700 text-xs text-gray-300">
+                  Resolved: {resolved.length} alarms &middot; MTTR: {fmtDur(Math.round(mttr))}
+                </div>
+              ) : null
+            })()}
             <div className="flex-1 overflow-y-auto">
               {historyLoading ? (
                 <div className="text-center py-8 text-gray-400">Loading...</div>
@@ -361,18 +397,32 @@ function AlarmsV2Page() {
                       <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-400 uppercase">Value</th>
                       <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-400 uppercase">Threshold</th>
                       <th className="px-3 py-2 text-center text-[10px] font-semibold text-gray-400 uppercase">Severity</th>
+                      <th className="px-3 py-2 text-center text-[10px] font-semibold text-gray-400 uppercase">Duration</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
-                    {historyData.map((h: any, i: number) => (
-                      <tr key={i} className="hover:bg-slate-800/50 text-xs">
-                        <td className="px-3 py-2 text-gray-400">{h.triggered_at ? new Date(h.triggered_at).toLocaleString('id-ID') : '-'}</td>
-                        <td className="px-3 py-2 text-gray-200">{h.alarm_type?.replace(/_/g, ' ')}</td>
-                        <td className="px-3 py-2 text-right font-mono text-gray-200">{h.metric_value}{h.unit}</td>
-                        <td className="px-3 py-2 text-right font-mono text-gray-500">{h.threshold_value}{h.unit}</td>
-                        <td className="px-3 py-2 text-center"><span className={`px-1.5 py-0.5 rounded text-[10px] ${h.severity === 'critical' ? 'bg-red-500/10 text-red-300' : 'bg-amber-500/10 text-amber-300'}`}>{h.severity}</span></td>
-                      </tr>
-                    ))}
+                    {historyData.map((h: any, i: number) => {
+                      const sec = h.duration_seconds || 0
+                      const d = Math.floor(sec / 86400); let s = sec % 86400
+                      const hh = Math.floor(s / 3600); s %= 3600
+                      const mm = Math.floor(s / 60); s %= 60
+                      const parts: string[] = []
+                      if (d > 0) parts.push(`${d}d`)
+                      if (hh > 0) parts.push(`${hh}h`)
+                      if (mm > 0) parts.push(`${mm}m`)
+                      if (parts.length === 0 && s > 0) parts.push(`${s}s`)
+                      const durStr = parts.length > 0 ? parts.join(' ') : (h.source === 'active' ? 'counting...' : '-')
+                      return (
+                        <tr key={i} className="hover:bg-slate-800/50 text-xs">
+                          <td className="px-3 py-2 text-gray-400">{h.triggered_at ? new Date(h.triggered_at).toLocaleString('id-ID') : '-'}</td>
+                          <td className="px-3 py-2 text-gray-200">{h.alarm_type?.replace(/_/g, ' ')}</td>
+                          <td className="px-3 py-2 text-right font-mono text-gray-200">{h.metric_value}{h.unit}</td>
+                          <td className="px-3 py-2 text-right font-mono text-gray-500">{h.threshold_value}{h.unit}</td>
+                          <td className="px-3 py-2 text-center"><span className={`px-1.5 py-0.5 rounded text-[10px] ${h.severity === 'critical' ? 'bg-red-500/10 text-red-300' : 'bg-amber-500/10 text-amber-300'}`}>{h.severity}</span></td>
+                          <td className="px-3 py-2 text-center font-mono text-gray-300">{durStr}</td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               )}
