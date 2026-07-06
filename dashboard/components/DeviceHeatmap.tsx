@@ -98,8 +98,8 @@ function PopupContent({
 }) {
   const fmt = (v: number | null, suffix = '') => v !== null ? Number(v).toFixed(1) + suffix : '-'
 
-  const cell = { padding: '1px 2px', color: '#374151', textAlign: 'right' as const, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }
-  const label = { padding: '1px 2px', color: '#6b7280', whiteSpace: 'nowrap' as const }
+  const cell = { padding: '1px 3px', color: '#374151', textAlign: 'right' as const, wordBreak: 'break-word' as const }
+  const label = { padding: '1px 3px', color: '#6b7280', whiteSpace: 'nowrap' as const, width: '1%' as const }
 
   const vc = (v: number | null, threshold: number | null, suffix: string) => {
     const bad = v !== null && threshold !== null && Number(v) < Number(threshold)
@@ -111,12 +111,12 @@ function PopupContent({
   }
 
   return (
-    <div style={{ minWidth: 260, maxWidth: 300, fontFamily: 'system-ui, sans-serif', fontSize: 12, overflow: 'hidden' }}>
-      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.serial_number}</div>
+    <div style={{ minWidth: 280, maxWidth: 380, fontFamily: 'system-ui, sans-serif', fontSize: 11, overflow: 'hidden' }}>
+      <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.serial_number}</div>
       {device.indihome_id && <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.indihome_id}{device.regional_name ? ' · ' + device.regional_name : ''}</div>}
 
-      <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 10 }}>
-        <colgroup><col style={{ width: '35%' }} /><col style={{ width: '65%' }} /></colgroup>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+        <colgroup><col style={{ width: '38%' }} /><col style={{ width: '62%' }} /></colgroup>
         <tbody>
           <tr>
             <td style={label}>Status</td>
