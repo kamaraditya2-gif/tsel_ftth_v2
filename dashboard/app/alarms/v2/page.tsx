@@ -30,6 +30,7 @@ function AlarmsV2Page() {
   const [ticketSummary, setTicketSummary] = useState('');   const [ticketRCA, setTicketRCA] = useState('')
   const [selectedRc, setSelectedRc] = useState<number | null>(null); const [rcNote, setRcNote] = useState('')
   const [selectedL1, setSelectedL1] = useState(''); const [rcAction, setRcAction] = useState(''); const [rcPIC, setRcPIC] = useState('')
+  const [savedRc, setSavedRc] = useState<{ l1: string; name: string; note: string; action: string; pic: string; time: string } | null>(null)
   const [retesting, setRetesting] = useState(false)
   const [historyDevice, setHistoryDevice] = useState<any>(null)
   const [historyData, setHistoryData] = useState<any[]>([])
@@ -112,7 +113,9 @@ function AlarmsV2Page() {
   }
   const assignRootCause = async () => {
     if (!expandedId || !selectedRc) return
+    const rc = rootCauses.find(r => r.id === selectedRc)
     await fetch('/api/alarms/root-cause/assign', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ device_id: expandedId, root_cause_id: selectedRc, note: rcNote, action: rcAction, pic: rcPIC }) })
+    setSavedRc({ l1: selectedL1, name: rc?.name || '', note: rcNote, action: rcAction, pic: rcPIC, time: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) })
     fetchAlarms()
   }
   const createTicket = async () => {
@@ -245,6 +248,16 @@ function AlarmsV2Page() {
                             <input type="text" value={rcNote} onChange={e => setRcNote(e.target.value)} placeholder="Specify other cause..." className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white mb-2" />
                           )}
                           <button onClick={assignRootCause} disabled={!selectedRc} className="w-full py-1.5 rounded bg-blue-500/20 text-blue-300 text-sm hover:bg-blue-500/30 disabled:opacity-40">Save Root Cause</button>
+                          {savedRc && (
+                            <div className="mt-2 p-2 rounded bg-slate-700/50 border border-slate-600 text-[10px] text-gray-300 space-y-0.5">
+                              <p><span className="text-gray-500">L1:</span> {savedRc.l1}</p>
+                              <p><span className="text-gray-500">L2:</span> {savedRc.name}</p>
+                              {savedRc.note && <p><span className="text-gray-500">Note:</span> {savedRc.note}</p>}
+                              {savedRc.action && <p><span className="text-gray-500">Action:</span> {savedRc.action}</p>}
+                              {savedRc.pic && <p><span className="text-gray-500">PIC:</span> {savedRc.pic}</p>}
+                              <p><span className="text-gray-500">Saved:</span> {savedRc.time}</p>
+                            </div>
+                          )}
                         </div>
                         {/* Action */}
                         <div><p className="text-xs text-gray-400 font-semibold uppercase mb-2">Action</p>
