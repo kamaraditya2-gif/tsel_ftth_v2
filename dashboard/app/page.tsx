@@ -7,12 +7,12 @@ import SkeletonCard from '@/components/SkeletonCard'
 import ThresholdChart from '@/components/ThresholdChart'
 import TopDevicesCard from '@/components/TopDevicesCard'
 import KPIBigCard from '@/components/KPIBigCard'
-import AlarmPieChart from '@/components/AlarmPieChart'
-import L1AvailabilityCard from '@/components/L1AvailabilityCard'
-import TopAlarmCard from '@/components/TopAlarmCard'
-import PerformanceAnalytics from '@/components/PerformanceAnalytics'
 import TopCards from '@/components/TopCards'
 import NetworkDiagram from '@/components/NetworkDiagram'
+import SeveritySummary from '@/components/SeveritySummary'
+import RootCauseAnalytics from '@/components/RootCauseAnalytics'
+import AvailabilityCard from '@/components/AvailabilityCard'
+import TopAlarmList from '@/components/TopAlarmList'
 import LocationFilter from '@/components/LocationFilter'
 import dynamic from 'next/dynamic'
 
@@ -1188,9 +1188,9 @@ export default function DashboardPage() {
         </div>
 
       {/* ================================================================= */}
-      {/* PHASE 3: DASHBOARD V2 — 7 Row Analytics (Hidden by default)         */}
+      {/* ADVANCED ANALYTICS (Hidden by default)                              */}
       {/* ================================================================= */}
-      {dashboardV2?.kpi && dashboardV2?.threshold && dashboardV2?.rootCause && dashboardV2?.topAlarms && (
+      {dashboardV2?.kpi && (
         <>
           <button
             onClick={() => setShowPhase3(!showPhase3)}
@@ -1203,50 +1203,25 @@ export default function DashboardPage() {
 
           {showPhase3 && (
             <div className="space-y-6 mb-8">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {/* 1. Severity Summary */}
+              <SeveritySummary data={dashboardV2.severity} />
+
+              {/* 2. Root Cause Analytics */}
+              <RootCauseAnalytics data={dashboardV2.rootCause} />
+
+              {/* 3. Availability */}
+              <AvailabilityCard data={dashboardV2.availability} />
+
+              {/* 4. Top Alarm */}
+              <TopAlarmList data={dashboardV2.topAlarms} />
+
+              {/* 5. Performance + KPI row */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <KPIBigCard title="Total Device" value={dashboardV2.kpi.total_device ?? 0} icon={Server} color="from-blue-500 to-blue-700" />
                 <KPIBigCard title="Active Alarm" value={dashboardV2.kpi.active_alarm ?? 0} icon={Bell} color="from-red-500 to-red-700" />
-                <KPIBigCard title="L1 Alarm" value={dashboardV2.kpi.l1_alarm ?? 0} icon={AlertTriangle} color="from-rose-600 to-red-800" />
-                <KPIBigCard title="L2 Alarm" value={dashboardV2.kpi.l2_alarm ?? 0} icon={AlertCircle} color="from-amber-500 to-orange-700" />
                 <KPIBigCard title="Availability" value={`${dashboardV2.kpi.availability || 0}%`} icon={Activity} color="from-green-500 to-emerald-700" />
-                <KPIBigCard title="Last Check" value={dashboardV2.kpi.last_check ? new Date(dashboardV2.kpi.last_check).toLocaleTimeString('id-ID') : '-'} icon={Clock} color="from-purple-500 to-violet-700" />
+                <KPIBigCard title="Avg Latency" value={`${dashboardV2.performance?.avg_latency || 0} ms`} icon={Clock} color="from-purple-500 to-violet-700" />
               </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <KPIBigCard title="Under Threshold" value={dashboardV2.threshold?.under_threshold ?? 0} icon={TrendingUp} color="from-cyan-500 to-teal-700" subtitle="Lower type" />
-                <KPIBigCard title="Upper Threshold" value={dashboardV2.threshold?.upper_threshold ?? 0} icon={TrendingUp} color="from-orange-500 to-red-700" subtitle="Upper type" />
-                <KPIBigCard title="Critical" value={dashboardV2.kpi.l1_alarm ?? 0} icon={AlertTriangle} color="from-red-600 to-rose-900" subtitle="Severity critical" />
-                <KPIBigCard title="Warning" value={dashboardV2.kpi.l2_alarm ?? 0} icon={AlertCircle} color="from-amber-500 to-yellow-800" subtitle="Severity warning" />
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <AlarmPieChart data={dashboardV2.rootCause ?? []} />
-                <div className="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-md p-5 shadow-lg shadow-amber-500/10">
-                  <h3 className="text-lg font-bold text-white mb-4">Root Cause Summary</h3>
-                  <div className="space-y-3">
-                    {(dashboardV2.rootCause ?? []).slice(0, 8).map((item: any, i: number) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <span className="text-sm text-gray-300 capitalize">{item.alarm_type?.replace(/_/g, ' ')}</span>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${item.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'}`} />
-                          <span className="text-sm font-bold text-white">{item.count ?? 0}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <L1AvailabilityCard data={dashboardV2.l1l2 ?? []} />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <TopAlarmCard title="Top Region Alarm" data={dashboardV2.topAlarms?.regions ?? []} icon={MapPin} />
-                <TopAlarmCard title="Top NOP Alarm" data={dashboardV2.topAlarms?.nops ?? []} icon={Building2} />
-                <TopAlarmCard title="Top Brand Alarm" data={dashboardV2.topAlarms?.brands ?? []} icon={Box} />
-                <TopAlarmCard title="Top ONT Type Alarm" data={dashboardV2.topAlarms?.ontTypes ?? []} icon={Cpu} />
-              </div>
-
-              <PerformanceAnalytics data={dashboardV2.performance ?? { avg_latency: 0, avg_ebr_latency: 0, avg_packet_loss: 0, avg_availability: 0 }} />
             </div>
           )}
         </>
