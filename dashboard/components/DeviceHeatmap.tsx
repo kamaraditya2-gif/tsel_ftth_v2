@@ -96,27 +96,20 @@ function PopupContent({
   ondemandState: OndemandState
   onStartTest: () => void
 }) {
-  const fmt = (v: number | null, suffix = '') => v !== null ? Number(v).toFixed(1) + suffix : '-'
+  const cell = { padding: '1px 4px', color: '#374151', textAlign: 'right' as const, whiteSpace: 'nowrap' as const }
+  const label = { padding: '1px 4px', color: '#6b7280', whiteSpace: 'nowrap' as const }
 
-  const cell = { padding: '1px 3px', color: '#374151', textAlign: 'right' as const, wordBreak: 'break-word' as const }
-  const label = { padding: '1px 3px', color: '#6b7280', whiteSpace: 'nowrap' as const, width: '1%' as const }
-
-  const vc = (v: number | null, threshold: number | null, suffix: string) => {
-    const bad = v !== null && threshold !== null && Number(v) < Number(threshold)
-    return <span style={{ fontWeight: bad ? 'bold' : 'normal', color: bad ? '#ef4444' : '#374151' }}>{v !== null ? Number(v).toFixed(1) + suffix : '-'}</span>
-  }
-  const pc = (v: number | null, threshold: number) => {
-    const bad = v !== null && Number(v) > threshold
-    return <span style={{ fontWeight: bad ? 'bold' : 'normal', color: bad ? '#ef4444' : '#374151' }}>{v !== null ? Number(v).toFixed(1) + ' ms' : '-'}</span>
+  const val = (v: number | null, bad: boolean, suffix: string) => {
+    if (v === null) return <span style={{ color: '#9ca3af' }}>-</span>
+    return <span style={{ fontWeight: bad ? 700 : 400, color: bad ? '#dc2626' : '#374151' }}>{Number(v).toFixed(1)}{suffix}</span>
   }
 
   return (
-    <div style={{ minWidth: 280, maxWidth: 380, fontFamily: 'system-ui, sans-serif', fontSize: 11, overflow: 'hidden' }}>
-      <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.serial_number}</div>
-      {device.indihome_id && <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.indihome_id}{device.regional_name ? ' · ' + device.regional_name : ''}</div>}
+    <div style={{ minWidth: 340, fontFamily: 'system-ui, sans-serif', fontSize: 12, boxSizing: 'border-box' }}>
+      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{device.serial_number}</div>
+      {device.indihome_id && <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{device.indihome_id}{device.regional_name ? ' · ' + device.regional_name : ''}</div>}
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
-        <colgroup><col style={{ width: '38%' }} /><col style={{ width: '62%' }} /></colgroup>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
         <tbody>
           <tr>
             <td style={label}>Status</td>
@@ -124,82 +117,66 @@ function PopupContent({
               <span style={{
                 background: device.status === 'online' ? '#dcfce7' : '#fee2e2',
                 color: device.status === 'online' ? '#166534' : '#991b1b',
-                padding: '0 5px', borderRadius: 9999, fontSize: 9, fontWeight: 600
+                padding: '0 6px', borderRadius: 9999, fontSize: 10, fontWeight: 600,
+                whiteSpace: 'nowrap'
               }}>{device.status.toUpperCase()}</span>
             </td>
           </tr>
-          <tr><td style={label}>Speed</td><td style={cell}>{device.speed_name || '-'}</td></tr>
-          <tr><td style={label}>Ping IGW</td><td style={cell}>{pc(device.ping_igw, 50)}</td></tr>
-          <tr><td style={label}>Download</td><td style={cell}>{vc(device.download_speed, device.download_threshold, ' Mbps')}{device.download_threshold !== null ? ' / ' + Number(device.download_threshold).toFixed(0) : ''}</td></tr>
-          <tr><td style={label}>Upload</td><td style={cell}>{vc(device.upload_speed, device.upload_threshold, ' Mbps')}{device.upload_threshold !== null ? ' / ' + Number(device.upload_threshold).toFixed(0) : ''}</td></tr>
-          <tr><td style={label}>Packet Loss</td><td style={cell}>{pc(device.packet_loss_percent, 3)}</td></tr>
-          <tr><td style={label}>Direct Latency</td><td style={cell}>{pc(device.avg_latency_ms, 50)}</td></tr>
+          <tr><td style={label}>Speed</td><td style={cell}>{device.speed_name || <span style={{ color: '#9ca3af' }}>-</span>}</td></tr>
+          <tr><td style={label}>Ping IGW</td><td style={cell}>{val(device.ping_igw, device.ping_igw !== null && device.ping_igw > 50, ' ms')}</td></tr>
+          <tr><td style={label}>Download</td><td style={cell}>{val(device.download_speed, device.download_speed !== null && device.download_threshold !== null && Number(device.download_speed) < Number(device.download_threshold), ' Mbps')}{device.download_threshold !== null ? <span style={{ color: '#9ca3af' }}> / {Number(device.download_threshold).toFixed(0)}</span> : ''}</td></tr>
+          <tr><td style={label}>Upload</td><td style={cell}>{val(device.upload_speed, device.upload_speed !== null && device.upload_threshold !== null && Number(device.upload_speed) < Number(device.upload_threshold), ' Mbps')}{device.upload_threshold !== null ? <span style={{ color: '#9ca3af' }}> / {Number(device.upload_threshold).toFixed(0)}</span> : ''}</td></tr>
+          <tr><td style={label}>Packet Loss</td><td style={cell}>{val(device.packet_loss_percent, device.packet_loss_percent !== null && device.packet_loss_percent > 3, '%')}</td></tr>
+          <tr><td style={label}>Direct Latency</td><td style={cell}>{val(device.avg_latency_ms, device.avg_latency_ms !== null && device.avg_latency_ms > 50, ' ms')}</td></tr>
         </tbody>
       </table>
 
       {ondemandState.status === 'idle' && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onStartTest() }}
-          style={{
-            marginTop: 6, width: '100%', padding: '3px 0', fontSize: 10, fontWeight: 500,
-            background: '#2563eb', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer'
-          }}
-        >
+        <button onClick={(e) => { e.stopPropagation(); onStartTest() }}
+          style={{ marginTop: 6, width: '100%', padding: '4px 0', fontSize: 11, fontWeight: 500, background: '#2563eb', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
           On Demand Test
         </button>
       )}
 
       {ondemandState.status === 'requesting' && (
-        <div style={{ marginTop: 6, padding: '6px 0', textAlign: 'center', color: '#2563eb', fontWeight: 500, fontSize: 10 }}>
-          Requesting test...
-        </div>
+        <div style={{ marginTop: 6, padding: '4px 0', textAlign: 'center', color: '#2563eb', fontSize: 11 }}>Requesting test...</div>
       )}
 
       {ondemandState.status === 'requested' && (
-        <div style={{ marginTop: 6, padding: '6px 0', textAlign: 'center', color: '#2563eb', fontWeight: 500, fontSize: 10 }}>
-          <svg style={{ display: 'inline-block', animation: 'spin 1s linear infinite', width: 12, height: 12, verticalAlign: 'middle', marginRight: 4 }} viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
-          </svg>
+        <div style={{ marginTop: 6, padding: '4px 0', textAlign: 'center', color: '#2563eb', fontSize: 11 }}>
+          <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', width: 10, height: 10, marginRight: 4, border: '2px solid #2563eb', borderRadius: '50%', borderTopColor: 'transparent', verticalAlign: 'middle' }} />
           On Demand Test Requested
         </div>
       )}
 
       {ondemandState.status === 'checking' && (
-        <div style={{ marginTop: 6, padding: '6px 0', textAlign: 'center', color: '#2563eb', fontWeight: 500, fontSize: 10 }}>
-          <svg style={{ display: 'inline-block', animation: 'spin 1s linear infinite', width: 12, height: 12, verticalAlign: 'middle', marginRight: 4 }} viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
-          </svg>
+        <div style={{ marginTop: 6, padding: '4px 0', textAlign: 'center', color: '#2563eb', fontSize: 11 }}>
+          <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', width: 10, height: 10, marginRight: 4, border: '2px solid #2563eb', borderRadius: '50%', borderTopColor: 'transparent', verticalAlign: 'middle' }} />
           Fetching results...
         </div>
       )}
 
       {ondemandState.status === 'completed' && ondemandState.results && (
-        <div style={{ marginTop: 6 }}>
-          <div style={{ fontSize: 9, fontWeight: 600, color: '#059669', marginBottom: 2 }}>On-Demand Result</div>
-          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 10, background: '#f0fdf4', borderRadius: 4 }}>
-            <colgroup><col style={{ width: '35%' }} /><col style={{ width: '65%' }} /></colgroup>
+        <div style={{ marginTop: 6, padding: 4, background: '#f0fdf4', borderRadius: 4 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: '#059669', marginBottom: 2 }}>On-Demand Result</div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
             <tbody>
-              <tr><td style={label}>Ping IGW</td><td style={cell}>{ondemandState.results.ping_igw !== null ? Number(ondemandState.results.ping_igw).toFixed(1) + ' ms' : '-'}</td></tr>
-              <tr><td style={label}>Download</td><td style={cell}>{ondemandState.results.download_speed !== null ? Number(ondemandState.results.download_speed).toFixed(1) + ' Mbps' : '-'}{ondemandState.results.download_threshold !== null ? ' / ' + Number(ondemandState.results.download_threshold).toFixed(0) : ''}</td></tr>
-              <tr><td style={label}>Upload</td><td style={cell}>{ondemandState.results.upload_speed !== null ? Number(ondemandState.results.upload_speed).toFixed(1) + ' Mbps' : '-'}{ondemandState.results.upload_threshold !== null ? ' / ' + Number(ondemandState.results.upload_threshold).toFixed(0) : ''}</td></tr>
-              <tr><td style={label}>Packet Loss</td><td style={cell}>{ondemandState.results.packet_loss_igw !== null ? Number(ondemandState.results.packet_loss_igw).toFixed(1) + '%' : '-'}</td></tr>
+              <tr><td style={label}>Ping IGW</td><td style={cell}>{ondemandState.results.ping_igw !== null ? Number(ondemandState.results.ping_igw).toFixed(1) + ' ms' : <span style={{ color: '#9ca3af' }}>-</span>}</td></tr>
+              <tr><td style={label}>Download</td><td style={cell}>{ondemandState.results.download_speed !== null ? Number(ondemandState.results.download_speed).toFixed(1) + ' Mbps' : <span style={{ color: '#9ca3af' }}>-</span>}{ondemandState.results.download_threshold !== null ? <span style={{ color: '#9ca3af' }}> / {Number(ondemandState.results.download_threshold).toFixed(0)}</span> : ''}</td></tr>
+              <tr><td style={label}>Upload</td><td style={cell}>{ondemandState.results.upload_speed !== null ? Number(ondemandState.results.upload_speed).toFixed(1) + ' Mbps' : <span style={{ color: '#9ca3af' }}>-</span>}{ondemandState.results.upload_threshold !== null ? <span style={{ color: '#9ca3af' }}> / {Number(ondemandState.results.upload_threshold).toFixed(0)}</span> : ''}</td></tr>
+              <tr><td style={label}>Packet Loss</td><td style={cell}>{ondemandState.results.packet_loss_igw !== null ? Number(ondemandState.results.packet_loss_igw).toFixed(1) + '%' : <span style={{ color: '#9ca3af' }}>-</span>}</td></tr>
             </tbody>
           </table>
         </div>
       )}
 
       {ondemandState.status === 'failed' && (
-        <div style={{ marginTop: 6, padding: '6px', textAlign: 'center', background: '#fef2f2', borderRadius: 4, color: '#dc2626', fontSize: 10, fontWeight: 500 }}>
+        <div style={{ marginTop: 6, padding: 4, textAlign: 'center', background: '#fef2f2', borderRadius: 4, color: '#dc2626', fontSize: 11, fontWeight: 500 }}>
           Test Failed
         </div>
       )}
 
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 }
