@@ -78,9 +78,13 @@ export default function DashboardPage() {
   const [alarmStats, setAlarmStats] = useState<any>(null)
   const [showPhase3, setShowPhase3] = useState(false)
   const [filterLocStr, setFilterLocStr] = useState({ areaIds: '', regionalIds: '', nopIds: '' })
+  const [userData, setUserData] = useState<{ username: string; full_name: string } | null>(null)
 
   useEffect(() => {
     fetchSystemStatus()
+    fetch('/api/user-role').then(r => r.json()).then(d => {
+      if (d.username) setUserData(d)
+    }).catch(() => {})
     fetchDashboardData()
     fetchSpeedGroups()
     fetchManufacturers()
@@ -547,6 +551,13 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* User Welcome */}
+          {userData && (
+            <span className="ml-auto text-xs text-gray-400 hidden xl:block">
+              Welcome, <span className="text-white font-medium">{userData.full_name || userData.username}</span>
+            </span>
+          )}
 
           {/* Location Cascading */}
           <LocationFilter onFilterChange={(f) => {
