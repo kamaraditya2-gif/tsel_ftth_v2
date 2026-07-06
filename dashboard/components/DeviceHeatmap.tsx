@@ -96,8 +96,8 @@ function PopupContent({
   ondemandState: OndemandState
   onStartTest: () => void
 }) {
-  const cell = { padding: '1px 4px', color: '#374151', textAlign: 'right' as const, whiteSpace: 'nowrap' as const }
-  const label = { padding: '1px 4px', color: '#6b7280', whiteSpace: 'nowrap' as const }
+  const cell = { padding: '1px 0 1px 3px', color: '#374151', textAlign: 'right' as const, whiteSpace: 'nowrap' as const }
+  const label = { padding: '1px 3px 1px 0', color: '#6b7280', whiteSpace: 'nowrap' as const }
 
   const val = (v: number | null, bad: boolean, suffix: string) => {
     if (v === null) return <span style={{ color: '#9ca3af' }}>-</span>
@@ -109,7 +109,7 @@ function PopupContent({
       <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{device.serial_number}</div>
       {device.indihome_id && <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{device.indihome_id}{device.regional_name ? ' · ' + device.regional_name : ''}</div>}
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+          <table style={{ borderCollapse: 'collapse', fontSize: 11 }}>
         <tbody>
           <tr>
             <td style={label}>Status</td>
@@ -161,7 +161,7 @@ function PopupContent({
       {ondemandState.status === 'completed' && ondemandState.results && (
         <div style={{ marginTop: 6, padding: 4, background: '#f0fdf4', borderRadius: 4 }}>
           <div style={{ fontSize: 10, fontWeight: 600, color: '#059669', marginBottom: 2 }}>On-Demand Result</div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+      <table style={{ borderCollapse: 'collapse', fontSize: 11 }}>
             <tbody>
               <tr><td style={label}>Ping IGW</td><td style={cell}>{ondemandState.results.ping_igw !== null ? Number(ondemandState.results.ping_igw).toFixed(1) + ' ms' : <span style={{ color: '#9ca3af' }}>-</span>}</td></tr>
               <tr><td style={label}>Download</td><td style={cell}>{ondemandState.results.download_speed !== null ? Number(ondemandState.results.download_speed).toFixed(1) + ' Mbps' : <span style={{ color: '#9ca3af' }}>-</span>}{ondemandState.results.download_threshold !== null ? <span style={{ color: '#9ca3af' }}> / {Number(ondemandState.results.download_threshold).toFixed(0)}</span> : ''}</td></tr>
