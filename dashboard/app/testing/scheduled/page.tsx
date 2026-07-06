@@ -280,6 +280,14 @@ export default function ScheduledPage() {
                   <div key={i} className="flex-1 text-[8px] text-gray-500 text-center">{String(i).padStart(2, '0')}:00</div>
                 ))}
               </div>
+              {/* Color Legend */}
+              <div className="flex gap-3 text-[9px] text-gray-400 pb-2 border-b border-white/5 mb-2">
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-cyan-500" /> Ping</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-violet-500" /> Traceroute</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-emerald-500" /> Download</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-amber-500" /> Upload</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-rose-500" /> Ont-Status</span>
+              </div>
               {tasks.filter(t => t.is_active).map(task => {
                 const start = task.started_at ? new Date(task.started_at) : new Date()
                 const startWib = new Date(start.getTime() + 7 * 60 * 60 * 1000)
@@ -287,14 +295,26 @@ export default function ScheduledPage() {
                 const int = task.cron_time?.startsWith('*/') ? parseInt(task.cron_time.substring(2)) : 60
                 const duration = Math.min(int, 240) / 60
                 const leftPct = (hour / 24) * 100
-                const widthPct = Math.max((duration / 24) * 100, 2)
-                const colors = ['bg-cyan-500', 'bg-emerald-500', 'bg-purple-500', 'bg-amber-500', 'bg-rose-500']
+                const widthPct = Math.max((duration / 24) * 100, 1.5)
+                const types = (task.test_type || '').split(',').map((t: string) => t.trim()).filter(Boolean)
+                const typeColors: Record<string, string> = {
+                  ping: 'bg-cyan-500', traceroute: 'bg-violet-500',
+                  download: 'bg-emerald-500', upload: 'bg-amber-500',
+                  'ont-status': 'bg-rose-500'
+                }
                 return (
-                  <div key={task.id} className="flex items-center gap-2">
-                    <div className="w-28 shrink-0 text-[9px] text-gray-300 truncate" title={task.title}>{task.title}</div>
-                    <div className="flex-1 h-5 relative bg-white/5 rounded overflow-hidden">
-                      <div className={`absolute h-full rounded ${colors[task.id % colors.length]} opacity-80`}
-                        style={{ left: `${leftPct}%`, width: `${widthPct}%` }} />
+                  <div key={task.id}>
+                    <div className="text-[9px] text-gray-400 mb-0.5 truncate" title={task.title}>{task.title}</div>
+                    <div className="space-y-0.5 mb-2">
+                      {types.map((type: string) => (
+                        <div key={type} className="flex items-center gap-2">
+                          <div className="w-28 shrink-0 text-[8px] text-gray-500 pl-2">{type}</div>
+                          <div className="flex-1 h-3 relative bg-white/5 rounded overflow-hidden">
+                            <div className={`absolute h-full rounded ${typeColors[type] || 'bg-gray-500'} opacity-70`}
+                              style={{ left: `${leftPct}%`, width: `${widthPct}%` }} />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )
