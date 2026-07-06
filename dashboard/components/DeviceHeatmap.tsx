@@ -171,8 +171,8 @@ function PopupContent({
         <button
           onClick={(e) => { e.stopPropagation(); onStartTest() }}
           style={{
-            marginTop: 10, width: '100%', padding: '6px 0', fontSize: 11, fontWeight: 600,
-            background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer'
+            marginTop: 8, width: '100%', padding: '4px 0', fontSize: 10, fontWeight: 500,
+            background: '#2563eb', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer'
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = '#1d4ed8')}
           onMouseLeave={(e) => (e.currentTarget.style.background = '#2563eb')}
@@ -545,20 +545,19 @@ export default function DeviceHeatmap({ timeRange = '24h', areaId, regionalId, n
 
         // Create popup with DOM content for React rendering
         const popupContainer = document.createElement('div')
-        const popup = new maplibregl.Popup({ offset: 15, closeButton: true, closeOnClick: false })
+        const popup = new maplibregl.Popup({ offset: 15, closeButton: true })
           .setDOMContent(popupContainer)
 
         marker.setPopup(popup)
 
         // Handle marker click to render React content into popup
         el.addEventListener('click', () => {
-          // Close any existing popup for this device
-          const existing = popupRootsRef.current.get(device.id)
-          if (existing) {
-            existing.root.unmount()
-            existing.popup.remove()
-            popupRootsRef.current.delete(device.id)
-          }
+          // Close all existing popups
+          popupRootsRef.current.forEach(({ root, popup }) => {
+            root.unmount()
+            popup.remove()
+          })
+          popupRootsRef.current.clear()
 
           selectedDeviceRef.current = device
           pollDeviceIdRef.current = null
