@@ -146,7 +146,7 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
         </div>
         <div className="flex items-center justify-between mb-1 px-1">
           <div>
-            <div className="text-[9px] text-gray-500">Rate</div>
+            <div className="text-[9px] text-gray-500">Test Success Rate</div>
             <div className="text-lg font-bold text-purple-400">{dashboardData?.successRate || 0}%</div>
           </div>
           <div className="text-right">
