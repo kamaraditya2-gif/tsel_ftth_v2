@@ -153,8 +153,8 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
         </div>
         <div className="space-y-1 mb-1">
           {(dashboardData?.speedPackages || []).map((pkg: any, i: number) => (
-            <div key={i} className="flex items-center justify-between px-1 py-0.5 bg-slate-700/20 rounded">
-              <span className="text-[9px] text-gray-300">{pkg.name}</span>
+            <div key={i} className="flex items-center justify-between px-1 py-0.5 bg-slate-700/30 rounded">
+              <span className="text-[9px] text-white font-medium">{pkg.name}</span>
               <span className="text-[9px] text-purple-300 font-semibold">{pkg.count}</span>
             </div>
           ))}
