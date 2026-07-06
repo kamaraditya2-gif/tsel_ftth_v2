@@ -10,15 +10,14 @@ export async function GET() {
     // 1. Severity Summary — classify devices by worst metric vs threshold
     const severityRes = await client.query(`
       WITH latest AS (
-        SELECT DISTINCT ON (d.id) d.id, d.serial_number, d.device_name,
-          p.ping_igw, p.ping_ebr, p.packet_loss_igw,
+        SELECT DISTINCT ON (d.id) d.id,
+          p.ping_igw, p.packet_loss_igw,
           sd.download_speed, su.upload_speed,
-          sg.download_threshold, sg.upload_threshold,
-          d.status
+          sg.download_threshold, sg.upload_threshold
         FROM devices_ont d
-        LEFT JOIN test_results_ping p ON p.device_id = d.id ORDER BY p.executed_at DESC
-        LEFT JOIN test_results_speed_download sd ON sd.device_id = d.id ORDER BY sd.executed_at DESC
-        LEFT JOIN test_results_speed_upload su ON su.device_id = d.id ORDER BY su.executed_at DESC
+        LEFT JOIN LATERAL (SELECT ping_igw, packet_loss_igw FROM test_results_ping WHERE device_id = d.id ORDER BY executed_at DESC LIMIT 1) p ON true
+        LEFT JOIN LATERAL (SELECT download_speed FROM test_results_speed_download WHERE device_id = d.id ORDER BY executed_at DESC LIMIT 1) sd ON true
+        LEFT JOIN LATERAL (SELECT upload_speed FROM test_results_speed_upload WHERE device_id = d.id ORDER BY executed_at DESC LIMIT 1) su ON true
         LEFT JOIN speed_group sg ON sg.id = d.speed_id
       )
       SELECT
