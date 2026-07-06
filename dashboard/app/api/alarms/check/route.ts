@@ -175,7 +175,7 @@ export async function GET(request: Request) {
           upload: device.upload,
           alarms: deviceAlarms,
           max_severity: deviceAlarms.some(a => a.severity === 'critical') ? 'critical' : 'warning',
-          root_cause: rootCause ? { id: rootCause.root_cause_id, note: rootCause.root_cause_note } : null,
+          root_cause: rootCause ? { id: rootCause.root_cause_id, note: rootCause.root_cause_note, action: rootCause.action, pic: rootCause.pic, assigned_at: rootCause.assigned_at } : null,
           ticket: ticket ? { id: ticket.id, number: ticket.ticket_number, status: ticket.status } : null,
         })
       }
@@ -201,7 +201,7 @@ export async function GET(request: Request) {
           upload: d.upload,
           alarms: [],
           max_severity: 'cleared',
-          root_cause: rootCause ? { id: rootCause.root_cause_id, note: rootCause.root_cause_note } : null,
+          root_cause: rootCause ? { id: rootCause.root_cause_id, note: rootCause.root_cause_note, action: rootCause.action, pic: rootCause.pic, assigned_at: rootCause.assigned_at } : null,
           ticket: ticket ? { id: ticket.id, number: ticket.ticket_number, status: ticket.status } : null,
         }
       })

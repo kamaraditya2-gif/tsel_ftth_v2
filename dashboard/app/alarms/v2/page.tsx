@@ -10,7 +10,7 @@ interface DeviceAlarm {
   device_id: number; device_name: string; serial_number: string; brand: string; ont_type: string
   speed_name: string; speed_limit: number; latency: number; packet_loss: number
   download: number; upload: number; alarms: AlarmItem[]; max_severity: string
-  root_cause: { id: number; note: string } | null; ticket: { id: number; number: string; status: string } | null
+  root_cause: { id: number; note: string; action: string; pic: string; assigned_at: string } | null; ticket: { id: number; number: string; status: string } | null
 }
 interface Comment { id: number; device_id: number; parent_id: number | null; comment: string; created_by: string; created_at: string }
 
@@ -122,7 +122,8 @@ function AlarmsV2Page() {
     const rc = rootCauses.find(r => r.id === selectedRc)
     const resp = await fetch('/api/alarms/root-cause/assign', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ device_id: expandedId, root_cause_id: selectedRc, note: rcNote, action: rcAction, pic: rcPIC }) })
     if (resp.ok) {
-      const upd = (arr: DeviceAlarm[]) => arr.map(dd => dd.device_id === expandedId ? { ...dd, root_cause: { id: selectedRc!, note: rcNote, action: rcAction, pic: rcPIC } as any } : dd)
+      const now = new Date().toISOString()
+      const upd = (arr: DeviceAlarm[]) => arr.map(dd => dd.device_id === expandedId ? { ...dd, root_cause: { id: selectedRc!, note: rcNote, action: rcAction, pic: rcPIC, assigned_at: now } as any } : dd)
       setData(prev => upd(prev))
       setCleared(prev => upd(prev))
     }
@@ -279,9 +280,8 @@ function AlarmsV2Page() {
                               <div className="mt-2 p-2 rounded bg-slate-700/50 border border-slate-600 text-[10px] text-gray-300 space-y-0.5">
                                 {rcInfo?.category && <p><span className="text-gray-500">L1:</span> {rcInfo.category}</p>}
                                 {rcInfo?.name && <p><span className="text-gray-500">L2:</span> {rcInfo.name}</p>}
-                                {(rc as any).note && <p><span className="text-gray-500">Note:</span> {(rc as any).note}</p>}
-                                {(rc as any).action && <p><span className="text-gray-500">Action:</span> {(rc as any).action}</p>}
-                                {(rc as any).pic && <p><span className="text-gray-500">PIC:</span> {(rc as any).pic}</p>}
+                                {rc.note && <p><span className="text-gray-500">Note:</span> {rc.note}</p>}
+                                {rc.assigned_at && <p><span className="text-gray-500">Assigned:</span> {new Date(rc.assigned_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</p>}
                               </div>
                             )
                           })()}
@@ -289,10 +289,22 @@ function AlarmsV2Page() {
                         {/* Action */}
                         <div><p className="text-xs text-gray-400 font-semibold uppercase mb-2">Action</p>
                           <textarea value={rcAction} onChange={e => setRcAction(e.target.value)} rows={2} placeholder="Describe action taken..." className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white" />
+                          {(() => {
+                            const ed = list.find(dd => dd.device_id === expandedId)
+                            const rc = ed?.root_cause
+                            if (!rc?.action) return null
+                            return <div className="mt-1 p-1.5 rounded bg-slate-700/30 text-[10px] text-gray-300"><span className="text-gray-500">Saved:</span> {rc.action}{rc.assigned_at ? <span className="text-gray-500 ml-2">at {new Date(rc.assigned_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</span> : ''}</div>
+                          })()}
                         </div>
                         {/* PIC */}
                         <div><p className="text-xs text-gray-400 font-semibold uppercase mb-2">PIC</p>
                           <input type="text" value={rcPIC} onChange={e => setRcPIC(e.target.value)} placeholder="Person in charge..." className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white" />
+                          {(() => {
+                            const ed = list.find(dd => dd.device_id === expandedId)
+                            const rc = ed?.root_cause
+                            if (!rc?.pic) return null
+                            return <div className="mt-1 p-1.5 rounded bg-slate-700/30 text-[10px] text-gray-300"><span className="text-gray-500">PIC:</span> {rc.pic}{rc.assigned_at ? <span className="text-gray-500 ml-2">at {new Date(rc.assigned_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</span> : ''}</div>
+                          })()}
                         </div>
                         <div><button onClick={runRetest} disabled={retesting} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500/20 text-indigo-300 text-sm hover:bg-indigo-500/30 disabled:opacity-40"><Play className="w-4 h-4" /> {retesting ? 'Submitting...' : 'Retest On-Demand'}</button></div>
                       </div>
