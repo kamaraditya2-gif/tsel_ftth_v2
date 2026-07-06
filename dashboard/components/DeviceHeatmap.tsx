@@ -99,13 +99,14 @@ function PopupContent({
   const fmt = (v: number | null, suffix = '') => v !== null ? Number(v).toFixed(1) + suffix : '-'
 
   return (
-    <div style={{ minWidth: 240, fontFamily: 'system-ui, sans-serif', fontSize: 12 }}>
-      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{device.serial_number}</div>
-      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>
+    <div style={{ minWidth: 240, maxWidth: 320, fontFamily: 'system-ui, sans-serif', fontSize: 12, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4, overflowWrap: 'break-word' }}>{device.serial_number}</div>
+      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8, overflowWrap: 'break-word' }}>
         {device.indihome_id || ''}{device.regional_name ? ' · ' + device.regional_name : ''}
       </div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+      <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 11 }}>
+        <colgroup><col style={{ width: '40%' }} /><col style={{ width: '60%' }} /></colgroup>
         <tbody>
           <tr>
             <td style={{ padding: '2px 4px', color: '#6b7280' }}>Status</td>
@@ -214,11 +215,12 @@ function PopupContent({
           <div style={{ fontSize: 10, fontWeight: 600, color: '#059669', marginBottom: 4 }}>
             Latest On-Demand Result
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, background: '#f0fdf4', borderRadius: 6 }}>
+          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 11, background: '#f0fdf4', borderRadius: 6 }}>
+            <colgroup><col style={{ width: '40%' }} /><col style={{ width: '60%' }} /></colgroup>
             <tbody>
               <tr>
-                <td style={{ padding: '2px 4px', color: '#6b7280' }}>Ping IGW</td>
-                <td style={{ padding: '2px 4px', textAlign: 'right', color: '#374151', fontWeight: ondemandState.results.ping_igw !== null && ondemandState.results.ping_igw > 50 ? 'bold' : 'normal' }}>
+                <td style={{ padding: '2px 4px', color: '#6b7280', overflowWrap: 'break-word' }}>Ping IGW</td>
+                <td style={{ padding: '2px 4px', textAlign: 'right', color: '#374151', overflowWrap: 'break-word', fontWeight: ondemandState.results.ping_igw !== null && ondemandState.results.ping_igw > 50 ? 'bold' : 'normal' }}>
                   {ondemandState.results.ping_igw !== null ? Number(ondemandState.results.ping_igw).toFixed(1) + ' ms' : '-'}
                 </td>
               </tr>
