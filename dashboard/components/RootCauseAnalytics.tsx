@@ -1,6 +1,6 @@
 'use client'
 
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
+import { useEffect, useRef } from 'react'
 
 const L1_COLORS = ['#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#10b981']
 const L2_COLORS = ['#ef4444', '#dc2626', '#f59e0b', '#d97706', '#3b82f6', '#2563eb', '#8b5cf6', '#7c3aed', '#10b981', '#059669']
@@ -8,10 +8,75 @@ const L2_COLORS = ['#ef4444', '#dc2626', '#f59e0b', '#d97706', '#3b82f6', '#2563
 interface RCItem { name: string; count: number }
 interface RootCauseData { l1: RCItem[]; l2: { category: string; name: string; count: number }[] }
 
+function PieCanvas({ data, colors }: { data: RCItem[]; colors: string[] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || data.length === 0) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const dpr = window.devicePixelRatio || 1
+    const w = canvas.clientWidth
+    const h = canvas.clientHeight
+    canvas.width = w * dpr
+    canvas.height = h * dpr
+    ctx.scale(dpr, dpr)
+
+    const cx = w / 2
+    const cy = h / 2
+    const r = Math.min(cx, cy) - 8
+    const total = data.reduce((s, i) => s + i.count, 0)
+    let startAngle = -Math.PI / 2
+
+    ctx.clearRect(0, 0, w, h)
+
+    data.forEach((item, i) => {
+      const sliceAngle = (item.count / total) * Math.PI * 2
+      ctx.beginPath()
+      ctx.moveTo(cx, cy)
+      ctx.arc(cx, cy, r, startAngle, startAngle + sliceAngle)
+      ctx.closePath()
+      ctx.fillStyle = colors[i % colors.length]
+      ctx.fill()
+
+      // label
+      const midAngle = startAngle + sliceAngle / 2
+      const lr = r * 0.65
+      const lx = cx + Math.cos(midAngle) * lr
+      const ly = cy + Math.sin(midAngle) * lr
+      ctx.fillStyle = '#fff'
+      ctx.font = 'bold 11px system-ui, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      if (sliceAngle > 0.15) {
+        ctx.fillText(`${(item.count / total * 100).toFixed(0)}%`, lx, ly)
+      }
+
+      startAngle += sliceAngle
+    })
+
+    // center hole
+    ctx.beginPath()
+    ctx.arc(cx, cy, r * 0.4, 0, Math.PI * 2)
+    ctx.fillStyle = '#1e293b'
+    ctx.fill()
+  }, [data, colors])
+
+  if (data.length === 0) return null
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width: '100%', height: 180 }}
+    />
+  )
+}
+
 export default function RootCauseAnalytics({ data }: { data: RootCauseData }) {
   const l1 = data?.l1 || []
   const l2 = data?.l2 || []
-  const l1Total = l1.reduce((s, i) => s + i.count, 0)
   const l2Max = Math.max(...l2.map(i => i.count), 1)
   const l2Sorted = [...l2].sort((a, b) => b.count - a.count)
 
@@ -24,13 +89,7 @@ export default function RootCauseAnalytics({ data }: { data: RootCauseData }) {
           <div className="h-[200px] flex items-center justify-center text-xs text-gray-500">No data</div>
         ) : (
           <>
-            <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                <Pie data={l1} dataKey="count" nameKey="name" cx="50%" cy="50%" outerRadius={75}>
-                  {l1.map((_, i) => <Cell key={i} fill={L1_COLORS[i % L1_COLORS.length]} />)}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
+            <PieCanvas data={l1} colors={L1_COLORS} />
             <div className="flex flex-wrap justify-center gap-3 mt-2">
               {l1.map((item, i) => (
                 <span key={item.name} className="flex items-center gap-1 text-[10px] text-gray-400">
