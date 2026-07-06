@@ -132,10 +132,12 @@ function PopupContent({
       </table>
 
       {ondemandState.status === 'idle' && (
-        <button onClick={(e) => { e.stopPropagation(); onStartTest() }}
-          style={{ marginTop: 6, width: '100%', padding: '4px 0', fontSize: 11, fontWeight: 500, background: '#2563eb', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
-          On Demand Test
-        </button>
+        <div style={{ marginTop: 6, textAlign: 'right' }}>
+          <span onClick={(e) => { e.stopPropagation(); onStartTest() }}
+            style={{ fontSize: 11, color: '#2563eb', fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+            On Demand Test
+          </span>
+        </div>
       )}
 
       {ondemandState.status === 'requesting' && (
