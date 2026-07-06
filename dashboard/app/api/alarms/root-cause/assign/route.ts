@@ -4,7 +4,7 @@ import pool from '@/lib/db'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { device_id, root_cause_id, note } = body
+    const { device_id, root_cause_id, note, action, pic } = body
 
     if (!device_id || !root_cause_id) {
       return NextResponse.json({ error: 'device_id and root_cause_id are required' }, { status: 400 })
@@ -12,14 +12,16 @@ export async function POST(request: Request) {
 
     const client = await pool.connect()
     await client.query(
-      `INSERT INTO device_alarm_root_cause (device_id, root_cause_id, root_cause_note, assigned_by, assigned_at)
-       VALUES ($1, $2, $3, 'admin', NOW())
+      `INSERT INTO device_alarm_root_cause (device_id, root_cause_id, root_cause_note, action, pic, assigned_by, assigned_at)
+       VALUES ($1, $2, $3, $4, $5, 'admin', NOW())
        ON CONFLICT (device_id) DO UPDATE SET
          root_cause_id = EXCLUDED.root_cause_id,
          root_cause_note = COALESCE(EXCLUDED.root_cause_note, device_alarm_root_cause.root_cause_note),
+         action = EXCLUDED.action,
+         pic = EXCLUDED.pic,
          assigned_by = 'admin',
          assigned_at = NOW()`,
-      [device_id, root_cause_id, note || null]
+      [device_id, root_cause_id, note || null, action || null, pic || null]
     )
     client.release()
 

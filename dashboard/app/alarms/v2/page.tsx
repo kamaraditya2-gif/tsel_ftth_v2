@@ -29,6 +29,7 @@ function AlarmsV2Page() {
   const [ticketPanel, setTicketPanel] = useState<any>(null)
   const [ticketSummary, setTicketSummary] = useState('');   const [ticketRCA, setTicketRCA] = useState('')
   const [selectedRc, setSelectedRc] = useState<number | null>(null); const [rcNote, setRcNote] = useState('')
+  const [selectedL1, setSelectedL1] = useState(''); const [rcAction, setRcAction] = useState(''); const [rcPIC, setRcPIC] = useState('')
   const [retesting, setRetesting] = useState(false)
   const [historyDevice, setHistoryDevice] = useState<any>(null)
   const [historyData, setHistoryData] = useState<any[]>([])
@@ -96,7 +97,7 @@ function AlarmsV2Page() {
   const toggleExpand = (d: DeviceAlarm) => {
     if (expandedId === d.device_id) { setExpandedId(null); return }
     setExpandedId(d.device_id); loadComments(d.device_id)
-    setSelectedRc(d.root_cause?.id || null); setRcNote(d.root_cause?.note || '')
+    setSelectedRc(d.root_cause?.id || null); setRcNote(d.root_cause?.note || ''); setRcAction((d.root_cause as any)?.action || ''); setRcPIC((d.root_cause as any)?.pic || '')
   }
 
   const addComment = async () => {
@@ -111,7 +112,7 @@ function AlarmsV2Page() {
   }
   const assignRootCause = async () => {
     if (!expandedId || !selectedRc) return
-    await fetch('/api/alarms/root-cause/assign', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ device_id: expandedId, root_cause_id: selectedRc, note: rcNote }) })
+    await fetch('/api/alarms/root-cause/assign', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ device_id: expandedId, root_cause_id: selectedRc, note: rcNote, action: rcAction, pic: rcPIC }) })
     fetchAlarms()
   }
   const createTicket = async () => {
@@ -221,16 +222,37 @@ function AlarmsV2Page() {
                   {expandedId === d.device_id && <tr key={`${d.device_id}-detail`}><td colSpan={13} className="px-6 py-4 bg-slate-800/30">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Left: Root Cause + Retest */}
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         <div><p className="text-xs text-gray-400 font-semibold uppercase mb-2">Root Cause</p>
-                          <div className="flex gap-2">
-                            <select value={selectedRc || ''} onChange={e => setSelectedRc(e.target.value ? parseInt(e.target.value) : null)} className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white">
-                              <option value="">Select root cause</option>
-                              {rootCauses.map(rc => <option key={rc.id} value={rc.id}>{rc.name} ({rc.category})</option>)}
+                          {/* L1 Category */}
+                          <select value={selectedL1} onChange={e => { setSelectedL1(e.target.value); setSelectedRc(null) }} className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white mb-2">
+                            <option value="">Select L1</option>
+                            {[...new Set(rootCauses.map(rc => rc.category))].map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                          </select>
+                          {/* L2 Root Cause */}
+                          {selectedL1 && (
+                            <select value={selectedRc || ''} onChange={e => setSelectedRc(e.target.value ? parseInt(e.target.value) : null)} className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white mb-2">
+                              <option value="">Select L2</option>
+                              {rootCauses.filter(rc => rc.category === selectedL1).map(rc => (
+                                <option key={rc.id} value={rc.id}>{rc.name}</option>
+                              ))}
                             </select>
-                            <button onClick={assignRootCause} className="px-3 py-1.5 rounded bg-blue-500/20 text-blue-300 text-sm hover:bg-blue-500/30">Save</button>
-                          </div>
-                          <input type="text" value={rcNote} onChange={e => setRcNote(e.target.value)} placeholder="Note..." className="w-full mt-2 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white" />
+                          )}
+                          {/* Note for Other */}
+                          {selectedL1 === 'Other' && (
+                            <input type="text" value={rcNote} onChange={e => setRcNote(e.target.value)} placeholder="Specify other cause..." className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white mb-2" />
+                          )}
+                          <button onClick={assignRootCause} disabled={!selectedRc} className="w-full py-1.5 rounded bg-blue-500/20 text-blue-300 text-sm hover:bg-blue-500/30 disabled:opacity-40">Save Root Cause</button>
+                        </div>
+                        {/* Action */}
+                        <div><p className="text-xs text-gray-400 font-semibold uppercase mb-2">Action</p>
+                          <textarea value={rcAction} onChange={e => setRcAction(e.target.value)} rows={2} placeholder="Describe action taken..." className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white" />
+                        </div>
+                        {/* PIC */}
+                        <div><p className="text-xs text-gray-400 font-semibold uppercase mb-2">PIC</p>
+                          <input type="text" value={rcPIC} onChange={e => setRcPIC(e.target.value)} placeholder="Person in charge..." className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white" />
                         </div>
                         <div><button onClick={runRetest} disabled={retesting} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500/20 text-indigo-300 text-sm hover:bg-indigo-500/30 disabled:opacity-40"><Play className="w-4 h-4" /> {retesting ? 'Submitting...' : 'Retest On-Demand'}</button></div>
                       </div>
