@@ -277,11 +277,11 @@ export default function ScheduledPage() {
               <div className="flex border-b border-white/10 pb-1">
                 <div className="w-28 shrink-0" />
                 {Array.from({ length: 24 }, (_, i) => (
-                  <div key={i} className="flex-1 text-[8px] text-gray-500 text-center">{String(i).padStart(2, '0')}:00</div>
+                  <div key={i} className="flex-1 text-[10px] text-gray-400 text-center">{String(i).padStart(2, '0')}:00</div>
                 ))}
               </div>
               {/* Color Legend */}
-              <div className="flex gap-3 text-[9px] text-gray-400 pb-2 border-b border-white/5 mb-2">
+              <div className="flex gap-4 text-xs text-gray-400 pb-2 border-b border-white/5 mb-2">
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-cyan-500" /> Ping</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-violet-500" /> Traceroute</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-emerald-500" /> Download</span>
@@ -304,11 +304,11 @@ export default function ScheduledPage() {
                 }
                 return (
                   <div key={task.id}>
-                    <div className="text-[9px] text-gray-400 mb-0.5 truncate" title={task.title}>{task.title}</div>
+                    <div className="text-xs text-gray-300 mb-0.5 truncate" title={task.title}>{task.title}</div>
                     <div className="space-y-0.5 mb-2">
                       {types.map((type: string) => (
                         <div key={type} className="flex items-center gap-2">
-                          <div className="w-28 shrink-0 text-[8px] text-gray-500 pl-2">{type}</div>
+                          <div className="w-28 shrink-0 text-[10px] text-gray-400 pl-2">{type}</div>
                           <div className="flex-1 h-3 relative bg-white/5 rounded overflow-hidden">
                             <div className={`absolute h-full rounded ${typeColors[type] || 'bg-gray-500'} opacity-70`}
                               style={{ left: `${leftPct}%`, width: `${widthPct}%` }} />
