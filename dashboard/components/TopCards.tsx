@@ -147,22 +147,17 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
           <Server className="w-3 h-3 text-purple-400" />
           <span className="text-[10px] font-bold text-white uppercase">Devices</span>
         </div>
-        <div className="grid grid-cols-2 gap-1.5 mb-1">
-          <div className="bg-slate-700/30 rounded-md p-1 text-center">
-            <div className="text-base font-bold text-white">{dashboardData?.totalDevices || 0}</div>
-            <div className="text-[9px] text-purple-300/70">Total</div>
-          </div>
-          <div className="bg-slate-700/30 rounded-md p-1 text-center">
-            <div className="text-base font-bold text-white">{dashboardData?.successRate || 0}%</div>
-            <div className="text-[9px] text-purple-300/70">Rate</div>
-          </div>
+        <div className="flex items-center justify-between mb-1 px-1">
+          <span className="text-base font-bold text-white">{dashboardData?.totalDevices || 0}</span>
+          <span className="text-[9px] text-purple-300/70">Total</span>
         </div>
-        <div className="flex gap-0.5 mb-1" style={{ height: '20px' }}>
-          {(ontTypeData || []).map((t: any, i: number) => {
-            const mx = Math.max(...(ontTypeData || []).map((x: any) => x.total_devices || 0))
-            const h = mx > 0 ? ((t.total_devices || 0) / mx) * 18 : 3
-            return <div key={i} className="flex-1 self-end"><div className="w-full rounded-t" style={{ height: h + 'px', backgroundColor: ['#a855f7','#c084fc','#d8b4fe','#e9d5ff'][i % 5] }} /></div>
-          })}
+        <div className="space-y-1 mb-1">
+          {(dashboardData?.speedPackages || []).map((pkg: any, i: number) => (
+            <div key={i} className="flex items-center justify-between px-1 py-0.5 bg-slate-700/20 rounded">
+              <span className="text-[9px] text-gray-300">{pkg.name}</span>
+              <span className="text-[9px] text-purple-300 font-semibold">{pkg.count}</span>
+            </div>
+          ))}
         </div>
         <div className="grid grid-cols-3 gap-0.5 text-[9px] pt-1 border-t border-slate-700/50">
           <div><span className="text-gray-500">Alarm:</span> <span className="text-purple-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms()}>{actTotal}</span></div>

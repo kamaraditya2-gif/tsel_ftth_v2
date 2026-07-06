@@ -425,8 +425,20 @@ export async function GET(request: Request) {
       LIMIT 5
     `, filterParams)
 
+    // Device counts by speed package
+    let speedPackages: { name: string; count: number }[] = []
+    try {
+      const spRes = await client.query(`
+        SELECT COALESCE(sg.name, 'No Package') as name, COUNT(*) as count
+        FROM devices_ont d LEFT JOIN speed_group sg ON d.speed_id = sg.id
+        GROUP BY sg.name ORDER BY sg.speed_limit ASC NULLS LAST
+      `)
+      speedPackages = spRes.rows.map(r => ({ name: r.name, count: parseInt(r.count) }))
+    } catch (e) { /* ignore */ }
+
     return NextResponse.json({
       totalDevices,
+      speedPackages,
       deviceStatus: {
         total: parseInt(deviceStatus.total),
         online: parseInt(deviceStatus.online),
