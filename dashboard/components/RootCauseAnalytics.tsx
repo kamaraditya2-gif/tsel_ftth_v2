@@ -26,7 +26,7 @@ export default function RootCauseAnalytics({ data }: { data: RootCauseData }) {
           <>
             <ResponsiveContainer width="100%" height={180}>
                 <PieChart>
-                <Pie data={l1} dataKey="count" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                <Pie data={l1} dataKey="count" nameKey="name" cx="50%" cy="50%" outerRadius={75}>
                   {l1.map((_, i) => <Cell key={i} fill={L1_COLORS[i % L1_COLORS.length]} />)}
                 </Pie>
               </PieChart>
