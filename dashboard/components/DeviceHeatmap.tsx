@@ -34,12 +34,8 @@ interface DownstreamServer {
   color: string
 }
 
-type MetricMode = 'ping' | 'speed'
-type DataSource = 'upstream' | 'downstream'
-
 interface DeviceHeatmapProps {
   timeRange?: string
-  dataSource?: 'upstream' | 'downstream'
   regionalId?: string
   areaId?: string
   nopId?: string
@@ -52,68 +48,34 @@ interface DeviceHeatmapProps {
   serverId?: string
 }
 
-function getPingColor(ping: number | null, status: string): string {
-  if (status === 'offline') return '#ef4444'
-  if (ping === null) return '#6b7280'
-  if (ping < 20) return '#22c55e'
-  if (ping < 50) return '#84cc16'
-  if (ping < 100) return '#eab308'
-  if (ping < 200) return '#f97316'
-  return '#ef4444'
-}
-
-function getSpeedColor(device: MapDevice): string {
+function getColor(device: MapDevice): string {
   if (device.status === 'offline') return '#ef4444'
-  const speed = device.download_speed
-  const threshold = device.download_threshold
-  if (speed === null || threshold === null) return '#6b7280'
-  const ratio = Number(speed) / Number(threshold)
-  if (ratio >= 1) return '#22c55e'
-  if (ratio >= 0.8) return '#84cc16'
-  if (ratio >= 0.6) return '#eab308'
-  if (ratio >= 0.4) return '#f97316'
+  const dlOk = device.download_speed !== null && device.download_threshold !== null && Number(device.download_speed) >= Number(device.download_threshold)
+  const ulOk = device.upload_speed !== null && device.upload_threshold !== null && Number(device.upload_speed) >= Number(device.upload_threshold)
+  const pingOk = device.ping_igw !== null && device.ping_igw < 50
+  const lossOk = device.packet_loss_percent !== null && device.packet_loss_percent < 3
+  const latencyOk = device.avg_latency_ms !== null && device.avg_latency_ms < 50
+  const passed = [dlOk, ulOk, pingOk, lossOk, latencyOk].filter(Boolean).length
+  const total = [device.download_speed !== null || device.download_threshold !== null,
+    device.upload_speed !== null || device.upload_threshold !== null,
+    device.ping_igw !== null, device.packet_loss_percent !== null,
+    device.avg_latency_ms !== null].filter(Boolean).length
+  if (total === 0) return '#6b7280'
+  const ratio = passed / total
+  if (ratio >= 0.8) return '#22c55e'
+  if (ratio >= 0.5) return '#eab308'
   return '#ef4444'
-}
-
-function getDownstreamPingColor(device: MapDevice): string {
-  if (device.status === 'offline') return '#ef4444'
-  const ping = device.avg_latency_ms
-  if (ping === null) return '#6b7280'
-  if (ping < 20) return '#22c55e'
-  if (ping < 50) return '#84cc16'
-  if (ping < 100) return '#eab308'
-  if (ping < 200) return '#f97316'
-  return '#ef4444'
-}
-
-function getPacketLossColor(device: MapDevice): string {
-  if (device.status === 'offline') return '#ef4444'
-  const loss = device.packet_loss_percent
-  if (loss === null) return '#6b7280'
-  if (loss < 1) return '#22c55e'
-  if (loss < 3) return '#84cc16'
-  if (loss < 5) return '#eab308'
-  if (loss < 10) return '#f97316'
-  return '#ef4444'
-}
-
-function getColor(device: MapDevice, metric: MetricMode, dataSource: DataSource): string {
-  if (dataSource === 'downstream') {
-    return metric === 'ping' ? getDownstreamPingColor(device) : getPacketLossColor(device)
-  }
-  return metric === 'ping' ? getPingColor(device.ping_igw, device.status) : getSpeedColor(device)
 }
 
 function getRadius(status: string): number {
   return status === 'offline' ? 16 : 12
 }
 
-export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataSource = 'upstream', areaId, regionalId, nopId, areaIds, regionalIds, nopIds, speedGroupId, manufacturerId, ontModelId, serverId }: DeviceHeatmapProps) {
+export default function DeviceHeatmap({ timeRange = '24h', areaId, regionalId, nopId, areaIds, regionalIds, nopIds, speedGroupId, manufacturerId, ontModelId, serverId }: DeviceHeatmapProps) {
   const [devices, setDevices] = useState<MapDevice[]>([])
   const [servers, setServers] = useState<DownstreamServer[]>([])
   const [loading, setLoading] = useState(true)
-  const [metric, setMetric] = useState<MetricMode>('ping')
-  const [dataSource, setDataSource] = useState<DataSource>(propDataSource)
+  const [dataSource, setDataSource] = useState<'upstream' | 'downstream'>('upstream')
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markersRef = useRef<maplibregl.Marker[]>([])
@@ -293,7 +255,7 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
 
       // Device markers
       validDevices.forEach((device) => {
-        const color = getColor(device, metric, dataSource)
+        const color = getColor(device)
         const radius = getRadius(device.status)
         const diameter = radius * 2
 
@@ -313,28 +275,19 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
           .setLngLat([Number(device.lng), Number(device.lat)])
           .addTo(map)
 
-        const metricRow = metric === 'ping'
-          ? (dataSource === 'upstream'
-              ? (device.ping_igw !== null ? `<span style="background:#f3f4f6;color:#374151;padding:2px 8px;border-radius:9999px">Ping ${device.ping_igw}ms</span>` : '')
-              : (device.avg_latency_ms !== null ? `<span style="background:#f3f4f6;color:#374151;padding:2px 8px;border-radius:9999px">Ping ${Number(device.avg_latency_ms).toFixed(1)}ms</span>` : ''))
-          : (dataSource === 'upstream'
-              ? (device.download_speed !== null
-                  ? `<span style="background:#f3f4f6;color:#374151;padding:2px 8px;border-radius:9999px">DL ${Number(device.download_speed).toFixed(1)} Mbps${device.download_threshold !== null ? ` / ${Number(device.download_threshold).toFixed(0)}` : ''}</span>`
-                  : '')
-              : (device.avg_latency_ms !== null
-                  ? `<span style="background:#f3f4f6;color:#374151;padding:2px 8px;border-radius:9999px">Latency ${Number(device.avg_latency_ms).toFixed(1)}ms${device.packet_loss_percent !== null ? ` / Loss ${Number(device.packet_loss_percent).toFixed(1)}%` : ''}</span>`
-                  : ''))
-
         const popupContent = `
-          <div style="min-width:180px;font-family:system-ui,sans-serif">
-            <div style="font-weight:600;font-size:14px;margin-bottom:6px">${device.serial_number}</div>
-            <div style="font-size:12px;color:#6b7280;margin-bottom:2px">IndiHome: ${device.indihome_id || '-'}</div>
-            <div style="font-size:12px;color:#6b7280;margin-bottom:2px">Regional: ${device.regional_name || '-'}</div>
-            <div style="font-size:12px;color:#6b7280;margin-bottom:4px">Speed: ${device.speed_name || '-'}</div>
-            <div style="display:flex;gap:8px;font-size:11px;flex-wrap:wrap">
-              <span style="background:${device.status === 'online' ? '#dcfce7' : '#fee2e2'};color:${device.status === 'online' ? '#166534' : '#991b1b'};padding:2px 8px;border-radius:9999px;font-weight:500">${device.status.toUpperCase()}</span>
-              ${metricRow}
-            </div>
+          <div style="min-width:200px;font-family:system-ui,sans-serif">
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px">${device.serial_number}</div>
+            <div style="font-size:11px;color:#6b7280;margin-bottom:6px">${device.indihome_id || ''}${device.regional_name ? ' · ' + device.regional_name : ''}</div>
+            <table style="width:100%;font-size:11px;border-collapse:collapse">
+              <tr><td style="padding:2px 4px;color:#6b7280">Status</td><td style="padding:2px 4px;text-align:right"><span style="background:${device.status === 'online' ? '#dcfce7' : '#fee2e2'};color:${device.status === 'online' ? '#166534' : '#991b1b'};padding:1px 6px;border-radius:9999px">${device.status.toUpperCase()}</span></td></tr>
+              <tr><td style="padding:2px 4px;color:#6b7280">Speed</td><td style="padding:2px 4px;text-align:right;color:#374151">${device.speed_name || '-'}${device.speed_name ? ' (' + device.speed_name + ')' : ''}</td></tr>
+              <tr><td style="padding:2px 4px;color:#6b7280">Ping IGW</td><td style="padding:2px 4px;text-align:right;color:#374151;font-weight:${device.ping_igw !== null && device.ping_igw > 50 ? 'bold;color:#ef4444' : 'normal'}">${device.ping_igw !== null ? device.ping_igw + ' ms' : '-'}</td></tr>
+              <tr><td style="padding:2px 4px;color:#6b7280">Download</td><td style="padding:2px 4px;text-align:right;color:#374151;font-weight:${device.download_speed !== null && device.download_threshold !== null && Number(device.download_speed) < Number(device.download_threshold) ? 'bold;color:#ef4444' : 'normal'}">${device.download_speed !== null ? Number(device.download_speed).toFixed(1) + ' Mbps' : '-'}${device.download_threshold !== null ? ' / ' + Number(device.download_threshold).toFixed(0) + ' Mbps' : ''}</td></tr>
+              <tr><td style="padding:2px 4px;color:#6b7280">Upload</td><td style="padding:2px 4px;text-align:right;color:#374151;font-weight:${device.upload_speed !== null && device.upload_threshold !== null && Number(device.upload_speed) < Number(device.upload_threshold) ? 'bold;color:#ef4444' : 'normal'}">${device.upload_speed !== null ? Number(device.upload_speed).toFixed(1) + ' Mbps' : '-'}${device.upload_threshold !== null ? ' / ' + Number(device.upload_threshold).toFixed(0) + ' Mbps' : ''}</td></tr>
+              <tr><td style="padding:2px 4px;color:#6b7280">Packet Loss</td><td style="padding:2px 4px;text-align:right;color:#374151;font-weight:${device.packet_loss_percent !== null && device.packet_loss_percent > 3 ? 'bold;color:#ef4444' : 'normal'}">${device.packet_loss_percent !== null ? Number(device.packet_loss_percent).toFixed(1) + '%' : '-'}</td></tr>
+              <tr><td style="padding:2px 4px;color:#6b7280">Direct Latency</td><td style="padding:2px 4px;text-align:right;color:#374151;font-weight:${device.avg_latency_ms !== null && device.avg_latency_ms > 50 ? 'bold;color:#ef4444' : 'normal'}">${device.avg_latency_ms !== null ? Number(device.avg_latency_ms).toFixed(1) + ' ms' : '-'}</td></tr>
+            </table>
           </div>
         `
 
@@ -357,7 +310,7 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
         lineSourceRef.current = null
       }
     }
-  }, [devices, metric, dataSource, servers, serverId])
+  }, [devices, dataSource, servers, serverId])
 
   useEffect(() => {
     return () => {
@@ -395,70 +348,16 @@ export default function DeviceHeatmap({ timeRange = '24h', dataSource: propDataS
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 p-0.5 bg-gray-50 dark:bg-gray-900 self-start">
-            <button
-              onClick={() => setDataSource('upstream')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${dataSource === 'upstream' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'}`}
-            >
-              Upstream
-            </button>
-            <button
-              onClick={() => setDataSource('downstream')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${dataSource === 'downstream' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'}`}
-            >
-              Downstream
-            </button>
+            <button onClick={() => setDataSource('upstream')}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${dataSource === 'upstream' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'}`}>Upstream</button>
+            <button onClick={() => setDataSource('downstream')}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${dataSource === 'downstream' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'}`}>Downstream</button>
           </div>
-          <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 p-0.5 bg-gray-50 dark:bg-gray-900 self-start">
-            <button
-              onClick={() => setMetric('ping')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${metric === 'ping' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'}`}
-            >
-              {dataSource === 'upstream' ? 'Ping Latency' : 'Latency'}
-            </button>
-            <button
-              onClick={() => setMetric('speed')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${metric === 'speed' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'}`}
-            >
-              {dataSource === 'upstream' ? 'Speed Threshold' : 'Packet Loss'}
-            </button>
-          </div>
-          <div className="flex flex-col gap-1 text-xs">
-            <span className="text-gray-500 dark:text-gray-400">
-              {dataSource === 'upstream'
-                ? (metric === 'ping' ? 'Ping latency (ms)' : 'Download vs threshold')
-                : (metric === 'ping' ? 'Direct ping latency (ms)' : 'Packet loss (%)')
-              }
-            </span>
-            <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 flex-wrap">
-              {metric === 'ping' ? (
-                <>
-                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500"></span>&lt;20</span>
-                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-lime-500"></span>20-50</span>
-                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-yellow-500"></span>50-100</span>
-                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-500"></span>100-200</span>
-                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500"></span>&gt;200</span>
-                </>
-              ) : (
-                dataSource === 'upstream' ? (
-                  <>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500"></span>&ge;100%</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-lime-500"></span>80-99%</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-yellow-500"></span>60-79%</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-500"></span>40-59%</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500"></span>&lt;40%</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500"></span>&lt;1%</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-lime-500"></span>1-3%</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-yellow-500"></span>3-5%</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-500"></span>5-10%</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500"></span>&gt;10%</span>
-                  </>
-                )
-              )}
-              <span className="flex items-center gap-1 border-l border-gray-300 dark:border-gray-600 pl-2 ml-1"><span className="w-3 h-3 rounded-full bg-gray-500"></span>no data</span>
-            </div>
+          <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500"></span>≥80% OK</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-yellow-500"></span>50-80%</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500"></span>&lt;50%</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-gray-500"></span>No data</span>
           </div>
         </div>
       </div>
