@@ -436,10 +436,71 @@ export async function GET(request: Request) {
       speedPackages = spRes.rows.map(r => ({ name: r.name, count: parseInt(r.count) }))
     } catch (e) { /* ignore */ }
 
+    // Speed test progress & threshold stats
+    let speedProgress = { dlTested: 0, dlTotal: 0, ulTested: 0, ulTotal: 0, dlAbove: 0, dlBelow: 0, ulAbove: 0, ulBelow: 0, dlSr: 0, ulSr: 0 }
+    try {
+      const dlRes = await client.query(`
+        SELECT COUNT(*) as cnt FROM (SELECT 1 FROM devices_ont d LEFT JOIN test_results_speed_download sd ON sd.device_id = d.id AND sd.executed_at > NOW() - INTERVAL '${interval}' ${whereClauseWithTime} GROUP BY d.id HAVING COUNT(sd.id) > 0) sub
+      `, filterParams)
+      const dlTested = parseInt(dlRes.rows[0]?.cnt || 0)
+      const totalDev = parseInt(totalDevices)
+      const dlAboveRes = await client.query(`SELECT COUNT(*) as cnt FROM (SELECT d.id, MAX(sd.download_speed) as speed, MAX(sg.download_threshold) as th FROM devices_ont d LEFT JOIN test_results_speed_download sd ON sd.device_id = d.id AND sd.executed_at > NOW() - INTERVAL '${interval}' LEFT JOIN speed_group sg ON sg.id = d.speed_id ${whereClauseWithTime} GROUP BY d.id HAVING MAX(sd.download_speed) IS NOT NULL AND MAX(sg.download_threshold) IS NOT NULL) sub WHERE speed >= th`, filterParams)
+      const dlBelowRes = await client.query(`SELECT COUNT(*) as cnt FROM (SELECT d.id, MAX(sd.download_speed) as speed, MAX(sg.download_threshold) as th FROM devices_ont d LEFT JOIN test_results_speed_download sd ON sd.device_id = d.id AND sd.executed_at > NOW() - INTERVAL '${interval}' LEFT JOIN speed_group sg ON sg.id = d.speed_id ${whereClauseWithTime} GROUP BY d.id HAVING MAX(sd.download_speed) IS NOT NULL AND MAX(sg.download_threshold) IS NOT NULL) sub WHERE speed < th`, filterParams)
+      const ulRes = await client.query(`SELECT COUNT(*) as cnt FROM (SELECT 1 FROM devices_ont d LEFT JOIN test_results_speed_upload su ON su.device_id = d.id AND su.executed_at > NOW() - INTERVAL '${interval}' ${whereClauseWithTime} GROUP BY d.id HAVING COUNT(su.id) > 0) sub`, filterParams)
+      const ulTested = parseInt(ulRes.rows[0]?.cnt || 0)
+      const ulAboveRes = await client.query(`SELECT COUNT(*) as cnt FROM (SELECT d.id, MAX(su.upload_speed) as speed, MAX(sg.upload_threshold) as th FROM devices_ont d LEFT JOIN test_results_speed_upload su ON su.device_id = d.id AND su.executed_at > NOW() - INTERVAL '${interval}' LEFT JOIN speed_group sg ON sg.id = d.speed_id ${whereClauseWithTime} GROUP BY d.id HAVING MAX(su.upload_speed) IS NOT NULL AND MAX(sg.upload_threshold) IS NOT NULL) sub WHERE speed >= th`, filterParams)
+      const ulBelowRes = await client.query(`SELECT COUNT(*) as cnt FROM (SELECT d.id, MAX(su.upload_speed) as speed, MAX(sg.upload_threshold) as th FROM devices_ont d LEFT JOIN test_results_speed_upload su ON su.device_id = d.id AND su.executed_at > NOW() - INTERVAL '${interval}' LEFT JOIN speed_group sg ON sg.id = d.speed_id ${whereClauseWithTime} GROUP BY d.id HAVING MAX(su.upload_speed) IS NOT NULL AND MAX(sg.upload_threshold) IS NOT NULL) sub WHERE speed < th`, filterParams)
+      const dlA = parseInt(dlAboveRes.rows[0]?.cnt || 0)
+      const dlB = parseInt(dlBelowRes.rows[0]?.cnt || 0)
+      const ulA = parseInt(ulAboveRes.rows[0]?.cnt || 0)
+      const ulB = parseInt(ulBelowRes.rows[0]?.cnt || 0)
+      speedProgress = {
+        dlTested, dlTotal: totalDev, ulTested, ulTotal: totalDev,
+        dlAbove: dlA, dlBelow: dlB, ulAbove: ulA, ulBelow: ulB,
+        dlSr: (dlA + dlB) > 0 ? Number((dlA / (dlA + dlB) * 100).toFixed(1)) : 0,
+        ulSr: (ulA + ulB) > 0 ? Number((ulA / (ulA + ulB) * 100).toFixed(1)) : 0,
+      }
+    } catch (e) { /* ignore */ }
+
+    // Ping test progress & stats
+    let pingProgress = { tested: 0, total: 0, successRate: 0, avgPacketLoss: 0 }
+    try {
+      const pp = await client.query(`
+        SELECT COUNT(*) as cnt FROM (SELECT 1 FROM devices_ont d LEFT JOIN test_results_ping p ON p.device_id = d.id AND p.executed_at > NOW() - INTERVAL '${interval}' ${whereClauseWithTime} GROUP BY d.id HAVING COUNT(p.id) > 0) sub
+      `, filterParams)
+      const pingTested = parseInt(pp.rows[0]?.cnt || 0)
+      const pingSrRes = await client.query(`SELECT ROUND(COUNT(*) FILTER (WHERE p.success = true)::numeric / NULLIF(COUNT(*), 0) * 100, 1) as sr, COALESCE(ROUND(AVG(p.packet_loss_igw)::numeric, 1), 0) as avg_pl FROM devices_ont d LEFT JOIN test_results_ping p ON p.device_id = d.id AND p.executed_at > NOW() - INTERVAL '${interval}' ${whereClauseWithTime}`, filterParams)
+      pingProgress = {
+        tested: pingTested, total: totalDev,
+        successRate: Number(pingSrRes.rows[0]?.sr || 0),
+        avgPacketLoss: Number(pingSrRes.rows[0]?.avg_pl || 0),
+      }
+    } catch (e) { /* ignore */ }
+
+    // Ping test progress & stats
+    let pingProgress = { tested: 0, total: 0, successRate: 0, avgPacketLoss: 0 }
+    try {
+      const pp = await client.query(`
+        SELECT
+          COUNT(DISTINCT p.device_id) as tested, (SELECT COUNT(*) FROM devices_ont) as total,
+          ROUND(COUNT(*) FILTER (WHERE p.success = true)::numeric / NULLIF(COUNT(*), 0) * 100, 1) as sr,
+          COALESCE(ROUND(AVG(p.packet_loss_igw)::numeric, 1), 0) as avg_pl
+        FROM devices_ont d
+        LEFT JOIN test_results_ping p ON p.device_id = d.id AND p.executed_at > NOW() - INTERVAL '${interval}'
+        ${whereClauseWithTime}
+      `, filterParams)
+      const p = pp.rows[0]
+      pingProgress = {
+        tested: parseInt(p.tested), total: parseInt(p.total),
+        successRate: Number(p.sr || 0), avgPacketLoss: Number(p.avg_pl || 0),
+      }
+    } catch (e) { /* ignore */ }
+
     return NextResponse.json({
       totalDevices,
       speedPackages,
-      deviceStatus: {
+      speedProgress,
+      pingProgress,
         total: parseInt(deviceStatus.total),
         online: parseInt(deviceStatus.online),
         offline: parseInt(deviceStatus.offline)
