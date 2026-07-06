@@ -142,8 +142,8 @@ function AlarmsV2Page() {
   }
 
   const severityColor = (s: string) => s === 'critical' ? 'text-red-400 bg-red-500/10 border-red-500/30' : s === 'warning' ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' : 'text-green-400 bg-green-500/10 border-green-500/30'
-  const alarmColor = (d: DeviceAlarm, type: string) => {
-    const a = d.alarms?.find((x: any) => x.alarm_type?.toLowerCase() === type.toLowerCase())
+  const alarmColor = (d: DeviceAlarm, ...types: string[]) => {
+    const a = d.alarms?.find((x: any) => types.some(t => x.alarm_type?.toLowerCase() === t.toLowerCase()))
     if (!a) return 'text-white'
     return a.severity === 'critical' ? 'text-red-400' : 'text-amber-400'
   }
@@ -246,10 +246,10 @@ function AlarmsV2Page() {
                     <td className="px-4 py-3"><p className="text-sm text-white">{d.device_name}</p><p className="text-xs text-gray-400">{d.serial_number}</p></td>
                     <td className="px-4 py-3"><p className="text-sm text-white">{d.brand || '-'}</p><p className="text-xs text-gray-400">{d.ont_type || ''}</p></td>
                     <td className="px-4 py-3"><span className="text-xs text-gray-400">{new Date().toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'})} {new Date().toLocaleDateString('id-ID', {day:'2-digit',month:'short'})}</span></td>
-                    <td className="px-4 py-3">{d.latency != null ? <span className={`text-sm font-mono ${alarmColor(d, 'latency')}`}>{Number(d.latency).toFixed(2)} ms</span> : <span className="text-xs text-gray-500">—</span>}</td>
-                    <td className="px-4 py-3">{d.packet_loss != null ? <span className={`text-sm font-mono ${alarmColor(d, 'packet_loss')}`}>{Number(d.packet_loss).toFixed(2)}%</span> : <span className="text-xs text-gray-500">—</span>}</td>
-                    <td className="px-4 py-3">{d.download != null ? <span className={`text-sm font-mono ${alarmColor(d, 'download')}`}>{Number(d.download).toFixed(2)} Mbps</span> : <span className="text-xs text-gray-500">—</span>}</td>
-                    <td className="px-4 py-3">{d.upload != null ? <span className={`text-sm font-mono ${alarmColor(d, 'upload')}`}>{Number(d.upload).toFixed(2)} Mbps</span> : <span className="text-xs text-gray-500">—</span>}</td>
+                    <td className="px-4 py-3">{d.latency != null ? <span className={`text-sm font-mono ${alarmColor(d, 'latency', 'Latency', 'Latency_IGW', 'Latency_EBR')}`}>{Number(d.latency).toFixed(2)} ms</span> : <span className="text-xs text-gray-500">—</span>}</td>
+                    <td className="px-4 py-3">{d.packet_loss != null ? <span className={`text-sm font-mono ${alarmColor(d, 'packet_loss', 'Packet_Loss', 'Packet_Loss_IGW', 'Packet_Loss_EBR')}`}>{Number(d.packet_loss).toFixed(2)}%</span> : <span className="text-xs text-gray-500">—</span>}</td>
+                    <td className="px-4 py-3">{d.download != null ? <span className={`text-sm font-mono ${alarmColor(d, 'download', 'Download_Speed')}`}>{Number(d.download).toFixed(2)} Mbps</span> : <span className="text-xs text-gray-500">—</span>}</td>
+                    <td className="px-4 py-3">{d.upload != null ? <span className={`text-sm font-mono ${alarmColor(d, 'upload', 'Upload_Speed')}`}>{Number(d.upload).toFixed(2)} Mbps</span> : <span className="text-xs text-gray-500">—</span>}</td>
                     <td className="px-4 py-3"><span className="text-sm text-gray-300">{d.speed_name || '-'} {d.speed_limit ? '(' + d.speed_limit + ' Mbps)' : ''}</span></td>
                     <td className="px-4 py-3"><span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${severityColor(d.max_severity)}`}>{d.max_severity === 'critical' ? <AlertCircle className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}{d.max_severity}</span></td>
                     <td className="px-4 py-3">{d.ticket ? <span className="text-xs text-blue-400">{d.ticket.number}</span> : <span className="text-xs text-gray-500">—</span>}</td>
