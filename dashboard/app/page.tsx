@@ -228,7 +228,7 @@ export default function DashboardPage() {
     try {
       const res = await fetch('/api/dashboard/v2')
       const data = await res.json()
-      if (data && data.kpi && data.threshold && data.rootCause && data.topAlarms) setDashboardV2(data)
+      if (data && data.kpi) setDashboardV2(data)
     } catch (error) {
       console.error('Failed to fetch dashboard v2 data:', error)
     }
