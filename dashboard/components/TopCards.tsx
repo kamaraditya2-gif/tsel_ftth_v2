@@ -67,7 +67,7 @@ export default function TopCards({ dashboardData, dashboardV2, ontBrandData, ont
         <div className="grid grid-cols-3 gap-0.5 text-[9px] pt-1 border-t border-slate-700/50">
           <div><span className="text-gray-500">Critical:</span> <span className="text-red-400 font-bold cursor-pointer hover:underline" onClick={() => goAlarms('active', 'critical')}>{actCritical}</span></div>
           <div><span className="text-gray-500">Warning:</span> <span className="text-amber-400 cursor-pointer hover:underline" onClick={() => goAlarms('active', 'warning')}>{actWarning}</span></div>
-          <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400 cursor-pointer hover:underline" onClick={() => goAlarms('cleared')}>{cleared?.bySeverity?.critical || 0 + cleared?.bySeverity?.warning || 0}</span></div>
+          <div><span className="text-gray-500">Cleared:</span> <span className="text-green-400 cursor-pointer hover:underline" onClick={() => goAlarms('cleared')}>{(cleared?.bySeverity?.critical || 0) + (cleared?.bySeverity?.warning || 0)}</span></div>
         </div>
       </div>
 
