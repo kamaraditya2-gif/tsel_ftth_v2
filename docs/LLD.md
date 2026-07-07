@@ -697,41 +697,407 @@ API Protection:
 
 ---
 
-## 9. Docker & Infrastructure
+## 9. Container & Infrastructure Detail
 
-### 9.1 Container Architecture
+### 9.1 Dockerfile Analysis
+
+#### Dashboard (`dashboard/Dockerfile`) — Multi-stage Build
+
+**Stage 1: Builder**
+- Base: `node:20-alpine`
+- Runs `npm install --legacy-peer-deps` (full dev dependencies)
+- Builds Next.js with dummy env vars (DB/REDIS dummies for build-time resolution)
+- Output: `.next` build artifacts, `node_modules`
+
+**Stage 2: Runner**
+- Base: `node:20-slim` (Debian-based, larger than Alpine but required for Docker CLI)
+- Includes:
+  - `docker` CLI (static binary v29.1.3) — for `docker compose scale` from admin UI
+  - `docker-compose` (standalone v2.35.1) — scaling operations
+  - `ca-certificates`, `curl` — HTTPS connectivity
+- Copies only: `.next`, `node_modules` (production), `public/`, `package.json`, `next.config.js`
+- Startup: `npm start` → `next start` on port 3000
+
+#### Worker (`worker/Dockerfile`) — Single Stage
+
+- Base: `node:20-alpine`
+- Installs OS deps: `fping`, `iputils` (for ICMP ping + fping)
+- `npm install --production` (no dev deps)
+- Single image used for all worker types (queue selection via `QUEUE_NAME` env var)
+- Startup: `node worker.js` or `node dispatcher.js` or `node start-direct-ping-worker.js`
+
+### 9.2 Container Environment Variables
+
+#### PostgreSQL (`postgres:15-alpine`)
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `POSTGRES_USER` | `${POSTGRES_USER:-mojojojo_user}` | Database user |
+| `POSTGRES_PASSWORD` | `${POSTGRES_PASSWORD}` | Database password |
+| `POSTGRES_DB` | `${POSTGRES_DB:-mojojojo_database}` | Database name |
+| `TZ` | `Asia/Jakarta` | Timezone |
+| `POSTGRES_PORT` | `5432` | Port (internal) |
+
+**Command args:** `postgres -c timezone=Asia/Jakarta`
+
+#### Redis (`redis:7-alpine`)
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `REDIS_PASSWORD` | `${REDIS_PASSWORD}` | Auth password |
+
+**Command:** `redis-server /usr/local/etc/redis/redis.conf`
+**Config file:** `./config/redis.conf` (mounted read-only)
 ```
-docker-compose.yml (unified stack)
-  ├── postgres (mojojojo_postgres) — port 5432
-  ├── redis (mojojojo_redis) — port 6379
-  ├── mojo_dashboard (mojojojo_dashboard) — port 3002→3000
-  ├── mojo_dispatcher (mojojojo_dispatcher)
-  ├── mojo_worker_fast (mojojojo_worker_fast)
-  ├── mojo_worker_download (mojojojo_worker_download)
-  ├── mojo_worker_upload (mojojojo_worker_upload)
-  └── mojo_direct_ping_worker (mojojojo_direct_ping_worker)
+requirepass ${REDIS_PASSWORD}
+```
+**Security opts:** `no-new-privileges:true`, `read_only: true`, `tmpfs: /tmp`
+
+#### Dashboard (Next.js)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `NEXT_PUBLIC_API_URL` | `http://localhost/api` | Public API base URL |
+| `INTERNAL_API_URL` | `http://localhost:3000` | Internal API URL for workers |
+| `DB_HOST` | `mojojojo_postgres` | PostgreSQL hostname |
+| `DB_PORT` | `5432` | PostgreSQL port |
+| `DB_USER` | `mojojojo_user` | Database user |
+| `DB_PASSWORD` | - | Database password |
+| `DB_NAME` | `mojojojo_database` | Database name |
+| `REDIS_HOST` | `mojojojo_redis` | Redis hostname |
+| `REDIS_PORT` | `6379` | Redis port |
+| `REDIS_PASSWORD` | - | Redis password |
+| `SESSION_SECRET` | - | Auth session encryption |
+| `DEEPSEEK_API_KEY` | - | AI chatbot API key |
+| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com/v1` | AI API base URL |
+| `DEEPSEEK_MODEL` | `deepseek-chat` | AI model name |
+
+#### Workers (Dispatcher + ACS Workers)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `QUEUE_NAME` | (varies) | BullMQ queue: acs-fast/acs-download/acs-upload |
+| `DB_HOST/PORT/USER/PASSWORD/NAME` | - | PostgreSQL connection |
+| `REDIS_HOST/PORT/PASSWORD` | - | Redis + BullMQ connection |
+| `API_BASE_URL` | `http://mojojojo_dashboard:3000` | Dashboard API for config |
+| `PING_RATE_LIMIT_SECONDS` | `10` | Per-device ping cooldown |
+| `SPEED_RATE_LIMIT_SECONDS` | `10` | Per-device speed test cooldown |
+| `AXIROS_CONFIG_TTL_MS` | `60000` | Axiros config cache TTL |
+
+#### Direct Ping Worker
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DIRECT_PING_INTERVAL_MINUTES` | `10` | Interval between ping cycles |
+| `DOWNSTREAM_SERVER_ID` | `1` | Regional server filter (0=all) |
+
+### 9.3 Volume Mounts & Data Persistence
+
+| Volume Path | Container Path | Type | Purpose |
+|------------|---------------|------|---------|
+| `./data/postgres` | `/var/lib/postgresql/data` | Bind | Persistent database files |
+| `./data/redis` | `/data` | Bind | Redis RDB snapshots |
+| `./config/redis.conf` | `/usr/local/etc/redis/redis.conf` | Bind ro | Redis configuration |
+| `./migrations` | `/docker-entrypoint-initdb.d` | Bind ro | SQL init scripts (first-run only) |
+| `./dashboard/.next` | `/app/.next` | Bind | Next.js build output (live rebuild) |
+| `/var/run/docker.sock` | `/var/run/docker.sock` | Bind ro | Docker daemon access |
+| `./docker-compose.yml` | `/app/docker-compose.yml` | Bind ro | Scaling operations |
+| `./docker-compose.scaling.yml` | `/app/docker-compose.scaling.yml` | Bind ro | Scaling operations |
+| Redis tmpfs | `/tmp` | tmpfs | Redis temp files |
+
+### 9.4 Service Dependency Graph
+
+```
+postgres (healthcheck: pg_isready)
+  │
+  ├── redis (healthcheck: redis-cli ping)
+  │     │
+  │     ├── mojo_dashboard (healthcheck: /api/health)
+  │     │     │
+  │     │     ├── mojo_worker_fast (depends_on: started)
+  │     │     ├── mojo_worker_download (depends_on: started)
+  │     │     └── mojo_worker_upload (depends_on: started)
+  │     │
+  │     ├── mojo_dispatcher (depends_on: healthy)
+  │     ├── mojo_worker_fast (depends_on: healthy)
+  │     ├── mojo_worker_download (depends_on: healthy)
+  │     └── mojo_worker_upload (depends_on: healthy)
+  │
+  ├── mojo_dispatcher (depends_on: healthy)
+  ├── mojo_worker_fast (depends_on: healthy)
+  ├── mojo_worker_download (depends_on: healthy)
+  ├── mojo_worker_upload (depends_on: healthy)
+  └── mojo_direct_ping_worker (depends_on: healthy)
 ```
 
-### 9.2 Build & Deploy
+**Conditions:**
+- `service_healthy` — waits for healthcheck to pass before starting
+- `service_started` — waits for container to start (no healthcheck required)
+
+### 9.5 Health Check Configuration
+
+#### PostgreSQL
+```yaml
+test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+interval: 10s, timeout: 5s, retries: 5, start_period: 0s
 ```
-Dashboard build:
-  sudo rm -rf .next && npm run build (host)
-  docker-compose restart mojo_dashboard
 
-Worker rebuild:
-  docker-compose build mojo_worker_fast
-  docker-compose up -d --force-recreate mojo_worker_fast
-  (repeat for download, upload, dispatcher)
+#### Redis
+```yaml
+test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+interval: 10s, timeout: 5s, retries: 5, start_period: 0s
+```
 
-Volume mounts:
-  .next → live rebuilds (EACCES fix: sudo chown -R webapp:webapp .next)
-  ./data/postgres → persistent DB
-  ./data/redis → persistent cache
+#### Dashboard
+```yaml
+test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health',
+      r => {process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
+interval: 30s, timeout: 10s, retries: 5, start_period: 40s
+```
+
+### 9.6 Container Networking
+
+#### Network Topology
+```
+mojojojo_network (bridge, 172.x.x.x/16)
+  │
+  ├── postgres:5432 (exposed host: 5432)
+  ├── redis:6379 (exposed host: 127.0.0.1:6379)
+  ├── mojo_dashboard:3000 (exposed host: 3002)
+  ├── mojo_dispatcher (no ports exposed)
+  ├── mojo_worker_fast (no ports exposed)
+  ├── mojo_worker_download (no ports exposed)
+  ├── mojo_worker_upload (no ports exposed)
+  └── mojo_direct_ping_worker (no ports exposed)
+```
+
+#### External Access
+- Dashboard: host port `3002` → container port `3000`
+- Externally accessible via frp tunnel at `gandooz.cloud:8804`
+- Workers DO NOT expose ports (internal only)
+- PostgreSQL port 5432 exposed to host (for external tools like DBeaver)
+- Redis bound to `127.0.0.1:6379` (host-local only, not network-accessible)
+
+### 9.7 Resource Limits
+
+| Container | CPU Limit | Memory Limit | Memory Reservation | OOM Priority |
+|-----------|-----------|--------------|---------------------|--------------|
+| postgres | 1 | 4G | 512M | Low (critical DB) |
+| redis | 0.5 | 1G | 256M | Low (critical queue) |
+| mojo_dashboard | 1 | 2G | - | Medium |
+| mojo_dispatcher | 0.5 | 256M | - | Low (can restart) |
+| mojo_worker_fast | 1 | 512M | - | Medium |
+| mojo_worker_download | 1 | 512M | - | Medium |
+| mojo_worker_upload | 1 | 512M | - | Medium |
+| direct_ping_worker | 0.5 | 256M | - | Low (non-critical) |
+
+### 9.8 Scaling Configuration (`docker-compose.scaling.yml`)
+
+Defines worker-only services for scaling via dashboard admin UI. Contains:
+- 3 ACS worker types (fast, download, upload) with identical config
+- 34 per-province direct ping workers (Sumut, Sumbar, Riau, Jambi, Sumsel, Bengkulu, Lampung, Babel, Kepri, DKI Jakarta, Jabar, Jateng, DIY, Jatim, Banten, Bali, NTB, NTT, Kalbar, Kalteng, Kalsel, Kaltim, Kaltara, Sulut, Sulteng, Sulsel, Sultra, Gorontalo, Sulbar, Maluku, Malut, Papua, Papua Barat)
+- Each direct ping worker has `DOWNSTREAM_SERVER_ID` set to its province ID
+
+### 9.9 Build & Deploy Commands
+
+#### Initial Build
+```bash
+# Unified stack
+docker compose up -d --build
+
+# Or modular deployment
+docker compose -f docker-compose-infra.yml up -d  # postgres + redis first
+docker compose -f docker-compose-app.yml up -d     # dashboard + workers
+docker compose -f docker-compose-dispatcher.yml up -d  # dispatcher
+```
+
+#### Rebuild Cycle
+```bash
+# Dashboard (code change)
+sudo rm -rf dashboard/.next
+npm run build           # Run on host (outside container)
+docker compose restart mojo_dashboard
+
+# Worker (code change)
+docker compose build mojo_worker_fast
+docker compose up -d --force-recreate mojo_worker_fast
+# Repeat for: mojo_worker_download, mojo_worker_upload, mojo_dispatcher
+```
+
+#### Permission Fixes
+```bash
+# .next volume mount EACCES
+sudo chown -R webapp:webapp dashboard/.next
+
+# Postgres data directory
+sudo chown -R 999:999 data/postgres   # UID 999 = postgres user inside container
 ```
 
 ---
 
-## 10. Integration Points
+## 10. Deployment Topology
+
+### 10.1 Physical Topology
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         CENTRAL DATACENTER                              │
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │  HOST SERVER 1 (Primary)                                        │   │
+│  │  ┌──────────┐  ┌───────┐  ┌──────────┐  ┌──────────┬──────────┐ │   │
+│  │  │PostgreSQL│  │ Redis │  │Dashboard │  │Dispatcher│Worker_F  │ │   │
+│  │  │   :5432  │  │:6379  │  │  :3002   │  │          │ (×N)     │ │   │
+│  │  └──────────┘  └───────┘  └──────────┘  └──────────┴──────────┘ │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │  HOST SERVER 2 (Worker Pool)                                   │   │
+│  │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐      │   │
+│  │  │Worker_F  │Worker_F  │Worker_F  │Worker_D  │Worker_U  │      │   │
+│  │  │  (fast)  │  (fast)  │  (fast)  │  (dl)    │  (ul)    │      │   │
+│  │  └──────────┴──────────┴──────────┴──────────┴──────────┘      │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────┘
+          │
+          │ Internet / VPN
+          │
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     REGIONAL DATACENTERS (×34 Provinces)                │
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │  REGIONAL SERVER (e.g., R01 Sumut, R07 Bali, ...)              │   │
+│  │  ┌───────────────────────────────────────────────────────────┐  │   │
+│  │  │  mojo_direct_ping_worker                                  │  │   │
+│  │  │  ├── Connects to CENTRAL PostgreSQL (via VPN/WAN)        │  │   │
+│  │  │  ├── DOWNSTREAM_SERVER_ID = province_id                  │  │   │
+│  │  │  ├── DIRECT_PING_INTERVAL_MINUTES = 10                   │  │   │
+│  │  │  └── ICMP fping → ONT devices in region                 │  │   │
+│  │  └───────────────────────────────────────────────────────────┘  │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 10.2 PostgreSQL Connection Pooling
+
+Worker uses `pg.Pool` configured as:
+```javascript
+new Pool({
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  max: 10,                 // Max concurrent connections
+  idleTimeoutMillis: 30000, // Close idle connections after 30s
+  connectionTimeoutMillis: 2000, // Fail fast if DB unreachable
+})
+```
+
+Without PgBouncer: N workers × 10 connections = high connection count. Planned for Phase 1.
+
+### 10.3 Redis Configuration
+
+```
+# config/redis.conf
+requirepass ${REDIS_PASSWORD}
+
+# Container security:
+security_opt:
+  - no-new-privileges:true
+read_only: true     # Read-only filesystem
+tmpfs: /tmp         # Writable temp only
+```
+
+Redis stores:
+- **BullMQ queues**: acs-fast, acs-download, acs-upload, acs-queue (legacy)
+- **Worker heartbeats**: Hash `acs-workers`
+- **Stop signals**: Key `worker:stop-signal`
+- **Rate limits**: Keys `ping:last:{deviceId}`, `speed:last:{deviceId}` (10s TTL)
+- **Session cache**: User sessions (if configured)
+
+### 10.4 Docker Compose Files Reference
+
+| File | Services | Usage |
+|------|----------|-------|
+| `docker-compose.yml` | All 8 services | Unified deployment |
+| `docker-compose-infra.yml` | postgres, redis | Infrastructure-only |
+| `docker-compose-app.yml` | dashboard + workers | Application layer (ext network) |
+| `docker-compose-dispatcher.yml` | dispatcher | Dispatcher-only |
+| `docker-compose-worker.yml` | worker (generic) | Manual worker deployment |
+| `docker-compose-dashboard.yml` | dashboard | Dashboard-only |
+| `docker-compose-nginx.yml` | nginx | Reverse proxy (optional) |
+| `docker-compose.offline.yml` | all | Offline/air-gapped deployment |
+| `docker-compose.scaling.yml` | workers × 34+ | Scaling management |
+| `docker-compose.regional-r3-r12.yml` | regional | Regional-specific configs |
+
+### 10.5 Environment File Structure
+
+```
+.env (not in git — gitignored)
+├── POSTGRES_USER/PASSWORD/DB/PORT
+├── DB_HOST/PORT/USER/PASSWORD/NAME
+├── REDIS_HOST/PORT/PASSWORD
+├── DASHBOARD_PORT / NEXT_PUBLIC_API_URL
+├── SESSION_SECRET / TZ / NODE_ENV
+├── PING_RATE_LIMIT_SECONDS / SPEED_RATE_LIMIT_SECONDS
+├── AXIROS_CONFIG_TTL_MS
+├── DIRECT_PING_INTERVAL_MINUTES / DOWNSTREAM_SERVER_ID
+└── Optional: DEEPSEEK_API_KEY, NGINX configs
+```
+
+### 10.6 Container Startup Sequence
+
+```
+1. postgres starts → healthcheck pg_isready
+2. redis starts → healthcheck redis-cli ping
+3. mojo_dashboard starts (depends: postgres+redis healthy)
+   → healthcheck /api/health (after 40s start_period)
+4. mojo_dispatcher starts (depends: postgres+redis healthy)
+5. mojo_worker_fast/download/upload start
+   (depends: postgres+redis healthy + dashboard started)
+6. mojo_direct_ping_worker starts (depends: postgres healthy)
+   → Requires NET_RAW capability for ICMP
+```
+
+### 10.7 Regional Worker Deployment
+
+Each regional server runs a single `mojo_direct_ping_worker` container:
+```bash
+# On regional server (e.g., R01 Sumut):
+docker run -d \
+  --name mojojojo_direct_ping_worker \
+  --network host \
+  --cap-add NET_RAW \
+  -e DB_HOST=<central_db_ip> \
+  -e DB_PORT=5432 \
+  -e DB_USER=mojojojo_user \
+  -e DB_PASSWORD=<password> \
+  -e DB_NAME=mojojojo_database \
+  -e DIRECT_PING_INTERVAL_MINUTES=10 \
+  -e DOWNSTREAM_SERVER_ID=2 \
+  mojo-worker:latest \
+  node start-direct-ping-worker.js
+```
+
+Or using `install.sh` for automated setup.
+
+### 10.8 frp Tunnel Configuration
+
+```
+# frpc (on central server)
+[dashboard]
+type = tcp
+local_ip = 127.0.0.1
+local_port = 3002
+remote_port = 8804
+
+# Access: https://gandooz.cloud:8804
+```
+
+---
+
+## 11. Integration Points
 
 ### 10.1 Axiros ACS API
 | Test Type | API Endpoint | Method |
@@ -754,7 +1120,7 @@ Volume mounts:
 
 ---
 
-## 11. Circuit Breaker Pattern
+## 12. Circuit Breaker Pattern
 
 ```javascript
 // Axiros config caching with circuit breaker
@@ -765,7 +1131,7 @@ const CB_RESET_TIMEOUT = 30000;       // 30s reset
 // State: CLOSED → OPEN (5 failures) → HALF_OPEN (30s wait) → CLOSED
 ```
 
-## 12. Key Edge Cases & Error Handling
+## 13. Key Edge Cases & Error Handling
 
 ### 12.1 ACS API Failures
 - "Ticket Expired" → worker circuit breaker trips after 5 failures

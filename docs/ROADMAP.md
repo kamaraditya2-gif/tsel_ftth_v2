@@ -13,6 +13,20 @@
 - [x] Docker Compose unified deployment (8 services)
 - [x] Modular docker-compose files for split deployment (infra, app, worker, dispatcher)
 - [x] Shared bridge network `mojojojo_network`
+- [x] Single-server deployment (4-8 vCPU, 16-32 GB RAM, 200-500 GB SSD)
+- [x] Multi-stage Dockerfile (dashboard: builder + runner; worker: single-stage Alpine)
+- [x] Worker Docker image with `fping` + `iputils` for ICMP ping
+- [x] Dashboard Docker image with `docker` + `docker-compose` for admin scaling
+- [x] 34 per-province direct ping workers defined in scaling compose
+- [x] Docker healthchecks for all services (pg_isready, redis-cli ping, HTTP /api/health)
+- [x] Resource limits (CPU + memory) per container
+- [x] Redis security: password auth, read-only filesystem, tmpfs, no-new-privileges
+- [x] PostgreSQL data persistence to bind mount
+- [x] Redis RDB persistence to bind mount
+- [x] Dashboard .next volume mount for live rebuilds
+- [x] frp tunnel for external dashboard access (gandooz.cloud:8804)
+- [x] `.env.example` documenting all tunable configuration
+- [x] Regional direct-ping-worker deployment model (per-province servers)
 
 ### Dashboard (Next.js 14 App Router)
 - [x] Main dashboard with 4 KPI cards (Latency, Speed, Packet Loss, Devices)
@@ -53,8 +67,16 @@
 
 ## Phase 1: Stabilization & Scale Prep (Q3 2026)
 
-### Performance & Scalability
+### Infrastructure & Container Optimization
 - [ ] **PgBouncer** — Add connection pooling for PostgreSQL (currently: 10 conns/worker × N workers = high connection count)
+- [ ] **Reduce Docker image size** — Audit dashboard runner image (~800 MB); remove unnecessary binaries
+- [ ] **Container layer caching** — Optimize Dockerfile layer ordering for faster rebuilds in CI
+- [ ] **Health check hardening** — Add health endpoint to workers (currently: dashboard only)
+- [ ] **Container logging driver** — Switch Docker from `json-file` to `journald` or `local` for log management
+- [ ] **Docker network security** — Implement network segmentation (infra vs app vs worker networks)
+- [ ] **Database backup automation** — Script `pg_dump` daily to S3-compatible storage (30-day retention) + WAL archiving for PITR
+
+### Performance & Scalability
 - [ ] **Batch inserts** — Replace individual queue_job inserts with multi-value INSERT (currently: 50-per-chunk but row-by-row)
 - [ ] **Direct ping batch insert** — Convert direct-ping-worker to batch inserts instead of row-per-device
 - [ ] **Increase MAX_PENDING_JOBS** — Raise from 50,000 to 200,000+ for full 26K device coverage
@@ -73,7 +95,8 @@
 - [ ] **Structured logging** — Migrate from console.log to structured JSON logging (pino already in worker deps)
 - [ ] **Centralized log aggregation** — Docker logging driver → centralized system (Loki/Elasticsearch)
 - [ ] **Key metrics dashboard** — Grafana dashboard for: queue depth, worker count, job latency, error rates, DB connection pool usage
-- [ ] **Alerting** — Alert when queues back up (pending > 10K), workers go offline, DB connections exhausted
+- [ ] **Container resource monitoring** — cAdvisor + Prometheus for CPU/memory/disk per container
+- [ ] **Alerting** — Alert when queues back up (pending > 10K), workers go offline, DB connections exhausted, disk > 80%
 - [ ] **Request tracing** — Add correlation IDs (run_id) spanning from task creation → dispatch → worker execution → result storage
 
 ### Bug Fixes & Hardening
@@ -93,19 +116,30 @@
 - [ ] **ACS Upload Workers** — Scale to 6 containers (concurrency=10 each) = same as download
 - [ ] **Direct Ping Workers** — Shard by `downstream_server_id` (5-10 workers, each covering 2-5 regions)
 - [ ] **Worker sharding** — Implement `id % SHARD_COUNT` for intra-region device distribution
-- [ ] **Docker Swarm / K8s** — Evaluate orchestration platform for auto-scaling workers
+- [ ] **Docker Swarm / K8s** — Evaluate orchestration platform for auto-scaling workers (replicas, rolling updates, self-healing)
 
 ### Infrastructure Upgrades
+- [ ] **Multi-host deployment** — Split services across dedicated hosts (DB, Dashboard, Worker pools)
 - [ ] **PostgreSQL read replicas** — Dashboard reads from replicas, workers write to primary
+- [ ] **PgBouncer deployment** — Connection pooling for N workers × 10 connections = reduced DB load
 - [ ] **Redis cluster** — Sharded Redis for queue data + rate limiting across multiple instances
 - [ ] **Redis memory upgrade** — Increase from 1GB to 2-4GB for full queue capacity
-- [ ] **Load balancer** — Add Nginx/HAProxy in front of dashboard for HA
+- [ ] **Load balancer** — Add Nginx/HAProxy in front of dashboard for HA (HTTPS termination + SSL)
 - [ ] **Total estimated hardware**: ~50 vCPU, 60GB RAM across multiple VMs
+- [ ] **Storage scaling** — PostgreSQL data volume: 500 GB → 1 TB; add monitoring-based auto-scaling
+
+### Network Topology Enhancements
+- [ ] **Site-to-site VPN** — Connect regional servers to central via WireGuard/IPsec for secure DB access
+- [ ] **Traffic shaping** — QoS for worker → Axiros API traffic (prevent rate limiting)
+- [ ] **DNS-based regional routing** — Regional workers discover nearest database replica via DNS
+- [ ] **Network latency monitoring** — Track DB query latency from regional workers to central DB
+- [ ] **CDN for dashboard** — Cache static assets (Next.js chunks) on CDN for faster NOC access
 
 ### Regional Deployment
 - [ ] **Regional worker packaging** — Standalone `install.sh` for regional direct-ping-worker
 - [ ] **Offline/air-gapped deployment** — Bundle all images + deps for remote regions without internet
 - [ ] **Regional health monitoring** — Dashboard shows per-region worker status, last successful test, data latency
+- [ ] **Regional DB read replicas** — Each region has local replica for low-latency queries
 
 ---
 
@@ -141,12 +175,29 @@
 
 ## Phase 4: Maturity (Q2-Q3 2027)
 
+### Infrastructure Maturity
+- [ ] **Container image vulnerability scanning** — Trivy/Snyk in CI pipeline; weekly scan reports
+- [ ] **Docker layer cache optimization** — BuildKit cache mounts; shared layer registry for fast multi-host builds
+- [ ] **Infrastructure as Code** — Terraform/Pulumi for VM provisioning + Docker Compose deployment
+- [ ] **Auto-scaling worker pools** — Based on queue depth: scale up when pending > 10K, scale down when < 1K
+- [ ] **Chaos engineering** — Worker failover testing, DB connection storm testing, network partition simulation
+
 ### DevOps & Reliability
 - [ ] **CI/CD pipeline** — GitHub Actions for automated build, test, and deployment
-- [ ] **Blue-green deployment** — Zero-downtime dashboard updates
-- [ ] **Chaos engineering** — Worker failover testing, DB connection storm testing
+- [ ] **Blue-green deployment** — Zero-downtime dashboard updates via load balancer
+- [ ] **Canary deployments for workers** — Deploy new worker version to 10% capacity, monitor, then full rollout
 - [ ] **Disaster recovery** — Automated backup → offsite restore procedure; RTO < 1 hour, RPO < 15 minutes
+- [ ] **Database DR** — Streaming replication to standby region; automated failover (Patroni/Repmgr)
+- [ ] **Container restart policy audit** — Ensure all containers have appropriate restart: always + on-failure limits
 - [ ] **SLO monitoring** — Track and report on key service level objectives (dashboard latency < 500ms, alarm processing < 1min)
+
+### Network & Security
+- [ ] **TLS everywhere** — Dashboard behind Nginx with LetsEncrypt/Cloudflare SSL
+- [ ] **mTLS for worker ↔ DB** — Mutual TLS authentication between regional workers and central database
+- [ ] **Docker Bench Security** — Run security audit; remediate findings (non-root users, seccomp, apparmor)
+- [ ] **WAF for dashboard** — Cloudflare/ModSecurity to protect exposed dashboard endpoint
+- [ ] **Rate limiting at load balancer** — Nginx rate limiting before requests reach dashboard container
+- [ ] **Network policy enforcement** — Kubernetes NetworkPolicy or iptables rules restricting inter-container traffic
 
 ### Code Quality
 - [ ] **TypeScript migration** — Full type coverage across all code (currently minimal types)
@@ -184,18 +235,26 @@
 - [ ] **Mobile app** — React Native / Flutter app for field engineers
 - [ ] **AR field tool** — Augmented reality overlay showing device status when point phone at ODP/ONTC
 
+### Next-Gen Infrastructure
+- [ ] **Multi-region active-active** — Full active-active deployment across 2+ datacenters with global load balancer
+- [ ] **Kubernetes migration** — Migrate from Docker Compose to K8s (statefulsets for DB, deployments for workers, HPA for auto-scaling)
+- [ ] **Service mesh** — Istio/Linkerd for mTLS, traffic splitting, observability between all microservices
+- [ ] **Edge computing** — Deploy lightweight workers at ISP PoPs (closer to ONT devices for lower latency ICMP)
+- [ ] **Immutable infrastructure** — Golden AMIs/images with Packer; zero-trust deployment model
+- [ ] **Green infrastructure** — Carbon-aware scheduling; scale down non-critical workers during low-carbon intensity hours
+
 ---
 
 ## Key Milestones Summary
 
 | Milestone | Target | Key Deliverables |
 |-----------|--------|-----------------|
-| Foundation | ✅ Done | Dashboard + Workers + Queue + Alarms + Auth |
-| Scale Ready | Q3 2026 | PgBouncer, batch ops, metrics, migration system |
-| 26K Scale | Q4 2026 | 25+ scaled workers, sharding, regional deployment |
-| Analytics | Q1 2027 | ML predictions, anomaly detection, SLA reporting, customer portal |
-| Maturity | Q2-Q3 2027 | CI/CD, full test coverage, DR, SLO monitoring |
-| Innovation | Q4 2027+ | AI remediation, multi-vendor, AR, real-time dashboard |
+| Foundation | ✅ Done | Dashboard + Workers + Queue + Alarms + Auth + Docker deployment + Regional model |
+| Scale Ready | Q3 2026 | PgBouncer, batch ops, container optimization, metrics, migration system, backup automation |
+| 26K Scale | Q4 2026 | 25+ scaled workers, sharding, multi-host deployment, HA DB + Redis, regional health monitoring |
+| Analytics | Q1 2027 | ML predictions, anomaly detection, SLA reporting, customer portal, CDN, network security |
+| Maturity | Q2-Q3 2027 | CI/CD, IaC, full test coverage, DR plan, vulnerability scanning, auto-scaling |
+| Innovation | Q4 2027+ | AI remediation, multi-vendor, AR, real-time dashboard, multi-region active-active, K8s migration |
 
 ---
 
@@ -204,11 +263,15 @@
 | Risk | Impact | Likelihood | Mitigation |
 |------|--------|-----------|------------|
 | Axiros API rate limiting | Jobs fail/timeout | Medium | Distributed Redis rate limiter + circuit breaker |
-| DB connection exhaustion | Workers hang | Medium | PgBouncer (Phase 1) |
-| Redis memory overflow | Queue data loss | Low | `removeOnComplete`/`removeOnFail` TTLs; monitor in Phase 1 |
-| Single dashboard instance | Full UI outage | Low | Docker restart-policy; multi-instance planned |
+| DB connection exhaustion | Workers hang | Medium | PgBouncer (Phase 1); connection pool tuning |
+| Redis memory overflow | Queue data loss | Low | `removeOnComplete`/`removeOnFail` TTLs; Redis eviction policy; monitor in Phase 1 |
+| Single dashboard instance | Full UI outage | Low | Docker restart-policy; multi-instance behind Nginx planned |
 | Stalled BullMQ jobs | Tests never complete | Low | stalledInterval + maxStalledCount configuration |
-| Regional network outage | Direct ping fails | Medium | Independent worker; data stays in region until sync |
+| Regional network outage | Direct ping fails | Medium | Independent worker; data stays locally until reconnection |
+| Disk full (DB logs) | Database crash | Medium | Log rotation; disk monitoring alert at 80%; separate data/log partitions |
+| Docker image sprawl | Disk space | Low | `docker system prune` cron job; CI cleanup old images |
+| Container memory leak | OOM kills | Medium | Resource limits set; memory monitoring; auto-restart with backoff |
+| frp tunnel down | Dashboard unreachable | Medium | frp auto-restart; multi-tunnel fallback; direct IP backup |
 
 ---
 
@@ -220,6 +283,13 @@
 | TypeScript types coverage | Medium | 2 weeks | Start with shared types |
 | Database migration tool | High | 3 days | Replace ad-hoc SQL |
 | Unit tests | Medium | 3 weeks | Jest setup |
+| Dashboard Docker image size optimization | Medium | 2 days | ~800 MB; remove unused binaries |
+| Container non-root user | High | 1 day | Workers run as root; add USER directive |
+| Docker layer caching optimization | Medium | 1 day | Reorder RUN commands for better cache hits |
 | API error standardization | Low | 3 days | Consistent error response format |
 | Remove legacy queue_results | Low | 1 day | After confirming no consumers |
 | ESLint configuration | Low | 1 day | Clean up lint rules |
+| Log rotation policy | Medium | 4 hours | Docker json-file max-size/max-file config |
+| Backup automation script | High | 1 day | pg_dump cron + S3 upload |
+| Redis eviction policy review | Low | 2 hours | Ensure allkeys-lru or volatile-ttl |
+| Health endpoint for workers | Medium | 1 day | Simple HTTP server in worker process |

@@ -172,31 +172,294 @@ Metric crosses threshold
 
 ---
 
-## 6. Deployment Architecture
+## 6. Infrastructure Architecture
 
-### 6.1 Docker Services
+### 6.1 Infrastructure Requirements
 
-| Service | Image | CPU | Memory | Scaling |
-|---------|-------|-----|--------|---------|
-| postgres | postgres:15-alpine | 1 | 4G | Vertical |
-| redis | redis:7-alpine | 0.5 | 1G | Vertical |
-| mojo_dashboard | mojo-dashboard (Next.js) | 1 | 2G | 1 instance |
-| mojo_dispatcher | mojo-worker (Node.js) | 0.5 | 256M | 1 instance |
-| mojo_worker_fast | mojo-worker | 1 | 512M | 13 (planned) |
-| mojo_worker_download | mojo-worker | 1 | 512M | 6 (planned) |
-| mojo_worker_upload | mojo-worker | 1 | 512M | 6 (planned) |
-| direct_ping_worker | mojo-worker | 0.5 | 256M | 5-10 sharded |
+#### Current (Production — Single Server)
 
-### 6.2 Network
-- All services on shared bridge network `mojojojo_network`
-- Dashboard port 3002:3000 mapped; exposed via frp at `gandooz.cloud:8804`
-- Workers use `NET_RAW` capability for ICMP ping
-- Postgres data persisted to `./data/postgres`, Redis to `./data/redis`
+| Resource | Spec | Notes |
+|----------|------|-------|
+| CPU | 4-8 vCPU | Intel/AMD x86_64 recommended |
+| RAM | 16-32 GB | Peak usage: Postgres 4G + Redis 1G + Dashboard 2G + Workers ~3G |
+| Storage | 200-500 GB SSD | Postgres data + Redis RDB + Docker images + Build cache |
+| OS | Ubuntu 22.04 / Debian 12 | Docker + Compose native support |
+| Network | 1 Gbps | Required for Axiros API calls + Dashboard access + Regional workers |
+| Docker | 24+ | Compose V2 support required |
 
-### 6.3 Regional Deployment
-- Direct-ping-worker runs on regional servers
-- Connects to central database via DB_HOST configuration
-- DOWNSTREAM_SERVER_ID filters per-region devices
+#### Scaled (26K Devices — Multi-Server)
+
+| Server Role | CPU | RAM | Storage | Count |
+|------------|-----|-----|---------|-------|
+| Database + Redis | 8 vCPU | 32 GB | 1 TB SSD | 1 (primary) + 1 (replica) |
+| Dashboard + Dispatcher | 4 vCPU | 8 GB | 100 GB | 1-2 (HA pair) |
+| ACS Workers (fast) | 4 vCPU | 8 GB | 50 GB | 3-4 hosts (13 containers) |
+| ACS Workers (dl/ul) | 4 vCPU | 8 GB | 50 GB | 2-3 hosts (12 containers) |
+| Direct Ping (regional) | 2 vCPU | 4 GB | 50 GB | Per-province server |
+| **Total** | ~50 vCPU | ~60 GB | ~1.5 TB | Multi-host |
+
+#### Network Bandwidth Requirements
+
+| Flow | Bandwidth | Latency | Notes |
+|------|-----------|---------|-------|
+| Worker → Axiros ACS API | 100 Mbps | < 50ms | SOAP/XML-RPC calls |
+| Worker → PostgreSQL | 100 Mbps | < 5ms (local) / < 50ms (remote) | Transactional writes |
+| Worker → Redis | 100 Mbps | < 1ms (local) / < 10ms (remote) | BullMQ queue ops |
+| Dashboard ↔ Browser | 50 Mbps | < 100ms | Real-time UI updates |
+| Regional Ping → Central DB | 10 Mbps | < 100ms | Test results inserts |
+| Axiros API ↔ ONT Devices | Per-ISP network | Varies | TR-069/CWMP management |
+
+### 6.2 Container Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      DEPLOYMENT TOPOLOGY                                 │
+│                                                                          │
+│  ┌──────────────────── CENTRAL SERVER ──────────────────────────────┐   │
+│  │                                                                   │   │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐  │   │
+│  │  │  PostgreSQL   │  │    Redis     │  │   mojo_dashboard      │  │   │
+│  │  │  15-alpine    │  │  7-alpine    │  │  Next.js :3002        │  │   │
+│  │  │  :5432        │  │  :6379       │  │  frp → gandooz.cloud  │  │   │
+│  │  │  Volume: data │  │  Volume: data│  │  Vol: .next, docker   │  │   │
+│  │  └──────┬───────┘  └──────┬───────┘  └──────────┬────────────┘  │   │
+│  │         │                 │                      │               │   │
+│  │         └─────────┬───────┴──────────┬───────────┘               │   │
+│  │                   │                  │                           │   │
+│  │  ┌────────────────▼─────────┐  ┌─────▼──────────────────────┐   │   │
+│  │  │    mojo_dispatcher       │  │  mojo_worker_fast (×1-N)   │   │   │
+│  │  │    Node.js + node-cron   │  │  BullMQ Worker (acs-fast)  │   │   │
+│  │  │    Queue: all types      │  │  Queue: ping/traceroute    │   │   │
+│  │  └──────────────────────────┘  └────────────────────────────┘   │   │
+│  │                                                                   │   │
+│  │  ┌──────────────────────────┐  ┌────────────────────────────┐   │   │
+│  │  │ mojo_worker_download ×N  │  │  mojo_worker_upload ×N     │   │   │
+│  │  │ BullMQ (acs-download)    │  │  BullMQ (acs-upload)       │   │   │
+│  │  │ Queue: speed dl tests    │  │  Queue: speed ul tests     │   │   │
+│  │  └──────────────────────────┘  └────────────────────────────┘   │   │
+│  └───────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+│  ┌─────────────────── REGIONAL SERVERS ────────────────────────────┐    │
+│  │                                                                   │   │
+│  │  ┌──────────────────────────────┐                                 │   │
+│  │  │ mojo_direct_ping_worker (×N) │  ← One per province/region     │   │
+│  │  │ ICMP fping → ONT devices     │     (R01 Sumut, R07 Bali, etc) │   │
+│  │  │ Connects to CENTRAL Postgres │                                 │   │
+│  │  │ DOWNSTREAM_SERVER_ID = N     │                                 │   │
+│  │  └──────────────────────────────┘                                 │   │
+│  └───────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+│  ┌─────────────────── EXTERNAL ─────────────────────────────────────┐   │
+│  │                                                                   │   │
+│  │  ┌──────────────────────────┐  ┌──────────────────────────────┐  │   │
+│  │  │   Axiros ACS API         │  │   ONT Devices (~26K)         │  │   │
+│  │  │   https://acs.telkomsel  │  │   TR-069 managed CPE         │  │   │
+│  │  │   .co.id/live/AXAPI/     │  │   Ping/Speed/Traceroute      │  │   │
+│  │  └──────────────────────────┘  └──────────────────────────────┘  │   │
+│  └───────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.3 Docker Images
+
+#### `mojo-dashboard:latest` (Dashboard)
+
+| Layer | Base | Size | Notes |
+|-------|------|------|-------|
+| Builder | `node:20-alpine` | ~300 MB | Full dev dependencies, `npm install --legacy-peer-deps` |
+| Runner | `node:20-slim` | ~500 MB | Production only; includes Docker CLI + Compose for admin scaling |
+| **Total** | - | **~800 MB** | Multi-stage build |
+
+**Runner Dependencies:**
+- `docker` CLI (static binary v29.1.3) — for scaling containers from admin UI
+- `docker-compose` v2.35.1 — standalone binary for compose operations
+- `ca-certificates`, `curl` — for HTTPS connectivity
+
+**Cached Volumes:**
+- `/app/.next` — Next.js build output (live rebuild mapping)
+- Docker socket (`/var/run/docker.sock:ro`) — scaling management
+
+#### `mojo-worker:latest` (Dispatcher + Workers)
+
+| Layer | Base | Size | Notes |
+|-------|------|------|-------|
+| Runtime | `node:20-alpine` | ~200 MB | Minimal Alpine |
+| Extras | `fping`, `iputils` | ~5 MB | ICMP ping tools for direct-ping-worker |
+| NPM | production only | ~50 MB | bullmq, ioredis, pg, axios, pino, node-cron |
+| **Total** | - | **~255 MB** | Single image for all worker types |
+
+### 6.4 Container Service Dependencies
+
+```
+postgres ──────┬── mojo_dashboard ─── (exposes :3000 → :3002)
+               ├── mojo_dispatcher ─── (creates BullMQ jobs)
+               ├── mojo_worker_fast ─── (consumes acs-fast queue)
+               ├── mojo_worker_download ─── (consumes acs-download queue)
+               ├── mojo_worker_upload ─── (consumes acs-upload queue)
+               └── mojo_direct_ping_worker ─── (independent loop)
+
+redis ─────────┬── mojo_dashboard ─── (session cache, rate limits)
+               ├── mojo_dispatcher ─── (BullMQ addJob)
+               └── mojo_worker_* ─── (BullMQ Worker, rate limits, heartbeats)
+
+mojo_dashboard ─── mojo_worker_fast/download/upload ─── (API_BASE_URL for
+                    Axiros config, test server config)
+```
+
+### 6.5 Storage Architecture
+
+| Volume | Path | Type | Size | Backup Strategy |
+|--------|------|------|------|----------------|
+| Postgres Data | `./data/postgres` | Bind mount (persistent) | 100-500 GB | pg_dump daily + WAL archiving |
+| Redis Data | `./data/redis` | Bind mount (persistent) | 1-4 GB | RDB snapshots every 5 min |
+| Dashboard Build | `./dashboard/.next` | Bind mount (ephemeral) | 300 MB | Not backed up; rebuild from source |
+| Redis tmpfs | `/tmp` | tmpfs (ephemeral) | 64 MB | Lost on restart |
+
+#### Backup Strategy
+- **Daily**: `pg_dump` full database → compressed to S3-compatible storage (30-day retention)
+- **Hourly**: WAL archive for point-in-time recovery
+- **Continuous**: Redis RDB snapshots (every 5 min to data volume)
+- **Application**: Source code in GitHub; `.next` can be rebuilt
+
+### 6.6 FTTH Network Topology (Monitored Network)
+
+```
+┌────────────────── CUSTOMER PREMISE ───────────────────┐
+│                                                        │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  ONT (Optical Network Terminal)                  │  │
+│  │  • Router/CPE: Huawei, Nokia, ZTE, FiberHome     │  │
+│  │  • TR-069 managed via Axiros ACS                 │  │
+│  │  • IP: Private (CGNAT or Public per region)      │  │
+│  │  • Speed Packages: 10/20/30/50/100 Mbps          │  │
+│  └──────────────────────┬───────────────────────────┘  │
+│                         │ Fiber (GPON)                 │
+└─────────────────────────┼─────────────────────────────┘
+                          │
+┌────────────────── ODP / ODC ────────────────────────┐
+│  Optical Distribution Point / Cabinet               │
+│  • Passive splitter (1:8, 1:16, 1:32)               │
+│  • Feeder/distribution fiber segments               │
+└──────────────────────┬──────────────────────────────┘
+                       │
+┌────────────────── OLT ──────────────────────────────┐
+│  Optical Line Terminal                               │
+│  • Located in STO (Sentral Telepon)                  │
+│  • GPON/XPON technology                             │
+│  • Aggregates upstream traffic                       │
+└──────────────────────┬──────────────────────────────┘
+                       │
+┌────────────────── BNG ──────────────────────────────┐
+│  Broadband Network Gateway                           │
+│  • PPPoE termination / IPoE                          │
+│  • Subscriber management + QoS                      │
+│  • Aggregation router                                │
+└──────────────────────┬──────────────────────────────┘
+                       │
+┌────────────────── IGW ──────────────────────────────┐
+│  Internet Gateway                                    │
+│  • Route ke internet publik                         │
+│  • NAT for CGNAT customers                          │
+└──────────────────────┬──────────────────────────────┘
+                       │
+┌────────────────── SPEED TEST SERVER ────────────────┐
+│  • Near IGW server for download/upload testing       │
+│  • Ookla-based or custom speed test                  │
+└─────────────────────────────────────────────────────┘
+
+┌────────────────── EBR ──────────────────────────────┐
+│  Edge Router                                         │
+│  • Route ke jaringan internal TELKOMSEL              │
+│  • Untuk traceroute ke arah core network            │
+└──────────────────────────────────────────────────────┘
+
+┌────────────────── AXIROS ACS ──────────────────────┐
+│  Auto Configuration Server                           │
+│  • TR-069 CWMP management                           │
+│  • API: https://acs.telkomsel.co.id                 │
+│  • Endpoints: IPPingTest, TraceRouteTest,           │
+│    PostONTDownloadSpeed, PostONTUploadSpeed,         │
+│    GetONTStatus                                      │
+└──────────────────────────────────────────────────────┘
+```
+
+### 6.7 Network Topology (Monitoring System)
+
+```
+                          ┌─────────────────────────────┐
+                          │     Browser (NOC User)       │
+                          │   https://gandooz.cloud:8804 │
+                          └─────────────┬───────────────┘
+                                        │ HTTPS (frp tunnel)
+                                        ▼
+                          ┌─────────────────────────────┐
+                          │       frp Server            │
+                          │   gandooz.cloud:8804         │
+                          └─────────────┬───────────────┘
+                                        │ frp tunnel
+                                        ▼
+┌────────────────── CENTRAL SERVER ───────────────────────┐
+│  ┌──────────────────────────────────────────────────┐   │
+│  │   Docker Bridge Network: mojojojo_network        │   │
+│  │   172.x.x.x/16 (internal)                       │   │
+│  │                                                  │   │
+│  │   mojo_dashboard:3000 ◄── frp client ── :3002   │   │
+│  │       │                                          │   │
+│  │   mojo_dispatcher ──► PostgreSQL:5432            │   │
+│  │   mojo_worker_* ──► PostgreSQL:5432 + Redis:6379  │   │
+│  └──────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────┘
+          │                                     │
+          ▼                                     ▼
+┌──────────────────┐  ┌──────────────────────────────┐
+│  Axiros ACS API   │  │  Regional Servers (×34)     │
+│  HTTPS:443        │  │  direct-ping-worker          │
+│  acs.telkomsel.id  │  │  ICMP → ONT devices         │
+└──────────────────┘  └──────────────────────────────┘
+                                │
+                          ┌─────┴─────┐
+                          ▼           ▼
+                    ONT Device 1  ONT Device N
+                    (ICMP echo)   (ICMP echo)
+```
+
+### 6.8 Firewall & Port Requirements
+
+| Source | Destination | Port | Protocol | Purpose |
+|--------|-------------|------|----------|---------|
+| All containers | PostgreSQL | 5432 | TCP | Database connection |
+| All containers | Redis | 6379 | TCP | Queue + cache |
+| Browser → Dashboard | :3002 / :8804 | 3002/443 | HTTPS | UI access |
+| Dashboard → Docker socket | /var/run/docker.sock | - | Unix | Scaling management |
+| Workers | Axiros ACS API | 443 | HTTPS | Test execution |
+| Regional ping workers | Central PostgreSQL | 5432 | TCP | Test result storage |
+| Direct ping workers | ONT devices | N/A | ICMP | ICMP echo (fping) |
+
+### 6.9 High-Availability Design (Planned)
+
+| Component | Current | Target HA |
+|-----------|---------|-----------|
+| Dashboard | Single container | 2× containers behind Nginx/HAProxy load balancer |
+| PostgreSQL | Single instance | Primary + Streaming replica + PgBouncer pool |
+| Redis | Single instance | Redis Sentinel cluster (3 nodes) |
+| Dispatcher | Single instance | Active-passive with Redis lock |
+| ACS Workers | Multiple containers (scalable) | Auto-healing via Docker restart policy |
+| Direct Ping | Multiple regional workers | Built-in independent operation per region |
+
+### 6.10 Environment Configuration
+
+All tunables via `.env` file (see `.env.example`):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POSTGRES_USER/PASSWORD/DB` | `mojojojo_*` | Database credentials |
+| `REDIS_PASSWORD` | (custom) | Redis auth |
+| `DASHBOARD_PORT` | `3002` | Host port for Next.js |
+| `PING_RATE_LIMIT_SECONDS` | `10` | Cooldown between pings per device |
+| `SPEED_RATE_LIMIT_SECONDS` | `10` | Cooldown between speed tests per device |
+| `AXIROS_CONFIG_TTL_MS` | `60000` | Axiros config cache duration |
+| `DIRECT_PING_INTERVAL_MINUTES` | `10` | Regional ping interval |
+| `DOWNSTREAM_SERVER_ID` | `1` | Regional server filter |
 
 ---
 
