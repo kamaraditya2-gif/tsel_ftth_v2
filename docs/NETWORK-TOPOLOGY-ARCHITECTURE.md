@@ -4,63 +4,84 @@
 
 ## 1. High-Level Network Topology
 
+Axiros ACS berada **di dalam jaringan internal Telkomsel**, bukan di internet publik.
+
 ```
-                         INTERNET
-                            │
-                    ┌───────┴───────┐
-                    │   Axiros ACS  │  TR-069/CWMP Management Server
-                    │  (External)   │  https://acs.telkomsel.co.id
-                    └───────┬───────┘
-                            │ TR-069 (CWMP) — port 443
-                            │
-                    ┌───────┴───────┐
-                    │   EBR         │  Edge Router — route ke core Telkomsel
-                    │  (Edge Router)│  Untuk traceroute internal network
-                    └───────┬───────┘
-                            │
-                    ┌───────┴───────┐
-                    │   IGW         │  Internet Gateway — NAT + routing publik
-                    │  (Gateway)    │  Near IGW server untuk speed test
-                    └───────┬───────┘
-                            │
-                    ┌───────┴───────┐
-                    │   BNG         │  Broadband Network Gateway
-                    │  (Aggregation)│  PPPoE/IPoE termination, QoS, subscriber mgmt
-                    └───────┬───────┘
-                            │ Fiber (GPON/XPON uplink)
-                    ┌───────┴───────┐
-                    │   OLT         │  Optical Line Terminal — di STO
-                    │  (Access)     │  Aggregates ONT upstream
-                    └───────┬───────┘
-                            │ Fiber feeder
-                  ┌─────────┴─────────┐
-                  │   ODP / ODC       │  Optical Distribution Point/Cabinet
-                  │   (Distribution)  │  Passive splitter 1:8 / 1:16 / 1:32
-                  └─────────┬─────────┘
-                            │ Fiber drop
-                  ┌─────────┴─────────┐
-                  │   ONT (CPE)       │  Optical Network Terminal
-                  │  (Customer Premise)│  Huawei / Nokia / ZTE / FiberHome
-                  │  IP: 10.x.x.x     │  TR-069 managed, ICMP reachable
-                  └───────────────────┘
+                         ┌────────────────────────────────────┐
+                         │         INTERNET / PUBLIC           │
+                         │  Telegram API, frp Server, dll     │
+                         └────────────────┬───────────────────┘
+                                          │ IGW route
+                         ┌────────────────┴───────────────────┐
+                         │              IGW                   │
+                         │    Internet Gateway — NAT publik   │
+                         │    Near IGW server (speed test)    │
+                         └────────────────┬───────────────────┘
+                                          │
+                         ┌────────────────┴───────────────────┐
+                         │        TELKOMSEL INTERNAL          │
+                         │             NETWORK                │
+                         │                                    │
+                         │  ┌──────────────────────────────┐  │
+                         │  │        Axiros ACS            │  │
+                         │  │  TR-069 Management Server    │  │
+                         │  │  https://acs.telkomsel.co.id │  │
+                         │  │  IPPingTest, TraceRouteTest, │  │
+                         │  │  PostONTDownloadSpeed, ...   │  │
+                         │  └──────────────┬───────────────┘  │
+                         │                 │                   │
+                         │  ┌──────────────┴───────────────┐  │
+                         │  │            EBR               │  │
+                         │  │  Edge Router — core network  │  │
+                         │  │  Traceroute target           │  │
+                         │  └──────────────┬───────────────┘  │
+                         │                 │                   │
+                         │  ┌──────────────┴───────────────┐  │
+                         │  │         BNG                  │  │
+                         │  │  Broadband Network Gateway   │  │
+                         │  │  PPPoE/IPoE, QoS, subscriber │  │
+                         │  └──────────────┬───────────────┘  │
+                         └─────────────────┼──────────────────┘
+                                           │ Fiber (GPON uplink)
+                         ┌─────────────────┴──────────────────┐
+                         │              OLT                   │
+                         │  Optical Line Terminal — di STO    │
+                         │  GPON/XPON aggregation             │
+                         └─────────────────┬──────────────────┘
+                                           │ Fiber feeder
+                         ┌─────────────────┴──────────────────┐
+                         │         ODP / ODC                  │
+                         │  Optical Distribution Point/Cabinet │
+                         │  Passive splitter 1:8 / 1:16 / 1:32│
+                         └─────────────────┬──────────────────┘
+                                           │ Fiber drop
+                         ┌─────────────────┴──────────────────┐
+                         │         ONT (CPE)                  │
+                         │  Optical Network Terminal          │
+                         │  Huawei / Nokia / ZTE / FiberHome  │
+                         │  IP: 10.x.x.x (CGNAT)             │
+                         │  TR-069 managed via Axiros ACS     │
+                         └────────────────────────────────────┘
 
-    ─── Test Paths ───
-    Ping:
-      ONT ──(TR-069)──▶ Axiros ACS ──(RPC IPPingTest)──▶ IGW server
-      ONT ──(TR-069)──▶ Axiros ACS ──(RPC IPPingTest)──▶ EBR server
 
-    Traceroute:
-      ONT ──(TR-069)──▶ Axiros ACS ──(RPC TraceRouteTest)──▶ EBR
+    ════════════════ Test Paths ════════════════
 
-    Speed Test:
-      ONT ──(TR-069)──▶ Axiros ACS ──(PostONTDownloadSpeed)──▶ Near IGW
-      ONT ──(TR-069)──▶ Axiros ACS ──(PostONTUploadSpeed)──▶ Near IGW
+    Ping (via ACS TR-069):
+      Worker ──▶ Axiros ACS ──(RPC IPPingTest)──▶ ONT ping IGW server
+      Worker ──▶ Axiros ACS ──(RPC IPPingTest)──▶ ONT ping EBR server
 
-    Direct Ping (ICMP):
+    Traceroute (via ACS TR-069):
+      Worker ──▶ Axiros ACS ──(RPC TraceRouteTest)──▶ ONT trace to EBR
+
+    Speed Test (via ACS REST):
+      Worker ──▶ Axiros ACS ──(PostONTDownloadSpeed)──▶ ONT → Near IGW
+      Worker ──▶ Axiros ACS ──(PostONTUploadSpeed)──▶ ONT → Near IGW
+
+    Direct Ping (ICMP langsung dari regional worker):
       Regional Worker ──(fping ICMP)──▶ ONT IP (10.x.x.x)
 
-    ONT Status:
-      Axiros ACS ──(GetONTStatus)──▶ ONT (TR-069 query)
+    ONT Status (via ACS):
+      Worker ──▶ Axiros ACS ──(GetONTStatus RPC)──▶ ONT
 ```
 
 ### Layer Mapping (OSI)
@@ -82,12 +103,18 @@
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│  INTERNET / WAN                                                            │
-│  ├── Axiros ACS Server:     203.xx.xx.xx (public)                         │
-│  ├── frp Server:            gandooz.cloud:8804 (public)                   │
-│  └── External APIs:         Telegram/WhatsApp/Ticketing (public)          │
+│  INTERNET / WAN (Publik)                                                    │
+│  ├── frp Server:            gandooz.cloud:8804                            │
+│  ├── External APIs:         Telegram/WhatsApp/Ticketing                    │
+│  ├── Docker Hub:            registry (untuk pull image)                    │
+│  └── DNS:                   8.8.8.8 / 1.1.1.1                             │
 │                                                                             │
-│  CORE NETWORK                                                              │
+│  TELKOMSEL INTERNAL NETWORK                                                 │
+│  ├── Axiros ACS Server:     10.100.x.x (internal)                         │
+│  │   ├── https://acs.telkomsel.co.id                                       │
+│  │   └── /live/AXAPI/Indihome (base_path)                                 │
+│  │                                                                          │
+│  CORE NETWORK (Telkomsel)                                                   │
 │  ├── IGW:                   10.11.x.x/16                                  │
 │  ├── EBR:                   10.22.x.x/16                                  │
 │  ├── BNG:                   10.33.x.x/16                                  │
@@ -270,12 +297,12 @@ Regional Worker (mojo_direct_ping_worker)
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                              CLOUD / PUBLIC                                  │
 │                                                                              │
-│  Browser (NOC)        Axiros ACS Server     frp Server         Telegram API │
-│  │                        │                    │                      │      │
-│  │ HTTPS                  │ HTTPS:443          │ frp:8804            │ HTTPS │
-└──┼────────────────────────┼────────────────────┼──────────────────────┼──────┘
-   │                        │                    │                      │
-   ▼                        ▼                    ▼                      ▼
+│  Browser (NOC)              frp Server         Telegram API               │
+│  │                            │                      │                     │
+│  │ HTTPS                      │ frp:8804            │ HTTPS               │
+└──┼────────────────────────────┼──────────────────────┼─────────────────────┘
+   │                            │                      │
+   ▼                            ▼                      ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                           CENTRAL DATACENTER                                 │
 │                                                                              │
@@ -288,19 +315,22 @@ Regional Worker (mojo_direct_ping_worker)
 │  │  │  :5432        │  │  :6379       │  │    :8804     │                │   │
 │  │  └──────┬───────┘  └──────┬───────┘  └──────────────┘                │   │
 │  │         │                 │                                            │   │
-│  │  ┌──────┴─────────────────┴──────────────────────────────────────┐   │   │
-│  │  │  Docker Bridge Network: 172.17.0.0/16                          │   │   │
-│  │  │                                                                 │   │   │
-│  │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │   │   │
-│  │  │  │  Dispatcher  │  │  acs-fast    │  │  acs-download        │  │   │   │
-│  │  │  │  (cron 1m)   │  │  (conc: 5)   │  │  (conc: 2)           │  │   │   │
-│  │  │  └──────────────┘  └──────────────┘  └──────────────────────┘  │   │   │
-│  │  │                                                                 │   │   │
-│  │  │  ┌──────────────────────┐  ┌──────────────┐                     │   │   │
-│  │  │  │  acs-upload          │  │  Dashboard   │                     │   │   │
-│  │  │  │  (conc: 2)           │  │  Next.js:3000│                     │   │   │
-│  │  │  └──────────────────────┘  └──────────────┘                     │   │   │
-│  │  └─────────────────────────────────────────────────────────────────┘   │   │
+│  │  ┌──────┴─────────────────┴──────────────────────────────────────┐   │
+│  │  │  Docker Bridge Network: 172.17.0.0/16                          │   │
+│  │  │                                                                 │   │
+│  │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │   │
+│  │  │  │  Dispatcher  │  │  acs-fast    │  │  acs-download        │  │   │
+│  │  │  │  (cron 1m)   │  │  (conc: 5)   │  │  (conc: 2)           │  │   │
+│  │  │  └──────────────┘  └──────────────┘  └──────────────────────┘  │   │
+│  │  │                                                                 │   │
+│  │  │  ┌──────────────────────┐  ┌──────────────┐                     │   │
+│  │  │  │  acs-upload          │  │  Dashboard   │                     │   │
+│  │  │  │  (conc: 2)           │  │  Next.js:3000│                     │   │
+│  │  │  └──────────────────────┘  └──────────────┘                     │   │
+│  │  │                                                                 │   │
+│  │  │  Outbound ──▶ Axiros ACS (internal) TCP/443                     │   │
+│  │  │  Outbound ──▶ Telegram API TCP/443                              │   │
+│  │  └─────────────────────────────────────────────────────────────────┘   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 │  FIREWALL:                                                                   │
@@ -484,7 +514,7 @@ Regional Worker (mojo_direct_ping_worker)
 | OLT → BNG (fiber) | 1-5 ms | Metro ethernet |
 | BNG → IGW (fiber) | 1-3 ms | Core network |
 | BNG → EBR (fiber) | 1-5 ms | Core network |
-| IGW → ACS Server | 5-15 ms | Internet/MPLS VPN |
+| BNG → Axiros ACS (internal) | 2-10 ms | Internal Telkomsel network |
 | **Total ping IGW** | **~10-25 ms** | |
 | **Total ping EBR** | **~15-35 ms** | |
 | Direct ping (regional) | 5-50 ms | Tergantung jarak |
