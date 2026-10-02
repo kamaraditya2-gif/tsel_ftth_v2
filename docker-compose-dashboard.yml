@@ -20,6 +20,8 @@ services:
       REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
       SESSION_SECRET: ${SESSION_SECRET:-mojojojo_session_secret_2024}
+      # Token bearer untuk /api/edge/* — kosong = endpoint edge menolak semua request
+      EDGE_SYNC_TOKEN: ${EDGE_SYNC_TOKEN:-}
       AI_INTEGRATIONS_GEMINI_API_KEY: ${AI_INTEGRATIONS_GEMINI_API_KEY}
       AI_INTEGRATIONS_GEMINI_BASE_URL: ${AI_INTEGRATIONS_GEMINI_BASE_URL}
       TZ: ${TZ:-Asia/Jakarta}
