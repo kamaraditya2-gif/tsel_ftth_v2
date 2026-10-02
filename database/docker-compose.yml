@@ -1,0 +1,88 @@
+# =============================================================================
+# MojoJojo — Standalone Database Server (PostgreSQL 16 + TimescaleDB)
+# =============================================================================
+# Dijalankan di VM database tersendiri, terpisah dari dashboard/worker.
+#
+#   cp env.example .env        # lalu ganti POSTGRES_PASSWORD dll
+#   docker compose up -d db
+#   docker compose run --rm migrate
+#
+# Aplikasi (dashboard, dispatcher, worker, regional) cukup diarahkan ke
+# DB_HOST=<IP server ini> dan DB_PORT=${POSTGRES_PORT}.
+# =============================================================================
+
+services:
+  db:
+    image: ${TIMESCALE_IMAGE:-timescale/timescaledb:2.17.2-pg16}
+    container_name: ${DB_CONTAINER_NAME:-mojojojo_timescaledb}
+    restart: always
+    shm_size: ${DB_SHM_SIZE:-1g}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mojojojo_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD wajib diisi di .env}
+      POSTGRES_DB: ${POSTGRES_DB:-mojojojo_database}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=trust"
+      TZ: ${TZ:-Asia/Jakarta}
+      # timescaledb-tune dijalankan saat init pertama berdasarkan resource ini
+      TS_TUNE_MEMORY: ${TS_TUNE_MEMORY:-8GB}
+      TS_TUNE_NUM_CPUS: ${TS_TUNE_NUM_CPUS:-4}
+      TS_TUNE_MAX_CONNS: ${DB_MAX_CONNECTIONS:-300}
+    command:
+      - postgres
+      - -c
+      - timezone=${TZ:-Asia/Jakarta}
+      - -c
+      - log_timezone=${TZ:-Asia/Jakarta}
+      - -c
+      - max_connections=${DB_MAX_CONNECTIONS:-300}
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+      - -c
+      - log_min_duration_statement=${DB_LOG_SLOW_MS:-2000}
+      - -c
+      - timescaledb.telemetry_level=off
+    volumes:
+      - ${PGDATA_DIR:-./data/postgres}:/var/lib/postgresql/data
+      - ./config/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    ports:
+      - "${POSTGRES_BIND:-0.0.0.0}:${POSTGRES_PORT:-5432}:5432"
+    deploy:
+      resources:
+        limits:
+          cpus: '${DB_CPU_LIMIT:-4.0}'
+          memory: ${DB_MEMORY_LIMIT:-8G}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - mojojojo_db
+
+  # One-shot: menjalankan migrasi yang belum ter-apply lalu keluar.
+  #   docker compose run --rm migrate            # apply semua migrasi baru
+  #   docker compose run --rm migrate status     # lihat status migrasi
+  migrate:
+    image: ${TIMESCALE_IMAGE:-timescale/timescaledb:2.17.2-pg16}
+    profiles: ["tools"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER:-mojojojo_user}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-mojojojo_database}
+      MIGRATIONS_DIR: /migrations
+    volumes:
+      - ./migrations:/migrations:ro
+      - ./scripts:/scripts:ro
+    entrypoint: ["bash", "/scripts/migrate.sh"]
+    command: ["up"]
+    networks:
+      - mojojojo_db
+
+networks:
+  mojojojo_db:
+    name: mojojojo_db
