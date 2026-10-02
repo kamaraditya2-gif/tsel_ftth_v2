@@ -1,3 +1,8 @@
+> ⚠️ **Deprecated.** Skema untuk server database TimescaleDB mandiri sekarang ada di
+> [`database/migrations`](../database/migrations) dan dijalankan dengan `database/scripts/migrate.sh`.
+> Lihat [`database/README.md`](../database/README.md). File di folder ini hanya disimpan sebagai riwayat
+> untuk database PostgreSQL lama.
+
 # Database Migrations
 
 This directory contains SQL migration files to update the database schema.

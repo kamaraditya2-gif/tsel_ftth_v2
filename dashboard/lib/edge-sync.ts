@@ -62,7 +62,11 @@ export function resolveNodeId(req: NextRequest, payload: any) {
 
 let edgeTablesReady: Promise<void> | null = null;
 
-/** Buat tabel edge sekali per proses; jika gagal, dicoba lagi di request berikut. */
+/**
+ * Buat tabel edge sekali per proses; jika gagal, dicoba lagi di request berikut.
+ * Sumber utama skema adalah database/migrations (edge_ping_logs di sana berupa
+ * hypertable); ini hanya fallback dan harus tetap sejalan dengan migrasi.
+ */
 export function ensureEdgeTables() {
   if (!edgeTablesReady) {
     edgeTablesReady = createEdgeTables().catch((err) => {
@@ -104,7 +108,7 @@ async function createEdgeTables() {
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS edge_ping_logs (
-      id BIGSERIAL PRIMARY KEY,
+      id BIGSERIAL,
       node_id TEXT NOT NULL,
       target_ip TEXT NOT NULL,
       bucket TIMESTAMPTZ NOT NULL,
@@ -112,8 +116,10 @@ async function createEdgeTables() {
       avg_loss_pct DOUBLE PRECISION,
       samples INTEGER DEFAULT 0,
       ok_count INTEGER DEFAULT 0,
-      dedupe_key TEXT UNIQUE NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      dedupe_key TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (id, bucket),
+      UNIQUE (dedupe_key, bucket)
     )
   `);
 
@@ -250,7 +256,7 @@ export async function ingestEdgePingLogs(nodeId: string, payload: any) {
       `INSERT INTO edge_ping_logs (
           node_id, target_ip, bucket, avg_rtt_ms, avg_loss_pct, samples, ok_count, dedupe_key
         ) VALUES ${inserts.join(', ')}
-        ON CONFLICT (dedupe_key) DO NOTHING`,
+        ON CONFLICT (dedupe_key, bucket) DO NOTHING`,
       values
     );
     inserted += result.rowCount ?? 0;

@@ -21,13 +21,18 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MIGRATIONS_DIR="${MIGRATIONS_DIR:-$SCRIPT_DIR/../migrations}"
 PSQL=(psql -X -q -v ON_ERROR_STOP=1 --no-psqlrc)
+# Sembunyikan NOTICE ("already exists, skipping"); WARNING dan ERROR tetap tampil
+export PGOPTIONS="${PGOPTIONS:-} -c client_min_messages=warning"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
 checksum() { sha256sum "$1" | cut -d' ' -f1; }
 
 migration_files() {
-  find "$MIGRATIONS_DIR" -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]_*.sql' -printf '%f\n' | sort
+  local f
+  for f in "$MIGRATIONS_DIR"/[0-9][0-9][0-9][0-9]_*.sql; do
+    [[ -f "$f" ]] && basename "$f"
+  done | sort
 }
 
 ensure_table() {
@@ -46,10 +51,15 @@ applied() {
 
 cmd_up() {
   ensure_table
+  # Ditampung di variabel dulu supaya kegagalan query/listing menghentikan skrip (set -e)
+  local applied_list files
+  applied_list="$(applied)"
+  files="$(migration_files)"
+
   declare -A done_sum=()
   while read -r v s; do
     [[ -n "$v" ]] && done_sum["$v"]="$s"
-  done < <(applied)
+  done <<< "$applied_list"
 
   local count=0
   while read -r file; do
@@ -74,7 +84,7 @@ cmd_up() {
       -c "INSERT INTO schema_migrations (version, checksum) VALUES ('$version', '$sum')" \
       >/dev/null
     count=$((count + 1))
-  done < <(migration_files)
+  done <<< "$files"
 
   if [[ $count -eq 0 ]]; then
     echo "Database sudah up to date."
@@ -85,10 +95,14 @@ cmd_up() {
 
 cmd_status() {
   ensure_table
+  local applied_list files
+  applied_list="$("${PSQL[@]}" -At -c "SELECT version, to_char(applied_at, 'YYYY-MM-DD HH24:MI:SS') FROM schema_migrations")"
+  files="$(migration_files)"
+
   declare -A done_at=()
   while IFS='|' read -r v at; do
     [[ -n "$v" ]] && done_at["$v"]="$at"
-  done < <("${PSQL[@]}" -At -c "SELECT version, to_char(applied_at, 'YYYY-MM-DD HH24:MI:SS') FROM schema_migrations")
+  done <<< "$applied_list"
 
   printf '%-45s %s\n' "MIGRATION" "APPLIED AT"
   while read -r file; do
@@ -96,7 +110,7 @@ cmd_status() {
     local version="${file%.sql}"
     printf '%-45s %s\n' "$version" "${done_at[$version]:-(pending)}"
     unset 'done_at[$version]'
-  done < <(migration_files)
+  done <<< "$files"
 
   for v in "${!done_at[@]}"; do
     printf '%-45s %s  (file tidak ditemukan!)\n' "$v" "${done_at[$v]}"
@@ -113,6 +127,8 @@ cmd_new() {
   printf -- '-- %s\n-- Migration: %s\n\n' "${next}_${name}.sql" "$name" > "$path"
   echo "Dibuat: $path"
 }
+
+[[ -d "$MIGRATIONS_DIR" ]] || die "folder migrasi tidak ditemukan: $MIGRATIONS_DIR"
 
 case "${1:-up}" in
   up)     cmd_up ;;

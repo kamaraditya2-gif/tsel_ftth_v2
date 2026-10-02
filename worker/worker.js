@@ -260,13 +260,12 @@ const worker = new Worker(QUEUE_NAME, async (job) => {
                 `INSERT INTO test_results_ping
                  (task_id, device_id, queue_job_id, run_id, ping_igw, ping_ebr, packet_loss_igw, packet_loss_ebr, success, executed_at, created_at)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                 ON CONFLICT (queue_job_id) DO UPDATE SET
+                 ON CONFLICT (queue_job_id, executed_at) DO UPDATE SET
                    ping_igw = EXCLUDED.ping_igw,
                    ping_ebr = EXCLUDED.ping_ebr,
                    packet_loss_igw = EXCLUDED.packet_loss_igw,
                    packet_loss_ebr = EXCLUDED.packet_loss_ebr,
-                   success = EXCLUDED.success,
-                   executed_at = EXCLUDED.executed_at`,
+                   success = EXCLUDED.success`,
                 [
                   taskId, deviceId, queueJobId, runId,
                   result.ping_igw, result.ping_ebr,
@@ -286,12 +285,11 @@ const worker = new Worker(QUEUE_NAME, async (job) => {
                 `INSERT INTO test_results_traceroute
                  (task_id, device_id, queue_job_id, run_id, traceroute_raw, total_hops, total_rtt_ms, success, executed_at, created_at)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                 ON CONFLICT (queue_job_id) DO UPDATE SET
+                 ON CONFLICT (queue_job_id, executed_at) DO UPDATE SET
                    traceroute_raw = EXCLUDED.traceroute_raw,
                    total_hops = EXCLUDED.total_hops,
                    total_rtt_ms = EXCLUDED.total_rtt_ms,
-                   success = EXCLUDED.success,
-                   executed_at = EXCLUDED.executed_at`,
+                   success = EXCLUDED.success`,
                 [
                   taskId, deviceId, queueJobId, runId,
                   JSON.stringify(hops), totalHops, totalRtt,
@@ -307,10 +305,9 @@ const worker = new Worker(QUEUE_NAME, async (job) => {
                 `INSERT INTO test_results_speed_download
                  (task_id, device_id, queue_job_id, run_id, download_speed, success, executed_at, created_at)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                 ON CONFLICT (queue_job_id) DO UPDATE SET
+                 ON CONFLICT (queue_job_id, executed_at) DO UPDATE SET
                    download_speed = EXCLUDED.download_speed,
-                   success = EXCLUDED.success,
-                   executed_at = EXCLUDED.executed_at`,
+                   success = EXCLUDED.success`,
                 [
                   taskId, deviceId, queueJobId, runId,
                   result.download_speed, result.success, executedAt, new Date()
@@ -325,10 +322,9 @@ const worker = new Worker(QUEUE_NAME, async (job) => {
                 `INSERT INTO test_results_speed_upload
                  (task_id, device_id, queue_job_id, run_id, upload_speed, success, executed_at, created_at)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                 ON CONFLICT (queue_job_id) DO UPDATE SET
+                 ON CONFLICT (queue_job_id, executed_at) DO UPDATE SET
                    upload_speed = EXCLUDED.upload_speed,
-                   success = EXCLUDED.success,
-                   executed_at = EXCLUDED.executed_at`,
+                   success = EXCLUDED.success`,
                 [
                   taskId, deviceId, queueJobId, runId,
                   result.upload_speed, result.success, executedAt, new Date()
