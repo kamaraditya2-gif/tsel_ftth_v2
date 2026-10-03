@@ -1,5 +1,5 @@
 =============================================================================
- PANDUAN DEPLOY REGIONAL FPING WORKER - MoJoJojoMonitor
+ PANDUAN DEPLOY REGIONAL FPING WORKER - Mojo-Central
 =============================================================================
 
 1. PERSYARATAN SERVER REGIONAL
@@ -17,8 +17,8 @@
 Jalankan di SERVER REGIONAL (bukan di VM pusat):
 
   # Clone repo
-  git clone https://github.com/kamaraditya2-gif/tsel_ftth.git MojoJojoMonitor
-  cd MojoJojoMonitor
+  git clone https://github.com/kamaraditya2-gif/tsel_ftth.git mojo-central
+  cd mojo-central
 
   # Deploy (interaktif)
   bash regional/deploy-regional.sh

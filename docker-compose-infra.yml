@@ -1,12 +1,12 @@
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: mojojojo_postgres
+    container_name: mojo-db
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-mojojojo_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mojojojo_password}
-      POSTGRES_DB: ${POSTGRES_DB:-mojojojo_database}
+      POSTGRES_USER: ${POSTGRES_USER:-mojo_db_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mojo_db_password}
+      POSTGRES_DB: ${POSTGRES_DB:-mojo_db}
       TZ: ${TZ:-Asia/Jakarta}
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
@@ -22,23 +22,23 @@ services:
         reservations:
           memory: 512M
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mojojojo_user} -d ${POSTGRES_DB:-mojojojo_database}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mojo_db_user} -d ${POSTGRES_DB:-mojo_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - mojojojo_network
+      - mojo-central-net
 
   redis:
     image: redis:7-alpine
-    container_name: mojojojo_redis
+    container_name: mojo-redis
     restart: always
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "${REDIS_PASSWORD:-mojojojo_redis_password}"]
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "${REDIS_PASSWORD:-mojo_redis_password}"]
     volumes:
       - ./data/redis:/data
       - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
     environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-mojojojo_redis_password}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-mojo_redis_password}
     ports:
       - "${REDIS_PORT:-127.0.0.1:6379}:6379"
     deploy:
@@ -49,12 +49,12 @@ services:
         reservations:
           memory: 256M
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-mojojojo_redis_password}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-mojo_redis_password}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - mojojojo_network
+      - mojo-central-net
     security_opt:
       - no-new-privileges:true
     read_only: true
@@ -62,5 +62,5 @@ services:
       - /tmp
 
 networks:
-  mojojojo_network:
+  mojo-central-net:
     external: true

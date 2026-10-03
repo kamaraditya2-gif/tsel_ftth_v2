@@ -84,9 +84,9 @@ services:
     environment:
       DB_HOST: \${DB_HOST:-103.143.12.115}
       DB_PORT: \${DB_PORT:-5432}
-      DB_USER: \${DB_USER:-mojojojo_user}
+      DB_USER: \${DB_USER:-mojo_db_user}
       DB_PASSWORD: \${DB_PASSWORD:-QG4CXVN4jbTKrjvdiiEjihOO}
-      DB_NAME: \${DB_NAME:-mojojojo_database}
+      DB_NAME: \${DB_NAME:-mojo_db}
       DOWNSTREAM_SERVER_ID: ${REGION_ID}
       DIRECT_PING_INTERVAL_MINUTES: \${INTERVAL:-10}
       PING_BATCH_SIZE: \${BATCH:-500}

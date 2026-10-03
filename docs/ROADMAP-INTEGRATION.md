@@ -586,7 +586,7 @@ Bulan 11-12 ─ Fase 5: Maturity
 
 ```
 ┌──────────────────────┐
-│    MojoJojoMonitor   │
+│    Mojo-Central   │
 ├──────────────────────┤
 │ Outbound Integrations│
 │ ├── Telegram API      │  HTTPS 443

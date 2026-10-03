@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Migration runner — MojoJojo database
+# Migration runner — Mojo-DB database
 # =============================================================================
 # Menjalankan file database/migrations/NNNN_nama.sql secara berurutan dan
 # mencatat yang sudah ter-apply di tabel schema_migrations. Setiap file
@@ -79,7 +79,7 @@ cmd_up() {
     # --single-transaction membungkus file + INSERT pencatatan dalam satu transaksi.
     # Advisory lock mencegah dua runner meng-apply migrasi yang sama bersamaan.
     "${PSQL[@]}" --single-transaction \
-      -c "SELECT pg_advisory_xact_lock(hashtext('mojojojo_schema_migrations'))" \
+      -c "SELECT pg_advisory_xact_lock(hashtext('mojo_db_schema_migrations'))" \
       -f "$path" \
       -c "INSERT INTO schema_migrations (version, checksum) VALUES ('$version', '$sum')" \
       >/dev/null

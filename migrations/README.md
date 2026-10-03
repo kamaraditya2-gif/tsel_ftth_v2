@@ -24,7 +24,7 @@ cd migrations
 
 ### Option 3: Manual (Direct psql)
 ```bash
-psql -h localhost -U mojojojo_user -d mojojojo_db -f 002_update_schema_to_latest.sql
+psql -h localhost -U mojo_db_user -d mojo_db -f 002_update_schema_to_latest.sql
 ```
 
 ### Option 4: Automatic with Docker Compose
@@ -35,9 +35,9 @@ services:
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_DB: mojojojo_db
-      POSTGRES_USER: mojojojo_user
-      POSTGRES_PASSWORD: mojojojo_password
+      POSTGRES_DB: mojo_db
+      POSTGRES_USER: mojo_db_user
+      POSTGRES_PASSWORD: mojo_db_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d:ro
@@ -66,6 +66,6 @@ The migration scripts use these environment variables:
 
 - `DB_HOST` (default: localhost)
 - `DB_PORT` (default: 5432)
-- `DB_NAME` (default: mojojojo_db)
-- `DB_USER` (default: mojojojo_user)
-- `DB_PASSWORD` (default: mojojojo_password)
+- `DB_NAME` (default: mojo_db)
+- `DB_USER` (default: mojo_db_user)
+- `DB_PASSWORD` (default: mojo_db_password)

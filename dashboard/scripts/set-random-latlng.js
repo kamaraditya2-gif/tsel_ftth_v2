@@ -3,9 +3,9 @@ const { Pool } = require('pg');
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'mojojojo_database',
-  user: process.env.DB_USER || 'mojojojo_user',
-  password: process.env.DB_PASSWORD || 'mojojojo_password',
+  database: process.env.DB_NAME || 'mojo_db',
+  user: process.env.DB_USER || 'mojo_db_user',
+  password: process.env.DB_PASSWORD || 'mojo_db_password',
 });
 
 async function run() {

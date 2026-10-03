@@ -403,7 +403,7 @@ export async function POST(request: Request) {
     // Fetch RAG context from database
     const ragContext = await fetchRAGContext(message)
 
-    const systemPrompt = `You are MojoBot, an AI assistant for the MojoJojoMonitor FTTH/ACS monitoring dashboard.
+    const systemPrompt = `You are MojoBot, an AI assistant for the Mojo-Central FTTH/ACS monitoring dashboard.
 
 Your job is to help field technicians and network engineers analyze network data, troubleshoot ONT devices, and monitor network health.
 

@@ -11,15 +11,15 @@
 services:
   mojo_direct_ping_worker:
     image: mojo-worker:latest
-    container_name: mojojojo_direct_ping_worker
+    container_name: mojo-central-direct-ping-worker
     restart: always
     command: ["node", "start-direct-ping-worker.js"]
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT:-5432}
-      DB_USER: ${DB_USER:-mojojojo_user}
+      DB_USER: ${DB_USER:-mojo_db_user}
       DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DB_NAME: ${DB_NAME:-mojo_db}
       DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
       TZ: ${TZ:-Asia/Jakarta}
     cap_add:
@@ -35,8 +35,8 @@ services:
         max_attempts: 3
         window: 120s
     networks:
-      - mojojojomonitor_mojojojo_network
+      - mojo-central-net
 
 networks:
-  mojojojomonitor_mojojojo_network:
+  mojo-central-net:
     external: true

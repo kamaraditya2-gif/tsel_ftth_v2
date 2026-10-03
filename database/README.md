@@ -1,4 +1,4 @@
-# MojoJojo Database Server (PostgreSQL 16 + TimescaleDB)
+# Mojo-DB Database Server (PostgreSQL 16 + TimescaleDB)
 
 Database berdiri sendiri di VM terpisah. Dashboard, dispatcher, worker, dan worker regional terhubung lewat jaringan memakai `DB_HOST`.
 
@@ -17,15 +17,17 @@ database/
 
 ```bash
 cd database
-cp env.example .env              # isi POSTGRES_PASSWORD, sesuaikan TS_TUNE_* dengan RAM/CPU VM
+cp env.example .env              # isi POSTGRES_PASSWORD
 docker compose up -d db
 docker compose run --rm migrate  # buat semua tabel + seed data referensi
 docker compose run --rm migrate status
 ```
 
+Container database tidak dibatasi CPU/RAM. Saat init pertama, `timescaledb-tune` membaca RAM dan CPU VM secara otomatis lalu mengatur `shared_buffers`, `effective_cache_size`, `work_mem`, dan worker paralel. Tuning ini hanya berjalan sekali, saat `PGDATA_DIR` masih kosong. Jika VM di-upgrade kemudian, atur ulang parameter itu lewat `ALTER SYSTEM SET ...` lalu restart container.
+
 Seed membuat user **admin / admin123**. Ganti password ini segera setelah login pertama.
 
-Batasi akses di `config/pg_hba.conf`: ganti baris `0.0.0.0/0` dengan IP server aplikasi dan regional. Setelah itu jalankan `docker compose exec db psql -U mojojojo_user -d mojojojo_database -c "SELECT pg_reload_conf()"`. Buka port 5432 di firewall hanya untuk IP tersebut.
+Batasi akses di `config/pg_hba.conf`: ganti baris `0.0.0.0/0` dengan IP server aplikasi dan regional. Setelah itu jalankan `docker compose exec db psql -U mojo_db_user -d mojo_db -c "SELECT pg_reload_conf()"`. Buka port 5432 di firewall hanya untuk IP tersebut.
 
 ## 2. Arahkan aplikasi ke server ini
 
@@ -34,9 +36,9 @@ Di server aplikasi (dan setiap regional), set di `.env`:
 ```env
 DB_HOST=<IP server database>
 DB_PORT=5432
-DB_USER=mojojojo_user
+DB_USER=mojo_db_user
 DB_PASSWORD=<sama dengan POSTGRES_PASSWORD>
-DB_NAME=mojojojo_database
+DB_NAME=mojo_db
 ```
 
 Service `postgres` lama di `docker-compose.yml` / `docker-compose-infra.yml` tidak perlu dijalankan lagi.
@@ -50,7 +52,7 @@ Jalankan setelah langkah 1, saat dispatcher dan worker sudah dihentikan:
 ```bash
 cd database
 docker compose run --rm \
-  -e SOURCE_URL=postgres://mojojojo_user:PASSWORD_LAMA@IP_LAMA:5432/mojojojo_database \
+  -e SOURCE_URL=postgres://mojo_db_user:PASSWORD_LAMA@IP_LAMA:5432/mojo_db \
   --entrypoint bash migrate /scripts/import-legacy.sh --yes
 ```
 
@@ -102,13 +104,13 @@ Konsekuensi desain:
 
 ```bash
 # Efek kompresi satu hypertable
-docker compose exec db psql -U mojojojo_user -d mojojojo_database -c \
+docker compose exec db psql -U mojo_db_user -d mojo_db -c \
   "SELECT pg_size_pretty(before_compression_total_bytes) AS sebelum,
           pg_size_pretty(after_compression_total_bytes) AS sesudah
    FROM hypertable_compression_stats('test_results_ping')"
 
 # Backup
-docker compose exec db pg_dump -U mojojojo_user -Fc mojojojo_database > backup_$(date +%F).dump
+docker compose exec db pg_dump -U mojo_db_user -Fc mojo_db > backup_$(date +%F).dump
 ```
 
 Restore dump TimescaleDB ke database baru memerlukan `SELECT timescaledb_pre_restore();` sebelum `pg_restore` dan `SELECT timescaledb_post_restore();` sesudahnya.

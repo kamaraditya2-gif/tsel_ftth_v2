@@ -1,8 +1,8 @@
-# High-Level Design — MojoJojoMonitor
+# High-Level Design — Mojo-Central
 
 ## 1. System Overview
 
-MojoJojoMonitor is an **FTTH (Fiber-to-the-Home) ACS (Auto Configuration Server) Monitoring Dashboard** designed to monitor, test, and manage up to 26,000 ONT devices across a large-scale fiber broadband network (Telkomsel Indihome). The system periodically executes network performance tests (ping, traceroute, download/upload speed) via the Axiros ACS API and direct ICMP ping, analyzes results against configurable thresholds, generates alarms, and provides a centralized real-time dashboard for NOC operations.
+Mojo-Central is an **FTTH (Fiber-to-the-Home) ACS (Auto Configuration Server) Monitoring Dashboard** designed to monitor, test, and manage up to 26,000 ONT devices across a large-scale fiber broadband network (Telkomsel Indihome). The system periodically executes network performance tests (ping, traceroute, download/upload speed) via the Axiros ACS API and direct ICMP ping, analyzes results against configurable thresholds, generates alarms, and provides a centralized real-time dashboard for NOC operations.
 
 ### Primary Goals
 - **Real-time visibility** into ONT device health, latency, speed, and packet loss
@@ -400,7 +400,7 @@ mojo_dashboard ─── mojo_worker_fast/download/upload ─── (API_BASE_UR
                                         ▼
 ┌────────────────── CENTRAL SERVER ───────────────────────┐
 │  ┌──────────────────────────────────────────────────┐   │
-│  │   Docker Bridge Network: mojojojo_network        │   │
+│  │   Docker Bridge Network: mojo-central-net        │   │
 │  │   172.x.x.x/16 (internal)                       │   │
 │  │                                                  │   │
 │  │   mojo_dashboard:3000 ◄── frp client ── :3002   │   │
@@ -452,7 +452,7 @@ All tunables via `.env` file (see `.env.example`):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `POSTGRES_USER/PASSWORD/DB` | `mojojojo_*` | Database credentials |
+| `POSTGRES_USER/PASSWORD/DB` | `mojo_db_*` | Database credentials |
 | `REDIS_PASSWORD` | (custom) | Redis auth |
 | `DASHBOARD_PORT` | `3002` | Host port for Next.js |
 | `PING_RATE_LIMIT_SECONDS` | `10` | Cooldown between pings per device |

@@ -399,14 +399,14 @@ SSH key-based auth (no password)
 ```bash
 # ============ Central .env ============
 # Database
-POSTGRES_USER=mojojojo_user
+POSTGRES_USER=mojo_db_user
 POSTGRES_PASSWORD=<random-32-char>
-POSTGRES_DB=mojojojo_database
-DB_HOST=mojojojo_postgres
+POSTGRES_DB=mojo_db
+DB_HOST=mojo-db
 DB_PORT=5432
 
 # Redis
-REDIS_HOST=mojojojo_redis
+REDIS_HOST=mojo-redis
 REDIS_PORT=6379
 REDIS_PASSWORD=<random-32-char>
 
@@ -430,9 +430,9 @@ WORKER_CONCURRENCY=5
 # ============ Regional Worker .env ============
 DB_HOST=<central_db_ip>
 DB_PORT=5432
-DB_USER=mojojojo_user
+DB_USER=mojo_db_user
 DB_PASSWORD=<password>
-DB_NAME=mojojojo_database
+DB_NAME=mojo_db
 DOWNSTREAM_SERVER_ID=<province_id>
 DIRECT_PING_INTERVAL_MINUTES=10
 ```

@@ -1,5 +1,5 @@
 -- Alter test_results table columns
--- Run with: Get-Content migrations\alter_test_results_columns.sql | docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database
+-- Run with: Get-Content migrations\alter_test_results_columns.sql | docker exec -i mojo-db psql -U mojo_db_user -d mojo_db
 
 -- Rename ping_ms to ping_igw
 ALTER TABLE test_results RENAME COLUMN ping_ms TO ping_igw;

@@ -7,7 +7,7 @@ class:
 paginate: true
 ---
 
-# MojoJojoMonitor
+# Mojo-Central
 ## Roadmap
 
 6 Phase — Foundation to Innovation

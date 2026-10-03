@@ -31,7 +31,7 @@ export async function GET(
 
       const osmRes = await fetch(osmUrl, {
         headers: {
-          'User-Agent': 'MojoJojoMonitor/1.0 (dashboard map tiles)',
+          'User-Agent': 'Mojo-Central/1.0 (dashboard map tiles)',
         },
       })
 

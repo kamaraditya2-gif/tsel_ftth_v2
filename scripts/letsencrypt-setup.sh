@@ -25,7 +25,7 @@ echo " Let's Encrypt — $DOMAIN"
 echo "=============================================="
 
 # Pastikan Nginx jalan dengan config HTTP-only dulu
-if ! docker ps --format '{{.Names}}' | grep -q mojojojo_nginx; then
+if ! docker ps --format '{{.Names}}' | grep -q mojo-central-nginx; then
   echo ""
   echo "Jalankan Nginx dulu dengan config yang support HTTP:"
   echo "  docker compose -f docker-compose-nginx.yml up -d"

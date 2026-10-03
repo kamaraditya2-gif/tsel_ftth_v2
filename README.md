@@ -1,4 +1,4 @@
-# MojoJojoMonitor — FTTH ACS Monitoring Dashboard
+# Mojo-Central — FTTH ACS Monitoring Dashboard
 
 ## 📍 Landing Page (Dashboard)
 

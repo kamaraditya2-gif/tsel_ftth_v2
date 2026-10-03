@@ -1,6 +1,6 @@
 -- Create test_results_speed_upload table for upload speed test results
 -- Separates upload speed results to avoid race conditions
--- Run with: Get-Content migrations\create_test_results_speed_upload.sql | docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database
+-- Run with: Get-Content migrations\create_test_results_speed_upload.sql | docker exec -i mojo-db psql -U mojo_db_user -d mojo_db
 
 -- Create the new table
 CREATE TABLE IF NOT EXISTS test_results_speed_upload (

@@ -127,7 +127,7 @@ Axiros ACS berada **di dalam jaringan internal Telkomsel**, bukan di internet pu
 │  └── ONT:                   10.50-99.x.x/16 (CGNAT pool)                 │
 │                                                                             │
 │  MONITORING SYSTEM (Private)                                               │
-│  ├── Docker bridge:         172.17.x.x/16 (mojojojo_network)              │
+│  ├── Docker bridge:         172.17.x.x/16 (mojo-central-net)              │
 │  │   ├── mojo_dashboard:    172.17.0.2:3000                               │
 │  │   ├── postgres:          172.17.0.3:5432                               │
 │  │   ├── redis:             172.17.0.4:6379                               │

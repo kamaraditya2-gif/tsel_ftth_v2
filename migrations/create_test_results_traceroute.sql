@@ -1,6 +1,6 @@
 -- Create test_results_traceroute table for traceroute test results
 -- This separates traceroute results from the general test_results table to avoid race conditions
--- Run with: Get-Content migrations\create_test_results_traceroute.sql | docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database
+-- Run with: Get-Content migrations\create_test_results_traceroute.sql | docker exec -i mojo-db psql -U mojo_db_user -d mojo_db
 
 -- Create the new table
 CREATE TABLE IF NOT EXISTS test_results_traceroute (

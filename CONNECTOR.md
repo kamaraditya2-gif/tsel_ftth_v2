@@ -1,4 +1,4 @@
-# 🔌 Cara Konektor & Arsitektur MojoJojoMonitor
+# 🔌 Cara Konektor & Arsitektur Mojo-Central
 
 ## 📐 Arsitektur Sistem
 
@@ -10,7 +10,7 @@
                               │
 ┌─────────────────────────────▼───────────────────────────────────────────┐
 │                     🖥️ DASHBOARD (Next.js)                              │
-│                    Container: mojojojo_dashboard                        │
+│                    Container: mojo-central-dashboard                        │
 │                    Port: 3002 → 3000                                    │
 │                                                                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │
@@ -21,7 +21,7 @@
                               │ REST API
 ┌─────────────────────────────▼───────────────────────────────────────────┐
 │                    🐘 POSTGRESQL                                        │
-│                    Container: mojojojo_postgres                         │
+│                    Container: mojo-db                         │
 │                    Port: 5432                                           │
 │                                                                         │
 │  ┌─────────────────┐  ┌──────────────────┐  ┌───────────────────────┐  │
@@ -36,20 +36,20 @@
         │                     │                     │
 ┌───────▼──────┐  ┌──────────▼──────────┐  ┌──────▼───────┐
 │ 🧮 REDIS     │  │ ⚙️ WORKERS (3)      │  │ 📡 DIRECT PING│
-│ mojojojo_    │  │                     │  │ mojojojo_     │
-│ redis        │  │ • fast: ping/tr/ont │  │ direct_ping_  │
+│ mojo-redis   │  │                     │  │ mojo-central- │
+│              │  │ • fast: ping/tr/ont │  │ direct-ping-  │
 │              │  │ • download: speed ↓ │  │   worker      │
 │ • BullMQ     │  │ • upload: speed ↑   │  │               │
 │ • Rate Limit │  │                     │  │ • fping ICMP  │
-│              │  │ mojojojo_worker_*   │  │ • Every 10min │
-│              │  │                     │  │ • → DB        │
+│              │  │ mojo-central-       │  │ • Every 10min │
+│              │  │   worker-*          │  │ • → DB        │
 └──────────────┘  └─────────────────────┘  └───────────────┘
                            │
               ┌────────────┴────────────┐
               │                         │
      ┌────────▼─────────┐    ┌──────────▼──────────┐
      │ 📅 DISPATCHER    │    │ 🌐 AXiROS ACS API   │
-     │ mojojojo_        │    │ (External Server)   │
+     │ mojo-central-    │    │ (External Server)   │
      │ dispatcher       │    │                     │
      │                  │    │ • PostONTPing       │
      │ • Cron schedule  │    │ • PostONTTraceRoute │
@@ -65,7 +65,7 @@
 ### 1. Dashboard → PostgreSQL
 Dashboard (Next.js API Routes) langsung query ke PostgreSQL via `lib/db` (pg Pool).
 ```
-Dashboard API → pool.connect() → mojojojo_postgres:5432
+Dashboard API → pool.connect() → mojo-db:5432
 ```
 
 ### 2. Worker → Redis → PostgreSQL
@@ -129,8 +129,8 @@ RUN apk add --no-cache fping iputils
 │                                                             │
 │  ┌──────────────┐      ICMP Ping (fping)                   │
 │  │ Container    │ ───────────────────────────────►          │
-│  │ mojojojo_    │        to all ONT IPs                    │
-│  │ direct_ping_ │                                           │
+│  │ mojo-central-│        to all ONT IPs                    │
+│  │ direct-ping- │                                           │
 │  │ worker       │ ◄───────────────────────────────          │
 │  └──────────────┘      latency + packet_loss               │
 │                              │                              │
@@ -205,11 +205,11 @@ Setelah install, buka: `http://<server-ip>:3002`
 
 | Service | Container | Port | Koneksi Dari |
 |---------|-----------|------|-------------|
-| Dashboard | mojojojo_dashboard | 3002 | Browser user |
-| PostgreSQL | mojojojo_postgres | 5432 | Dashboard, Worker |
-| Redis | mojojojo_redis | 6379 | Dashboard, Worker, Dispatcher |
-| Worker Fast | mojojojo_worker_fast | — | Redis queue (acs-fast) |
-| Worker Download | mojojojo_worker_download | — | Redis queue (acs-download) |
-| Worker Upload | mojojojo_worker_upload | — | Redis queue (acs-upload) |
-| Dispatcher | mojojojo_dispatcher | — | Redis queue |
-| Direct Ping | mojojojo_direct_ping_worker | — | PostgreSQL |
+| Dashboard | mojo-central-dashboard | 3002 | Browser user |
+| PostgreSQL | mojo-db | 5432 | Dashboard, Worker |
+| Redis | mojo-redis | 6379 | Dashboard, Worker, Dispatcher |
+| Worker Fast | mojo-central-worker-fast | — | Redis queue (acs-fast) |
+| Worker Download | mojo-central-worker-download | — | Redis queue (acs-download) |
+| Worker Upload | mojo-central-worker-upload | — | Redis queue (acs-upload) |
+| Dispatcher | mojo-central-dispatcher | — | Redis queue |
+| Direct Ping | mojo-central-direct-ping-worker | — | PostgreSQL |

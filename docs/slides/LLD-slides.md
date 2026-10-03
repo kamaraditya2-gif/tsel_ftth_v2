@@ -7,7 +7,7 @@ class:
 paginate: true
 ---
 
-# MojoJojoMonitor
+# Mojo-Central
 ## Low-Level Design
 
 Database, API, Worker, & Infrastructure Detail
@@ -196,7 +196,7 @@ Conditions: `service_healthy` / `service_started`
 
 ```javascript
 new Pool({
-  host: process.env.DB_HOST,  // mojojojo_postgres
+  host: process.env.DB_HOST,  // mojo-db
   port: 5432,
   max: 10,           // connections per worker
   idleTimeoutMillis: 30000,

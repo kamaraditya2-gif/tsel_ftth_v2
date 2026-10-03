@@ -1,4 +1,4 @@
-# Low-Level Design — MojoJojoMonitor
+# Low-Level Design — Mojo-Central
 
 ## 1. Database Schema
 
@@ -98,7 +98,7 @@ speed_id INTEGER FK → speed_group(id) -- optional per-speed-group override
 #### `app_settings`
 ```sql
 id SERIAL PK
-app_name VARCHAR(100) DEFAULT 'MojoJojo Monitor'
+app_name VARCHAR(100) DEFAULT 'Mojo-Central'
 logo_url TEXT
 favicon_url TEXT
 created_at / updated_at TIMESTAMP
@@ -732,9 +732,9 @@ API Protection:
 
 | Variable | Value | Purpose |
 |----------|-------|---------|
-| `POSTGRES_USER` | `${POSTGRES_USER:-mojojojo_user}` | Database user |
+| `POSTGRES_USER` | `${POSTGRES_USER:-mojo_db_user}` | Database user |
 | `POSTGRES_PASSWORD` | `${POSTGRES_PASSWORD}` | Database password |
-| `POSTGRES_DB` | `${POSTGRES_DB:-mojojojo_database}` | Database name |
+| `POSTGRES_DB` | `${POSTGRES_DB:-mojo_db}` | Database name |
 | `TZ` | `Asia/Jakarta` | Timezone |
 | `POSTGRES_PORT` | `5432` | Port (internal) |
 
@@ -759,12 +759,12 @@ requirepass ${REDIS_PASSWORD}
 |----------|---------|---------|
 | `NEXT_PUBLIC_API_URL` | `http://localhost/api` | Public API base URL |
 | `INTERNAL_API_URL` | `http://localhost:3000` | Internal API URL for workers |
-| `DB_HOST` | `mojojojo_postgres` | PostgreSQL hostname |
+| `DB_HOST` | `mojo-db` | PostgreSQL hostname |
 | `DB_PORT` | `5432` | PostgreSQL port |
-| `DB_USER` | `mojojojo_user` | Database user |
+| `DB_USER` | `mojo_db_user` | Database user |
 | `DB_PASSWORD` | - | Database password |
-| `DB_NAME` | `mojojojo_database` | Database name |
-| `REDIS_HOST` | `mojojojo_redis` | Redis hostname |
+| `DB_NAME` | `mojo_db` | Database name |
+| `REDIS_HOST` | `mojo-redis` | Redis hostname |
 | `REDIS_PORT` | `6379` | Redis port |
 | `REDIS_PASSWORD` | - | Redis password |
 | `SESSION_SECRET` | - | Auth session encryption |
@@ -779,7 +779,7 @@ requirepass ${REDIS_PASSWORD}
 | `QUEUE_NAME` | (varies) | BullMQ queue: acs-fast/acs-download/acs-upload |
 | `DB_HOST/PORT/USER/PASSWORD/NAME` | - | PostgreSQL connection |
 | `REDIS_HOST/PORT/PASSWORD` | - | Redis + BullMQ connection |
-| `API_BASE_URL` | `http://mojojojo_dashboard:3000` | Dashboard API for config |
+| `API_BASE_URL` | `http://mojo-central-dashboard:3000` | Dashboard API for config |
 | `PING_RATE_LIMIT_SECONDS` | `10` | Per-device ping cooldown |
 | `SPEED_RATE_LIMIT_SECONDS` | `10` | Per-device speed test cooldown |
 | `AXIROS_CONFIG_TTL_MS` | `60000` | Axiros config cache TTL |
@@ -859,7 +859,7 @@ interval: 30s, timeout: 10s, retries: 5, start_period: 40s
 
 #### Network Topology
 ```
-mojojojo_network (bridge, 172.x.x.x/16)
+mojo-central-net (bridge, 172.x.x.x/16)
   │
   ├── postgres:5432 (exposed host: 5432)
   ├── redis:6379 (exposed host: 127.0.0.1:6379)
@@ -1066,14 +1066,14 @@ Each regional server runs a single `mojo_direct_ping_worker` container:
 ```bash
 # On regional server (e.g., R01 Sumut):
 docker run -d \
-  --name mojojojo_direct_ping_worker \
+  --name mojo-central-direct-ping-worker \
   --network host \
   --cap-add NET_RAW \
   -e DB_HOST=<central_db_ip> \
   -e DB_PORT=5432 \
-  -e DB_USER=mojojojo_user \
+  -e DB_USER=mojo_db_user \
   -e DB_PASSWORD=<password> \
-  -e DB_NAME=mojojojo_database \
+  -e DB_NAME=mojo_db \
   -e DIRECT_PING_INTERVAL_MINUTES=10 \
   -e DOWNSTREAM_SERVER_ID=2 \
   mojo-worker:latest \

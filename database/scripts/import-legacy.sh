@@ -10,8 +10,8 @@
 # PERINGATAN: semua tabel aplikasi di database TUJUAN dikosongkan dulu
 # (termasuk seed admin/area/regional/NOP) lalu diganti dengan data sumber.
 #
-#   SOURCE_URL=postgres://user:pass@ip-lama:5432/mojojojo_database \
-#   TARGET_URL=postgres://user:pass@ip-baru:5432/mojojojo_database \
+#   SOURCE_URL=postgres://user:pass@ip-lama:5432/mojo_db \
+#   TARGET_URL=postgres://user:pass@ip-baru:5432/mojo_db \
 #   ./import-legacy.sh --yes
 #
 # Atau dari folder database/ (TARGET otomatis = container db):

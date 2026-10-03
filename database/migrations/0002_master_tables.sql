@@ -150,7 +150,7 @@ CREATE INDEX idx_threshold_master_status   ON threshold_master(status);
 -- ---------------------------------------------------------------------------
 CREATE TABLE app_settings (
     id          SERIAL PRIMARY KEY,
-    app_name    VARCHAR(100) NOT NULL DEFAULT 'MojoJojo Monitor',
+    app_name    VARCHAR(100) NOT NULL DEFAULT 'Mojo-Central',
     logo_url    TEXT,
     favicon_url TEXT,
     created_at  TIMESTAMP DEFAULT NOW(),

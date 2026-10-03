@@ -1,7 +1,7 @@
 services:
   nginx:
     image: nginx:alpine
-    container_name: mojojojo_nginx
+    container_name: mojo-central-nginx
     restart: always
     ports:
       - "${NGINX_HTTP_PORT:-80}:80"
@@ -15,12 +15,12 @@ services:
           cpus: '0.5'
           memory: 512M
     networks:
-      - mojojojo_network
+      - mojo-central-net
 
   # Auto-renew Let's Encrypt certificate (opsional, hanya untuk public domain)
   certbot:
     image: certbot/certbot
-    container_name: mojojojo_certbot
+    container_name: mojo-central-certbot
     restart: unless-stopped
     entrypoint: ""
     command: >
@@ -38,6 +38,6 @@ services:
       - letsencrypt
 
 networks:
-  mojojojo_network:
+  mojo-central-net:
     external: true
-    name: mojojojomonitor_mojojojo_network
+    name: mojo-central-net

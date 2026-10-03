@@ -198,7 +198,7 @@ export default function ReportsPage() {
     const ws2 = XLSX.utils.aoa_to_sheet([detailHeaders, ...detailRows])
     XLSX.utils.book_append_sheet(wb, ws2, 'Device Details')
 
-    XLSX.writeFile(wb, `MojoJojo_Report_${reportType}_${new Date().toISOString().split('T')[0]}.xlsx`)
+    XLSX.writeFile(wb, `MojoCentral_Report_${reportType}_${new Date().toISOString().split('T')[0]}.xlsx`)
   }
 
   const exportPDF = async () => {
@@ -206,7 +206,7 @@ export default function ReportsPage() {
     const doc = new jsPDF('landscape')
 
     doc.setFontSize(18)
-    doc.text('MojoJojo Monitor Report', 14, 20)
+    doc.text('Mojo-Central Report', 14, 20)
     doc.setFontSize(11)
     doc.text(`Type: ${reportType.toUpperCase()} | Date: ${dateFrom || 'All'} to ${dateTo || 'All'}`, 14, 28)
 
@@ -240,7 +240,7 @@ export default function ReportsPage() {
       headStyles: { fillColor: [239, 68, 68] },
     })
 
-    doc.save(`MojoJojo_Report_${reportType}_${new Date().toISOString().split('T')[0]}.pdf`)
+    doc.save(`MojoCentral_Report_${reportType}_${new Date().toISOString().split('T')[0]}.pdf`)
   }
 
   return (

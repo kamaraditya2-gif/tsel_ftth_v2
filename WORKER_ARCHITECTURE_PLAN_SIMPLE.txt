@@ -1,5 +1,5 @@
 ================================================================================
-RENCANA SIMPLIFY ARSITEKTUR WORKER MOJOJOJO MONITOR UNTUK 26.000 ONT
+RENCANA SIMPLIFY ARSITEKTUR WORKER MOJO-CENTRAL UNTUK 26.000 ONT
 ================================================================================
 
 Prinsip Dasar
@@ -26,8 +26,8 @@ Contoh container yang standby:
 | mojo_worker_download       | acs-download   | Running 1x    | +N replicas  |
 | mojo_worker_upload         | acs-upload     | Running 1x    | +N replicas  |
 | mojo_direct_ping_worker    | Offline ping   | Running 1x    | +N replicas  |
-| mojojojo_postgres          | Database       | Running       | Resize VM    |
-| mojojojo_redis             | BullMQ         | Running       | Resize VM    |
+| mojo-db          | Database       | Running       | Resize VM    |
+| mojo-redis             | BullMQ         | Running       | Resize VM    |
 
 
 1.1 Langkah Scale Up di VM Utama

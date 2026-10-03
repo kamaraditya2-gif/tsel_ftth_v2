@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# MojoJojoMonitor Installer
+# Mojo-Central Installer
 # ACS/FTTH Monitoring System – Online & Offline (Air-Gapped) Deployment
 # =============================================================================
 set -euo pipefail
@@ -8,10 +8,10 @@ set -euo pipefail
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'
 BOLD='\033[1m'; NC='\033[0m'
 
-PROJECT="MojoJojoMonitor"
+PROJECT="Mojo-Central"
 REPO="https://github.com/kamaraditya2-gif/tsel_ftth.git"
-INSTALL_DIR="/opt/mojojojo-monitor"
-BUNDLE_DIR="/opt/mojojojo-bundle"
+INSTALL_DIR="/opt/mojo-central"
+BUNDLE_DIR="/opt/mojo-central-bundle"
 
 log()   { echo -e "${CYAN}[INFO]${NC}  $1"; }
 ok()    { echo -e "${GREEN}[OK]${NC}    $1"; }
@@ -60,28 +60,28 @@ gen_env() {
   local pg_pass rd_pass sess_sec
   pg_pass=$(openssl rand -base64 32 2>/dev/null | tr -dc 'a-zA-Z0-9' | head -c 24 || echo "Mojo2024Secure!")
   rd_pass=$(openssl rand -base64 32 2>/dev/null | tr -dc 'a-zA-Z0-9' | head -c 24 || echo "Redis2024Secure!")
-  sess_sec=$(openssl rand -base64 32 2>/dev/null || echo "mojojojo-session-secret-2024")
+  sess_sec=$(openssl rand -base64 32 2>/dev/null || echo "mojo-central-session-secret-2024")
 
   cat > "$env_file" <<EOF
-# ===== MojoJojoMonitor Environment =====
+# ===== Mojo-Central Environment =====
 # Database
-POSTGRES_USER=mojojojo_user
+POSTGRES_USER=mojo_db_user
 POSTGRES_PASSWORD=${pg_pass}
-POSTGRES_DB=mojojojo_database
-DB_HOST=mojojojo_postgres
+POSTGRES_DB=mojo_db
+DB_HOST=mojo-db
 DB_PORT=5432
-DB_USER=mojojojo_user
+DB_USER=mojo_db_user
 DB_PASSWORD=${pg_pass}
-DB_NAME=mojojojo_database
+DB_NAME=mojo_db
 
 # Redis
 REDIS_PASSWORD=${rd_pass}
-REDIS_HOST=mojojojo_redis
+REDIS_HOST=mojo-redis
 REDIS_PORT=6379
 REDIS_PORT_INTERNAL=6379
 
 # Worker
-API_BASE_URL=http://mojojojo_dashboard:3000
+API_BASE_URL=http://mojo-central-dashboard:3000
 PING_RATE_LIMIT_SECONDS=10
 SPEED_RATE_LIMIT_SECONDS=10
 AXIROS_CONFIG_TTL_MS=60000
@@ -92,7 +92,7 @@ DOWNSTREAM_SERVER_ID=1
 
 # Dashboard
 NEXT_PUBLIC_API_URL=/api
-INTERNAL_API_URL=http://mojojojo_worker:3000
+INTERNAL_API_URL=http://mojo-central-worker:3000
 SESSION_SECRET=${sess_sec}
 TZ=Asia/Jakarta
 DASHBOARD_PORT=3002
@@ -176,7 +176,7 @@ setup_letsencrypt() {
   cd "$dir"
 
   # Pastikan Nginx running di port 80
-  if ! docker ps --format '{{.Names}}' | grep -q mojojojo_nginx; then
+  if ! docker ps --format '{{.Names}}' | grep -q mojo-central-nginx; then
     log "Start Nginx (HTTP only untuk verifikasi domain)..."
     docker compose -f docker-compose-nginx.yml up -d nginx
     sleep 3
@@ -208,7 +208,7 @@ deploy_regional() {
   else
     warn "File regional/deploy-regional.sh tidak ditemukan."
     echo "Clone dulu repo ini di server regional, lalu jalankan:"
-    echo "  cd MojoJojoMonitor && bash regional/deploy-regional.sh $rname $rid"
+    echo "  cd mojo-central && bash regional/deploy-regional.sh $rname $rid"
   fi
 }
 
@@ -277,13 +277,13 @@ install_online() {
 
   log "Setup database..."
   sleep 5
-  until docker exec mojojojo_postgres pg_isready -U mojojojo_user -d mojojojo_database &>/dev/null; do
+  until docker exec mojo-db pg_isready -U mojo_db_user -d mojo_db &>/dev/null; do
     sleep 3
   done
 
   if [ -f schema.sql ]; then
     log "Import schema..."
-    docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database < schema.sql
+    docker exec -i mojo-db psql -U mojo_db_user -d mojo_db < schema.sql
     ok "Schema imported."
   fi
 
@@ -317,12 +317,12 @@ package_offline() {
   log "Dump database..."
   docker compose up -d postgres 2>/dev/null || true
   for i in $(seq 1 30); do
-    docker exec mojojojo_postgres pg_isready -U mojojojo_user -d mojojojo_database &>/dev/null && break
+    docker exec mojo-db pg_isready -U mojo_db_user -d mojo_db &>/dev/null && break
     sleep 2
   done
-  docker exec mojojojo_postgres sh -c 'pg_dump -U mojojojo_user --no-owner --no-privileges mojojojo_database > /tmp/db_dump.sql' 2>/dev/null
-  docker cp mojojojo_postgres:/tmp/db_dump.sql "$bundle/db_dump.sql" 2>/dev/null || warn "DB dump gagal/tidak ada data."
-  docker exec mojojojo_postgres rm -f /tmp/db_dump.sql 2>/dev/null || true
+  docker exec mojo-db sh -c 'pg_dump -U mojo_db_user --no-owner --no-privileges mojo_db > /tmp/db_dump.sql' 2>/dev/null
+  docker cp mojo-db:/tmp/db_dump.sql "$bundle/db_dump.sql" 2>/dev/null || warn "DB dump gagal/tidak ada data."
+  docker exec mojo-db rm -f /tmp/db_dump.sql 2>/dev/null || true
 
   log "Save images (butuh waktu)..."
 
@@ -358,7 +358,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 echo "=============================================="
-echo " MojoJojoMonitor — Offline Deploy"
+echo " Mojo-Central — Offline Deploy"
 echo "=============================================="
 
 [ ! -f .env ] && { echo "ERROR: .env tidak ditemukan."; exit 1; }
@@ -377,15 +377,15 @@ echo "[3/4] Start infrastructure..."
 docker compose -f docker-compose.offline.yml up -d postgres redis
 
 echo "  Tunggu postgres..."
-until docker exec mojojojo_postgres pg_isready -U "${POSTGRES_USER:-mojojojo_user}" -d "${POSTGRES_DB:-mojojojo_database}" >/dev/null 2>&1; do sleep 2; done
+until docker exec mojo-db pg_isready -U "${POSTGRES_USER:-mojo_db_user}" -d "${POSTGRES_DB:-mojo_db}" >/dev/null 2>&1; do sleep 2; done
 
 echo "[4/4] Restore database & start services..."
 if [ -f db_dump.sql ]; then
   echo "  Restore db_dump.sql..."
-  docker exec -i mojojojo_postgres psql -U "${POSTGRES_USER:-mojojojo_user}" -d "${POSTGRES_DB:-mojojojo_database}" < db_dump.sql
+  docker exec -i mojo-db psql -U "${POSTGRES_USER:-mojo_db_user}" -d "${POSTGRES_DB:-mojo_db}" < db_dump.sql
 elif [ -f schema.sql ]; then
   echo "  Import schema.sql..."
-  docker exec -i mojojojo_postgres psql -U "${POSTGRES_USER:-mojojojo_user}" -d "${POSTGRES_DB:-mojojojo_database}" < schema.sql
+  docker exec -i mojo-db psql -U "${POSTGRES_USER:-mojo_db_user}" -d "${POSTGRES_DB:-mojo_db}" < schema.sql
 fi
 
 docker compose -f docker-compose.offline.yml up -d
@@ -442,17 +442,17 @@ deploy_offline() {
   docker compose -f docker-compose.offline.yml up -d postgres redis
 
   log "Tunggu postgres..."
-  until docker exec mojojojo_postgres pg_isready -U mojojojo_user -d mojojojo_database &>/dev/null; do
+  until docker exec mojo-db pg_isready -U mojo_db_user -d mojo_db &>/dev/null; do
     sleep 2
   done
   ok "Postgres siap."
 
   log "Setup database..."
   if [ -f db_dump.sql ]; then
-    docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database < db_dump.sql
+    docker exec -i mojo-db psql -U mojo_db_user -d mojo_db < db_dump.sql
     ok "Restore db_dump.sql."
   elif [ -f schema.sql ]; then
-    docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database < schema.sql
+    docker exec -i mojo-db psql -U mojo_db_user -d mojo_db < schema.sql
     ok "Schema imported."
   else
     warn "Tidak ada database dump/schema. DB kosong."
@@ -516,14 +516,14 @@ print_summary() {
   echo -e "  ${CYAN}Login:${NC}      admin / admin123"
   echo ""
   echo "  Container:"
-  echo "    mojojojo_dashboard          (Dashboard)"
-  echo "    mojojojo_worker_fast        (Ping/Traceroute/ONT)"
-  echo "    mojojojo_worker_download    (Speed Download)"
-  echo "    mojojojo_worker_upload      (Speed Upload)"
-  echo "    mojojojo_direct_ping_worker (Direct ICMP Ping)"
-  echo "    mojojojo_dispatcher         (Cron Scheduler)"
-  echo "    mojojojo_postgres           (Database)"
-  echo "    mojojojo_redis              (Queue Broker)"
+  echo "    mojo-central-dashboard          (Dashboard)"
+  echo "    mojo-central-worker-fast        (Ping/Traceroute/ONT)"
+  echo "    mojo-central-worker-download    (Speed Download)"
+  echo "    mojo-central-worker-upload      (Speed Upload)"
+  echo "    mojo-central-direct-ping-worker (Direct ICMP Ping)"
+  echo "    mojo-central-dispatcher         (Cron Scheduler)"
+  echo "    mojo-db           (Database)"
+  echo "    mojo-redis              (Queue Broker)"
   echo ""
   echo "  Perintah:"
   echo "    cd ${INSTALL_DIR:-.}/ && docker compose logs -f"

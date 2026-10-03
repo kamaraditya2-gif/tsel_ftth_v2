@@ -55,17 +55,17 @@ if (-not $NoData) {
   Write-Host '      Menunggu postgres siap...'
   $ready = $false
   for ($i = 0; $i -lt 30; $i++) {
-    docker exec mojojojo_postgres pg_isready -U mojojojo_user -d mojojojo_database *> $null
+    docker exec mojo-db pg_isready -U mojo_db_user -d mojo_db *> $null
     if ($LASTEXITCODE -eq 0) { $ready = $true; break }
     Start-Sleep -Seconds 2
   }
   if (-not $ready) { throw 'Postgres tidak siap untuk di-dump' }
 
   # Dump ke dalam container lalu copy keluar (hindari masalah encoding redirect PowerShell)
-  docker exec mojojojo_postgres sh -c 'pg_dump -U mojojojo_user --no-owner --no-privileges mojojojo_database > /tmp/db_dump.sql'
+  docker exec mojo-db sh -c 'pg_dump -U mojo_db_user --no-owner --no-privileges mojo_db > /tmp/db_dump.sql'
   if ($LASTEXITCODE -ne 0) { throw 'pg_dump gagal' }
-  docker cp mojojojo_postgres:/tmp/db_dump.sql (Join-Path $Bundle 'db_dump.sql')
-  docker exec mojojojo_postgres rm -f /tmp/db_dump.sql
+  docker cp mojo-db:/tmp/db_dump.sql (Join-Path $Bundle 'db_dump.sql')
+  docker exec mojo-db rm -f /tmp/db_dump.sql
   Write-Host '      db_dump.sql tersimpan.'
 } else {
   Write-Host "`n[2/4] Lewati dump database (-NoData)." -ForegroundColor Yellow
@@ -117,6 +117,6 @@ Write-Host '  chmod +x deploy-offline-ubuntu.sh && ./deploy-offline-ubuntu.sh'
 
 Write-Host "`n--- BUNDLE DIRECT PING (hanya direct-ping-worker) ---"
 Write-Host 'Pindahkan folder offline-bundle-direct-ping ke mesin terpisah yang bisa reach PostgreSQL.'
-Write-Host 'Edit .env di dalamnya: DB_HOST=<IP_SERVER_POSTGRES> (bukan mojojojo_postgres).'
+Write-Host 'Edit .env di dalamnya: DB_HOST=<IP_SERVER_POSTGRES> (bukan mojo-db).'
 Write-Host 'Lalu jalankan:'
 Write-Host '  chmod +x deploy-offline-direct-ping.sh && ./deploy-offline-direct-ping.sh'

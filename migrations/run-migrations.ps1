@@ -3,9 +3,9 @@
 
 $DB_HOST = $env:DB_HOST ?? "localhost"
 $DB_PORT = $env:DB_PORT ?? "5432"
-$DB_NAME = $env:DB_NAME ?? "mojojojo_db"
-$DB_USER = $env:DB_USER ?? "mojojojo_user"
-$DB_PASSWORD = $env:DB_PASSWORD ?? "mojojojo_password"
+$DB_NAME = $env:DB_NAME ?? "mojo_db"
+$DB_USER = $env:DB_USER ?? "mojo_db_user"
+$DB_PASSWORD = $env:DB_PASSWORD ?? "mojo_db_password"
 
 Write-Host "Running migrations for database: $DB_NAME"
 Write-Host "=========================================="

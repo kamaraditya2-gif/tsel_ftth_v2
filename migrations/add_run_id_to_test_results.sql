@@ -1,5 +1,5 @@
 -- Add run_id column to test_results_speed and test_results_ping tables
--- Run with: Get-Content migrations\add_run_id_to_test_results.sql | docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database
+-- Run with: Get-Content migrations\add_run_id_to_test_results.sql | docker exec -i mojo-db psql -U mojo_db_user -d mojo_db
 
 -- Add run_id to test_results_speed
 ALTER TABLE test_results_speed ADD COLUMN IF NOT EXISTS run_id VARCHAR(255);

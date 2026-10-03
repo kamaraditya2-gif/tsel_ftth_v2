@@ -18,12 +18,12 @@ INSERT INTO users (username, password, role_id, email, full_name, is_active) VAL
     ('admin',
      '$2b$10$v/ULSFrsxPlB8noPulB8neKRGE3fTAm0dSTqR8WW79D4Lsmo4v3QW',   -- admin123
      (SELECT id FROM roles WHERE name = 'Administrator'),
-     'admin@mojojojo.local', 'Administrator', true);
+     'admin@mojo-central.local', 'Administrator', true);
 
 -- ---------------------------------------------------------------------------
 -- Setting aplikasi & integrasi
 -- ---------------------------------------------------------------------------
-INSERT INTO app_settings (app_name) VALUES ('MojoJojo Monitor');
+INSERT INTO app_settings (app_name) VALUES ('Mojo-Central');
 
 INSERT INTO integration_settings (platform, name, status, config) VALUES
     ('telegram',  'Telegram Bot',     'inactive', '{}'),

@@ -4,22 +4,22 @@ services:
       context: ./dashboard
       dockerfile: Dockerfile
     image: mojo-dashboard:latest
-    container_name: mojojojo_dashboard
+    container_name: mojo-central-dashboard
     restart: always
     ports:
       - "${DASHBOARD_PORT:-3002}:3000"
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost/api}
       INTERNAL_API_URL: ${INTERNAL_API_URL:-http://localhost:3000}
-      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_HOST: ${DB_HOST:-mojo-db}
       DB_PORT: ${DB_PORT:-5432}
-      DB_USER: ${DB_USER:-mojojojo_user}
-      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
-      DB_NAME: ${DB_NAME:-mojojojo_database}
-      REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
+      DB_USER: ${DB_USER:-mojo_db_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojo_db_password}
+      DB_NAME: ${DB_NAME:-mojo_db}
+      REDIS_HOST: ${REDIS_HOST:-mojo-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
-      SESSION_SECRET: ${SESSION_SECRET:-mojojojo_session_secret_2024}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojo_redis_password}
+      SESSION_SECRET: ${SESSION_SECRET:-mojo_central_session_secret_2024}
       # Token bearer untuk /api/edge/* — kosong = endpoint edge menolak semua request
       EDGE_SYNC_TOKEN: ${EDGE_SYNC_TOKEN:-}
       AI_INTEGRATIONS_GEMINI_API_KEY: ${AI_INTEGRATIONS_GEMINI_API_KEY}
@@ -36,8 +36,8 @@ services:
           cpus: '2.0'
           memory: 2G
     networks:
-      - mojojojo_network
+      - mojo-central-net
 
 networks:
-  mojojojo_network:
+  mojo-central-net:
     external: true

@@ -7,18 +7,18 @@ services:
       - NET_RAW
     command: ["node", "start-direct-ping-worker.js"]
     environment:
-      DB_HOST: mojojojo_postgres
+      DB_HOST: mojo-db
       DB_PORT: 5432
-      DB_USER: mojojojo_user
+      DB_USER: mojo_db_user
       DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: mojojojo_database
-      REDIS_HOST: mojojojo_redis
+      DB_NAME: mojo_db
+      REDIS_HOST: mojo-redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       DOWNSTREAM_SERVER_ID: 3
       DIRECT_PING_INTERVAL_MINUTES: 5
     networks:
-      - mojojojo_network
+      - mojo-central-net
 
   fping_r12_jabodetabek:
     image: mojo-worker:latest
@@ -28,20 +28,20 @@ services:
       - NET_RAW
     command: ["node", "start-direct-ping-worker.js"]
     environment:
-      DB_HOST: mojojojo_postgres
+      DB_HOST: mojo-db
       DB_PORT: 5432
-      DB_USER: mojojojo_user
+      DB_USER: mojo_db_user
       DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: mojojojo_database
-      REDIS_HOST: mojojojo_redis
+      DB_NAME: mojo_db
+      REDIS_HOST: mojo-redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       DOWNSTREAM_SERVER_ID: 12
       DIRECT_PING_INTERVAL_MINUTES: 5
     networks:
-      - mojojojo_network
+      - mojo-central-net
 
 networks:
-  mojojojo_network:
+  mojo-central-net:
     external: true
-    name: mojojojomonitor_mojojojo_network
+    name: mojo-central-net

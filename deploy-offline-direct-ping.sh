@@ -11,7 +11,7 @@
 #   ./deploy-offline-direct-ping.sh
 #
 # PASTIKA .env sudah diedit:
-#   DB_HOST=<IP_SERVER_POSTGRES>   (BUKAN mojojojo_postgres)
+#   DB_HOST=<IP_SERVER_POSTGRES>   (BUKAN mojo-db)
 #   DB_PASSWORD=<password>
 
 set -euo pipefail

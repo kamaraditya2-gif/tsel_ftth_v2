@@ -4,7 +4,7 @@
 -- - test_results_ping (ping data)
 -- - test_results_traceroute (traceroute data)
 -- - test_results_speed (download/upload speed data)
--- Run with: Get-Content migrations\drop_test_results.sql | docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database
+-- Run with: Get-Content migrations\drop_test_results.sql | docker exec -i mojo-db psql -U mojo_db_user -d mojo_db
 
 -- Drop the dependent view first
 DROP VIEW IF EXISTS v_device_health;

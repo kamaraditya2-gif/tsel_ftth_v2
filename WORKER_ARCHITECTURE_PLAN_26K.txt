@@ -1,15 +1,15 @@
 ================================================================================
-RENCANA ARSITEKTUR WORKER MOJOJOJO MONITOR UNTUK 26.000 ONT
+RENCANA ARSITEKTUR WORKER MOJO-CENTRAL UNTUK 26.000 ONT
 ================================================================================
 
 Ringkasan Arsitektur Saat Ini
 -----------------------------
 Saat ini ada 4 worker yang berjalan:
 
-1. mojojojo_worker_fast      -> Queue acs-fast      -> Test: ping, traceroute, ont-status
-2. mojojojo_worker_download  -> Queue acs-download  -> Test: download speed
-3. mojojojo_worker_upload    -> Queue acs-upload    -> Test: upload speed
-4. mojojojo_direct_ping_worker -> Loop mandiri      -> Direct ICMP ping
+1. mojo-central-worker-fast      -> Queue acs-fast      -> Test: ping, traceroute, ont-status
+2. mojo-central-worker-download  -> Queue acs-download  -> Test: download speed
+3. mojo-central-worker-upload    -> Queue acs-upload    -> Test: upload speed
+4. mojo-central-direct-ping-worker -> Loop mandiri      -> Direct ICMP ping
 
 Semua ACS worker pakai concurrency = 5 hardcoded dan 1 container per queue.
 Effective parallelism ACS: 3 queue x 1 container x 5 concurrency = 15 job concurrent.

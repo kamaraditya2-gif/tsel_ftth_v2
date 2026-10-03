@@ -1,4 +1,4 @@
-# Roadmap — MojoJojoMonitor
+# Roadmap — Mojo-Central
 
 > **Status**: Production — Active Development
 > **Target Scale**: 26,000+ ONT devices across multiple regional servers
@@ -12,7 +12,7 @@
 - [x] Redis 7 with BullMQ queue system (4 queues: fast, download, upload, legacy)
 - [x] Docker Compose unified deployment (8 services)
 - [x] Modular docker-compose files for split deployment (infra, app, worker, dispatcher)
-- [x] Shared bridge network `mojojojo_network`
+- [x] Shared bridge network `mojo-central-net`
 - [x] Single-server deployment (4-8 vCPU, 16-32 GB RAM, 200-500 GB SSD)
 - [x] Multi-stage Dockerfile (dashboard: builder + runner; worker: single-stage Alpine)
 - [x] Worker Docker image with `fping` + `iputils` for ICMP ping
@@ -169,7 +169,7 @@
 - [ ] **Webhook notifications** — Configurable webhook per alarm type
 - [ ] **Email reports** — Scheduled PDF/CSV email delivery
 - [ ] **Slack / Microsoft Teams** — Additional notification channels
-- [ ] **Grafana datasource plugin** — Allow Grafana to query MojoJojoMonitor data directly
+- [ ] **Grafana datasource plugin** — Allow Grafana to query Mojo-Central data directly
 
 ---
 

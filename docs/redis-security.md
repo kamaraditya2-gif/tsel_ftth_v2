@@ -9,7 +9,7 @@ This document outlines the Redis security measures implemented in this project f
 - **Status**: ✅ Implemented
 - **Description**: All Redis connections require password authentication
 - **Configuration**: `REDIS_PASSWORD` environment variable
-- **Default**: `mojojojo_redis_password` (change in production)
+- **Default**: `mojo_redis_password` (change in production)
 - **Implementation**: 
   - Redis client (`dashboard/lib/redis.ts`) enforces password
   - Redis config (`config/redis.conf`) sets `requirepass`

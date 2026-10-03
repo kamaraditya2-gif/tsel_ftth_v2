@@ -1,5 +1,5 @@
 # =============================================================================
-# MojoJojo — Standalone Database Server (PostgreSQL 16 + TimescaleDB)
+# Mojo-DB — Standalone Database Server (PostgreSQL 16 + TimescaleDB)
 # =============================================================================
 # Dijalankan di VM database tersendiri, terpisah dari dashboard/worker.
 #
@@ -14,18 +14,19 @@
 services:
   db:
     image: ${TIMESCALE_IMAGE:-timescale/timescaledb:2.17.2-pg16}
-    container_name: ${DB_CONTAINER_NAME:-mojojojo_timescaledb}
+    container_name: ${DB_CONTAINER_NAME:-mojo-db}
     restart: always
     shm_size: ${DB_SHM_SIZE:-1g}
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-mojojojo_user}
+      POSTGRES_USER: ${POSTGRES_USER:-mojo_db_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD wajib diisi di .env}
-      POSTGRES_DB: ${POSTGRES_DB:-mojojojo_database}
+      POSTGRES_DB: ${POSTGRES_DB:-mojo_db}
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=trust"
       TZ: ${TZ:-Asia/Jakarta}
-      # timescaledb-tune dijalankan saat init pertama berdasarkan resource ini
-      TS_TUNE_MEMORY: ${TS_TUNE_MEMORY:-8GB}
-      TS_TUNE_NUM_CPUS: ${TS_TUNE_NUM_CPUS:-4}
+      # timescaledb-tune dijalankan saat init pertama. Jika TS_TUNE_MEMORY /
+      # TS_TUNE_NUM_CPUS kosong, RAM & CPU dideteksi otomatis dari seluruh VM.
+      TS_TUNE_MEMORY: ${TS_TUNE_MEMORY:-}
+      TS_TUNE_NUM_CPUS: ${TS_TUNE_NUM_CPUS:-}
       TS_TUNE_MAX_CONNS: ${DB_MAX_CONNECTIONS:-300}
     command:
       - postgres
@@ -46,18 +47,14 @@ services:
       - ./config/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
     ports:
       - "${POSTGRES_BIND:-0.0.0.0}:${POSTGRES_PORT:-5432}:5432"
-    deploy:
-      resources:
-        limits:
-          cpus: '${DB_CPU_LIMIT:-4.0}'
-          memory: ${DB_MEMORY_LIMIT:-8G}
+    # Tanpa batas CPU/RAM: container boleh memakai seluruh resource VM database.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 10
     networks:
-      - mojojojo_db
+      - mojo-db-net
 
   # One-shot: menjalankan migrasi yang belum ter-apply lalu keluar.
   #   docker compose run --rm migrate            # apply semua migrasi baru
@@ -71,9 +68,9 @@ services:
     environment:
       PGHOST: db
       PGPORT: 5432
-      PGUSER: ${POSTGRES_USER:-mojojojo_user}
+      PGUSER: ${POSTGRES_USER:-mojo_db_user}
       PGPASSWORD: ${POSTGRES_PASSWORD}
-      PGDATABASE: ${POSTGRES_DB:-mojojojo_database}
+      PGDATABASE: ${POSTGRES_DB:-mojo_db}
       MIGRATIONS_DIR: /migrations
     volumes:
       - ./migrations:/migrations:ro
@@ -81,8 +78,8 @@ services:
     entrypoint: ["bash", "/scripts/migrate.sh"]
     command: ["up"]
     networks:
-      - mojojojo_db
+      - mojo-db-net
 
 networks:
-  mojojojo_db:
-    name: mojojojo_db
+  mojo-db-net:
+    name: mojo-db-net

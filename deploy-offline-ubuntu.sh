@@ -2,11 +2,11 @@
 #
 # Deploy stack di server Ubuntu offline (air-gapped).
 #
-# Rekomendasi lokasi di server: /opt/mojojojo/
-#   sudo mkdir -p /opt/mojojojo
-#   sudo chown $USER:$USER /opt/mojojojo
-#   cp -r offline-bundle/* /opt/mojojojo/
-#   cd /opt/mojojojo
+# Rekomendasi lokasi di server: /opt/mojo-central/
+#   sudo mkdir -p /opt/mojo-central
+#   sudo chown $USER:$USER /opt/mojo-central
+#   cp -r offline-bundle/* /opt/mojo-central/
+#   cd /opt/mojo-central
 #   chmod +x deploy-offline-ubuntu.sh
 #   ./deploy-offline-ubuntu.sh
 #
@@ -18,7 +18,7 @@ cd "$(dirname "$0")"
 COMPOSE="docker compose -f docker-compose.offline.yml"
 
 echo "=============================================="
-echo " Deploy offline - MojoJojo Monitor"
+echo " Deploy offline - Mojo-Central"
 echo "=============================================="
 
 # 1. Load images
@@ -37,7 +37,7 @@ echo "[3/5] Menjalankan postgres & redis..."
 $COMPOSE up -d postgres redis
 
 echo "      Menunggu postgres siap..."
-until docker exec mojojojo_postgres pg_isready -U "${POSTGRES_USER:-mojojojo_user}" -d "${POSTGRES_DB:-mojojojo_database}" >/dev/null 2>&1; do
+until docker exec mojo-db pg_isready -U "${POSTGRES_USER:-mojo_db_user}" -d "${POSTGRES_DB:-mojo_db}" >/dev/null 2>&1; do
   sleep 2
 done
 echo "      Postgres siap."
@@ -45,21 +45,21 @@ echo "      Postgres siap."
 # 4. Inisialisasi / restore database
 echo ""
 echo "[4/5] Setup database..."
-DB_USER_EFF="${DB_USER:-mojojojo_user}"
-DB_NAME_EFF="${DB_NAME:-mojojojo_database}"
+DB_USER_EFF="${DB_USER:-mojo_db_user}"
+DB_NAME_EFF="${DB_NAME:-mojo_db}"
 
 # Cek apakah database sudah berisi tabel (skip jika sudah ada data, mis. data dir lama)
-TABLE_COUNT=$(docker exec mojojojo_postgres psql -U "$DB_USER_EFF" -d "$DB_NAME_EFF" -tAc \
+TABLE_COUNT=$(docker exec mojo-db psql -U "$DB_USER_EFF" -d "$DB_NAME_EFF" -tAc \
   "SELECT count(*) FROM information_schema.tables WHERE table_schema='public';" 2>/dev/null || echo "0")
 
 if [ "${TABLE_COUNT:-0}" -gt 0 ]; then
   echo "      Database sudah berisi $TABLE_COUNT tabel -> lewati import."
 elif [ -f db_dump.sql ]; then
   echo "      Restore dari db_dump.sql (schema + data)..."
-  docker exec -i mojojojo_postgres psql -U "$DB_USER_EFF" -d "$DB_NAME_EFF" < db_dump.sql
+  docker exec -i mojo-db psql -U "$DB_USER_EFF" -d "$DB_NAME_EFF" < db_dump.sql
 elif [ -f schema.sql ]; then
   echo "      Import schema.sql (DB fresh)..."
-  docker exec -i mojojojo_postgres psql -U "$DB_USER_EFF" -d "$DB_NAME_EFF" < schema.sql
+  docker exec -i mojo-db psql -U "$DB_USER_EFF" -d "$DB_NAME_EFF" < schema.sql
 else
   echo "      WARNING: tidak ada db_dump.sql / schema.sql. DB dibiarkan kosong."
 fi

@@ -1,6 +1,6 @@
 -- Create test_results_direct_ping table for direct ping test results
 -- This stores results from direct IP ping tests (not via IGW/EBR)
--- Run with: Get-Content migrations\create_test_results_direct_ping.sql | docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database
+-- Run with: Get-Content migrations\create_test_results_direct_ping.sql | docker exec -i mojo-db psql -U mojo_db_user -d mojo_db
 
 -- Create the new table
 CREATE TABLE IF NOT EXISTS test_results_direct_ping (

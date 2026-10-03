@@ -38,7 +38,7 @@ logger.info({
 
 // Base URL of the dashboard/Next.js API that serves config endpoints.
 // Defaults to localhost for local runs; in Docker set API_BASE_URL to the
-// dashboard service, e.g. http://mojojojo_dashboard:3000
+// dashboard service, e.g. http://mojo-central-dashboard:3000
 const API_BASE_URL = (process.env.API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 // Helper function for circuit breaker protected axios calls

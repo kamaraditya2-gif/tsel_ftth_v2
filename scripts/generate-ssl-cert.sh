@@ -26,7 +26,7 @@ echo "Generate self-signed certificate (${DAYS} days)..."
 openssl req -x509 -nodes -days "$DAYS" -newkey rsa:2048 \
   -keyout "$KEY_FILE" \
   -out "$CERT_FILE" \
-  -subj "/C=ID/ST=Jakarta/L=Jakarta/O=MojoJojoMonitor/OU=IT/CN=*" \
+  -subj "/C=ID/ST=Jakarta/L=Jakarta/O=Mojo-Central/OU=IT/CN=*" \
   -addext "subjectAltName=DNS:*,DNS:localhost,IP:127.0.0.1"
 
 chmod 600 "$KEY_FILE"

@@ -11,12 +11,12 @@
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: mojojojo_postgres
+    container_name: mojo-db
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-mojojojo_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mojojojo_password}
-      POSTGRES_DB: ${POSTGRES_DB:-mojojojo_database}
+      POSTGRES_USER: ${POSTGRES_USER:-mojo_db_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mojo_db_password}
+      POSTGRES_DB: ${POSTGRES_DB:-mojo_db}
       TZ: ${TZ:-Asia/Jakarta}
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
@@ -31,23 +31,23 @@ services:
         reservations:
           memory: 512M
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mojojojo_user} -d ${POSTGRES_DB:-mojojojo_database}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mojo_db_user} -d ${POSTGRES_DB:-mojo_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - mojojojo_network
+      - mojo-central-net
 
   redis:
     image: redis:7-alpine
-    container_name: mojojojo_redis
+    container_name: mojo-redis
     restart: always
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     volumes:
       - ./data/redis:/data
       - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
     environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-mojojojo_redis_password}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-mojo_redis_password}
     ports:
       - "${REDIS_PORT:-127.0.0.1:6379}:6379"
     deploy:
@@ -58,33 +58,33 @@ services:
         reservations:
           memory: 256M
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-mojojojo_redis_password}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-mojo_redis_password}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - mojojojo_network
+      - mojo-central-net
     security_opt:
       - no-new-privileges:true
 
   mojo_dashboard:
     image: mojo-dashboard:latest
-    container_name: mojojojo_dashboard
+    container_name: mojo-central-dashboard
     restart: always
     ports:
       - "${DASHBOARD_PORT:-3002}:3000"
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost/api}
       INTERNAL_API_URL: ${INTERNAL_API_URL:-http://localhost:3000}
-      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_HOST: ${DB_HOST:-mojo-db}
       DB_PORT: ${DB_PORT:-5432}
-      DB_USER: ${DB_USER:-mojojojo_user}
-      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
-      DB_NAME: ${DB_NAME:-mojojojo_database}
-      REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
+      DB_USER: ${DB_USER:-mojo_db_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojo_db_password}
+      DB_NAME: ${DB_NAME:-mojo_db}
+      REDIS_HOST: ${REDIS_HOST:-mojo-redis}
       REDIS_PORT: ${REDIS_PORT_INTERNAL:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
-      SESSION_SECRET: ${SESSION_SECRET:-mojojojo_session_secret_2024}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojo_redis_password}
+      SESSION_SECRET: ${SESSION_SECRET:-mojo_central_session_secret_2024}
       AI_INTEGRATIONS_GEMINI_API_KEY: ${AI_INTEGRATIONS_GEMINI_API_KEY:-}
       AI_INTEGRATIONS_GEMINI_BASE_URL: ${AI_INTEGRATIONS_GEMINI_BASE_URL:-}
       TZ: ${TZ:-Asia/Jakarta}
@@ -99,22 +99,22 @@ services:
           cpus: '2.0'
           memory: 2G
     networks:
-      - mojojojo_network
+      - mojo-central-net
 
   mojo_dispatcher:
     image: mojo-worker:latest
-    container_name: mojojojo_dispatcher
+    container_name: mojo-central-dispatcher
     restart: always
     command: ["node", "dispatcher.js"]
     environment:
-      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_HOST: ${DB_HOST:-mojo-db}
       DB_PORT: ${DB_PORT:-5432}
-      DB_USER: ${DB_USER:-mojojojo_user}
-      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
-      DB_NAME: ${DB_NAME:-mojojojo_database}
-      REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
+      DB_USER: ${DB_USER:-mojo_db_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojo_db_password}
+      DB_NAME: ${DB_NAME:-mojo_db}
+      REDIS_HOST: ${REDIS_HOST:-mojo-redis}
       REDIS_PORT: ${REDIS_PORT_INTERNAL:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojo_redis_password}
       TZ: ${TZ:-Asia/Jakarta}
     depends_on:
       postgres:
@@ -132,24 +132,24 @@ services:
         max_attempts: 3
         window: 120s
     networks:
-      - mojojojo_network
+      - mojo-central-net
 
   mojo_worker_fast:
     image: mojo-worker:latest
-    container_name: mojojojo_worker_fast
+    container_name: mojo-central-worker-fast
     restart: always
     command: ["node", "worker.js"]
     environment:
       QUEUE_NAME: acs-fast
-      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_HOST: ${DB_HOST:-mojo-db}
       DB_PORT: ${DB_PORT:-5432}
-      DB_USER: ${DB_USER:-mojojojo_user}
-      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
-      DB_NAME: ${DB_NAME:-mojojojo_database}
-      REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
+      DB_USER: ${DB_USER:-mojo_db_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojo_db_password}
+      DB_NAME: ${DB_NAME:-mojo_db}
+      REDIS_HOST: ${REDIS_HOST:-mojo-redis}
       REDIS_PORT: ${REDIS_PORT_INTERNAL:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
-      API_BASE_URL: ${API_BASE_URL:-http://mojojojo_dashboard:3000}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojo_redis_password}
+      API_BASE_URL: ${API_BASE_URL:-http://mojo-central-dashboard:3000}
       PING_RATE_LIMIT_SECONDS: ${PING_RATE_LIMIT_SECONDS:-10}
       SPEED_RATE_LIMIT_SECONDS: ${SPEED_RATE_LIMIT_SECONDS:-10}
       AXIROS_CONFIG_TTL_MS: ${AXIROS_CONFIG_TTL_MS:-60000}
@@ -172,24 +172,24 @@ services:
         max_attempts: 3
         window: 120s
     networks:
-      - mojojojo_network
+      - mojo-central-net
 
   mojo_worker_download:
     image: mojo-worker:latest
-    container_name: mojojojo_worker_download
+    container_name: mojo-central-worker-download
     restart: always
     command: ["node", "worker.js"]
     environment:
       QUEUE_NAME: acs-download
-      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_HOST: ${DB_HOST:-mojo-db}
       DB_PORT: ${DB_PORT:-5432}
-      DB_USER: ${DB_USER:-mojojojo_user}
-      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
-      DB_NAME: ${DB_NAME:-mojojojo_database}
-      REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
+      DB_USER: ${DB_USER:-mojo_db_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojo_db_password}
+      DB_NAME: ${DB_NAME:-mojo_db}
+      REDIS_HOST: ${REDIS_HOST:-mojo-redis}
       REDIS_PORT: ${REDIS_PORT_INTERNAL:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
-      API_BASE_URL: ${API_BASE_URL:-http://mojojojo_dashboard:3000}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojo_redis_password}
+      API_BASE_URL: ${API_BASE_URL:-http://mojo-central-dashboard:3000}
       PING_RATE_LIMIT_SECONDS: ${PING_RATE_LIMIT_SECONDS:-10}
       SPEED_RATE_LIMIT_SECONDS: ${SPEED_RATE_LIMIT_SECONDS:-10}
       AXIROS_CONFIG_TTL_MS: ${AXIROS_CONFIG_TTL_MS:-60000}
@@ -212,24 +212,24 @@ services:
         max_attempts: 3
         window: 120s
     networks:
-      - mojojojo_network
+      - mojo-central-net
 
   mojo_worker_upload:
     image: mojo-worker:latest
-    container_name: mojojojo_worker_upload
+    container_name: mojo-central-worker-upload
     restart: always
     command: ["node", "worker.js"]
     environment:
       QUEUE_NAME: acs-upload
-      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_HOST: ${DB_HOST:-mojo-db}
       DB_PORT: ${DB_PORT:-5432}
-      DB_USER: ${DB_USER:-mojojojo_user}
-      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
-      DB_NAME: ${DB_NAME:-mojojojo_database}
-      REDIS_HOST: ${REDIS_HOST:-mojojojo_redis}
+      DB_USER: ${DB_USER:-mojo_db_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojo_db_password}
+      DB_NAME: ${DB_NAME:-mojo_db}
+      REDIS_HOST: ${REDIS_HOST:-mojo-redis}
       REDIS_PORT: ${REDIS_PORT_INTERNAL:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojojojo_redis_password}
-      API_BASE_URL: ${API_BASE_URL:-http://mojojojo_dashboard:3000}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-mojo_redis_password}
+      API_BASE_URL: ${API_BASE_URL:-http://mojo-central-dashboard:3000}
       PING_RATE_LIMIT_SECONDS: ${PING_RATE_LIMIT_SECONDS:-10}
       SPEED_RATE_LIMIT_SECONDS: ${SPEED_RATE_LIMIT_SECONDS:-10}
       AXIROS_CONFIG_TTL_MS: ${AXIROS_CONFIG_TTL_MS:-60000}
@@ -252,19 +252,19 @@ services:
         max_attempts: 3
         window: 120s
     networks:
-      - mojojojo_network
+      - mojo-central-net
 
   mojo_direct_ping_worker:
     image: mojo-worker:latest
-    container_name: mojojojo_direct_ping_worker
+    container_name: mojo-central-direct-ping-worker
     restart: always
     command: ["node", "start-direct-ping-worker.js"]
     environment:
-      DB_HOST: ${DB_HOST:-mojojojo_postgres}
+      DB_HOST: ${DB_HOST:-mojo-db}
       DB_PORT: ${DB_PORT:-5432}
-      DB_USER: ${DB_USER:-mojojojo_user}
-      DB_PASSWORD: ${DB_PASSWORD:-mojojojo_password}
-      DB_NAME: ${DB_NAME:-mojojojo_database}
+      DB_USER: ${DB_USER:-mojo_db_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mojo_db_password}
+      DB_NAME: ${DB_NAME:-mojo_db}
       DIRECT_PING_INTERVAL_MINUTES: ${DIRECT_PING_INTERVAL_MINUTES:-10}
       TZ: ${TZ:-Asia/Jakarta}
     cap_add:
@@ -283,9 +283,9 @@ services:
         max_attempts: 3
         window: 120s
     networks:
-      - mojojojo_network
+      - mojo-central-net
 
 networks:
-  mojojojo_network:
-    name: mojojojo_network
+  mojo-central-net:
+    name: mojo-central-net
     driver: bridge

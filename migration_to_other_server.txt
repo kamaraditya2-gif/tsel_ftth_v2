@@ -1,4 +1,4 @@
-# MojoJojoMonitor - Migration to gandooz.cloud (DEV Server)
+# Mojo-Central - Migration to gandooz.cloud (DEV Server)
 # ============================================================
 # Tanggal: 17 Juni 2026
 # Source: cachyos-x8664 
@@ -11,7 +11,7 @@
 # ============================================================
 
 # 1a. Dump database PostgreSQL
-docker exec mojojojo_postgres pg_dump -U mojojojo_user -d mojojojo_database \
+docker exec mojo-db pg_dump -U mojo_db_user -d mojo_db \
   --no-owner --no-privileges > /tmp/mojo_dump.sql
 # Size: 2.7 MB
 
@@ -46,12 +46,12 @@ docker load -i mojo_images.tar
 # ============================================================
 # LANGKAH 4: Deploy dengan docker compose
 # ============================================================
-# ⚠️ PENTING: Set COMPOSE_PROJECT_NAME=mojojojomonitor agar:
+# ⚠️ PENTING: Set COMPOSE_PROJECT_NAME=mojo-central agar:
 #   - Worker terminal di dashboard bisa deteksi container
 #   - Network naming konsisten dengan source
 #   - Sesuai dengan label yang di-hardcode di worker-logs API
 
-COMPOSE_PROJECT_NAME=mojojojomonitor docker compose up -d --no-build
+COMPOSE_PROJECT_NAME=mojo-central docker compose up -d --no-build
 
 # ============================================================
 # TROUBLESHOOT 1: Build dashboard gagal
@@ -68,22 +68,22 @@ COMPOSE_PROJECT_NAME=mojojojomonitor docker compose up -d --no-build
 # Gejala: Buka /admin/worker -> tidak ada log worker
 # Penyebab: Container label project tidak cocok.
 #           Worker-logs API hardcode filter:
-#           -f label=com.docker.compose.project=mojojojomonitor
-#           Jika project name != mojojojomonitor, 0 worker terdeteksi.
-# Solusi: Set COMPOSE_PROJECT_NAME=mojojojomonitor saat docker compose up
+#           -f label=com.docker.compose.project=mojo-central
+#           Jika project name != mojo-central, 0 worker terdeteksi.
+# Solusi: Set COMPOSE_PROJECT_NAME=mojo-central saat docker compose up
 
 # ============================================================
 # TROUBLESHOOT 3: Regional worker tidak start
 # ============================================================
-# Gejala: network mojojojomonitor_mojojojo_network not found
+# Gejala: network mojo-central-net not found
 # Penyebab: Network name di docker-compose.regional-r3-r12.yml
 #           beda dengan yang dibuat compose (tergantung project name)
 # Solusi: Sesuaikan network name di compose file regional:
 #
-#   sed -i 's|xxx_mojojojo_network|mojojojomonitor_mojojojo_network|' \
+#   sed -i 's|xxx_mojo-central-net|mojo-central-net|' \
 #     docker-compose.regional-r3-r12.yml
 #
-#   COMPOSE_PROJECT_NAME=mojojojomonitor docker compose \
+#   COMPOSE_PROJECT_NAME=mojo-central docker compose \
 #     -f docker-compose.regional-r3-r12.yml up -d
 
 # ============================================================
@@ -106,14 +106,14 @@ COMPOSE_PROJECT_NAME=mojojojomonitor docker compose up -d --no-build
 # Penyebab: docker compose down + up me-recreate container
 # Solusi: Import ulang dari dump:
 #
-#   docker exec -i mojojojo_postgres psql -U mojojojo_user \
-#     -d mojojojo_database < ~/mojo_dump.sql
+#   docker exec -i mojo-db psql -U mojo_db_user \
+#     -d mojo_db < ~/mojo_dump.sql
 
 # ============================================================
 # LANGKAH 5: Import database
 # ============================================================
-docker exec -i mojojojo_postgres psql -U mojojojo_user \
-  -d mojojojo_database < mojo_dump.sql
+docker exec -i mojo-db psql -U mojo_db_user \
+  -d mojo_db < mojo_dump.sql
 
 # ============================================================
 # VERIFIKASI AKHIR
@@ -123,7 +123,7 @@ docker exec -i mojojojo_postgres psql -U mojojojo_user \
 docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'mojo|fping'
 
 # Cek database
-docker exec mojojojo_postgres psql -U mojojojo_user -d mojojojo_database -c "
+docker exec mojo-db psql -U mojo_db_user -d mojo_db -c "
   SELECT 'devices' as tbl, COUNT(*) FROM devices_ont
   UNION ALL SELECT 'test_ping', COUNT(*) FROM test_results_ping
   UNION ALL SELECT 'direct_ping', COUNT(*) FROM test_results_direct_ping
@@ -146,17 +146,17 @@ curl -s 'http://localhost:3002/api/admin/worker-logs?tail=5' \
 # ============================================================
 # FINAL CONTAINER LIST (target server - gandooz.cloud)
 # ============================================================
-# mojojojo_postgres             - PostgreSQL 15        :5432
-# mojojojo_redis                - Redis 7              :6379
-# mojojojo_dashboard            - Next.js              :3002
-# mojojojo_dispatcher           - Job dispatcher cron   (1 min)
-# mojojojo_worker_fast          - Ping/traceroute/ont
-# mojojojo_worker_download      - Speed test download
-# mojojojo_worker_upload        - Speed test upload
-# mojojojo_direct_ping_worker   - ICMP ping regional
+# mojo-db             - PostgreSQL 15        :5432
+# mojo-redis                - Redis 7              :6379
+# mojo-central-dashboard            - Next.js              :3002
+# mojo-central-dispatcher           - Job dispatcher cron   (1 min)
+# mojo-central-worker-fast          - Ping/traceroute/ont
+# mojo-central-worker-download      - Speed test download
+# mojo-central-worker-upload        - Speed test upload
+# mojo-central-direct-ping-worker   - ICMP ping regional
 # fping_r03_jabotabek           - Regional R03 (Jabotabek)
 # fping_r12_jabodetabek         - Regional R12 (Jabodetabek)
 #
 # Total: 10 container
-# Network: mojojojomonitor_mojojojo_network
-# Project: mojojojomonitor
+# Network: mojo-central-net
+# Project: mojo-central

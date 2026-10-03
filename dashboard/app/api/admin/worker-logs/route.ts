@@ -15,11 +15,11 @@ const DIRECT_FILTER_MODE = process.env.WORKER_LOG_FILTER === 'direct'
 
 async function getWorkerContainers(): Promise<WorkerContainer[]> {
   try {
-    // Ambil semua container milik project mojojojomonitor yang namanya mengandung "worker".
+    // Ambil semua container milik project mojo-central yang namanya mengandung "worker".
     // Ini mencakup mojo_worker_fast/download/upload, mojo_direct_ping_worker_*,
     // dan semua replica scaling (mojo_worker_fast-1, mojo_worker_fast-2, dst).
     const { stdout } = await execAsync(
-      `docker ps --format '{{.ID}}\t{{.Names}}\t{{.Label "com.docker.compose.service"}}' -f label=com.docker.compose.project=mojojojomonitor`,
+      `docker ps --format '{{.ID}}\t{{.Names}}\t{{.Label "com.docker.compose.service"}}' -f label=com.docker.compose.project=mojo-central`,
       { timeout: 10000 }
     )
 
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     if (containers.length === 0) {
       return NextResponse.json({
-        logs: ['No worker containers found for project mojojojomonitor'],
+        logs: ['No worker containers found for project mojo-central'],
         total: 1,
         timestamp: new Date().toISOString()
       })

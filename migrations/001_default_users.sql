@@ -58,7 +58,7 @@ BEGIN
         INSERT INTO users (username, password, role_id, email, full_name, is_active) VALUES
         ('admin', '$2b$10$v/ULSFrsxPlB8noPulB8neKRGE3fTAm0dSTqR8WW79D4Lsmo4v3QW', 
          (SELECT id FROM roles WHERE name = 'Administrator' LIMIT 1), 
-         'admin@mojojojo.local', 
+         'admin@mojo-central.local', 
          'Administrator', 
          true);
     END IF;

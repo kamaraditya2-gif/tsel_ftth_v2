@@ -1,12 +1,12 @@
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: mojojojo_postgres
+    container_name: mojo-db
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-mojojojo_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mojojojo_password}
-      POSTGRES_DB: ${POSTGRES_DB:-mojojojo_database}
+      POSTGRES_USER: ${POSTGRES_USER:-mojo_db_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mojo_db_password}
+      POSTGRES_DB: ${POSTGRES_DB:-mojo_db}
       TZ: ${TZ:-Asia/Jakarta}
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
@@ -21,13 +21,13 @@ services:
         reservations:
           memory: 512M
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mojojojo_user} -d ${POSTGRES_DB:-mojojojo_database}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mojo_db_user} -d ${POSTGRES_DB:-mojo_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - mojojojo_network
+      - mojo-central-net
 
 networks:
-  mojojojo_network:
+  mojo-central-net:
     external: true

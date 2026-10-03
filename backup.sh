@@ -10,7 +10,7 @@ BACKUP_NAME="backup_acs_$(date +%Y%m%d_%H%M%S).sql"
 mkdir -p $BACKUP_DIR
 
 echo "🗄️  Memulai backup database..."
-docker exec mojojojo_postgres pg_dump -U mojojojo_user mojojojo_database > $BACKUP_DIR/$BACKUP_NAME
+docker exec mojo-db pg_dump -U mojo_db_user mojo_db > $BACKUP_DIR/$BACKUP_NAME
 
 if [ $? -ne 0 ]; then
     echo "❌ Gagal backup database"

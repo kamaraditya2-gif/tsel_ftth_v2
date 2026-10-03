@@ -1,4 +1,4 @@
-# Deployment Steps: MojoJojoMonitor to 172.232.248.219 (Fresh VM)
+# Deployment Steps: Mojo-Central to 172.232.248.219 (Fresh VM)
 # Date: 2026-06-11
 
 ## 0. Prerequisites (Local)
@@ -17,21 +17,21 @@
 - Logout and login again (or newgrp docker) to apply group changes
 
 ## 2. Copy Application to Remote
-- From local project root, run rsync to /home/webapp/MojoJojoMonitor on remote
+- From local project root, run rsync to /home/webapp/mojo-central on remote
 - Exclude: node_modules, .next, data, .git, .aider*, .env (copy separately)
-- Command: rsync -avz --exclude=node_modules --exclude=.next --exclude=data --exclude=.git --exclude=.env --exclude=.aider* . webapp@172.232.248.219:/home/webapp/MojoJojoMonitor/
+- Command: rsync -avz --exclude=node_modules --exclude=.next --exclude=data --exclude=.git --exclude=.env --exclude=.aider* . webapp@172.232.248.219:/home/webapp/mojo-central/
 
 ## 3. Setup Environment on Remote
 - Copy .env from local to remote project root
 - Ensure DB credentials and other env vars are correct
-- Example: scp .env webapp@172.232.248.219:/home/webapp/MojoJojoMonitor/
+- Example: scp .env webapp@172.232.248.219:/home/webapp/mojo-central/
 
 ## 4. Initialize Database
 - Run migrations in correct order:
-  - docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database < migrations/003_add_alarm_tables.sql
-  - docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database < migrations/004_integration_settings.sql
+  - docker exec -i mojo-db psql -U mojo_db_user -d mojo_db < migrations/003_add_alarm_tables.sql
+  - docker exec -i mojo-db psql -U mojo_db_user -d mojo_db < migrations/004_integration_settings.sql
 - Fix FK: active_alarms and alarm_history must reference devices_ont(id)
-  - docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database -c "ALTER TABLE active_alarms DROP CONSTRAINT IF EXISTS active_alarms_device_id_fkey; ALTER TABLE active_alarms ADD CONSTRAINT active_alarms_device_id_fkey FOREIGN KEY (device_id) REFERENCES devices_ont(id) ON DELETE CASCADE; ALTER TABLE alarm_history DROP CONSTRAINT IF EXISTS alarm_history_device_id_fkey; ALTER TABLE alarm_history ADD CONSTRAINT alarm_history_device_id_fkey FOREIGN KEY (device_id) REFERENCES devices_ont(id) ON DELETE CASCADE;"
+  - docker exec -i mojo-db psql -U mojo_db_user -d mojo_db -c "ALTER TABLE active_alarms DROP CONSTRAINT IF EXISTS active_alarms_device_id_fkey; ALTER TABLE active_alarms ADD CONSTRAINT active_alarms_device_id_fkey FOREIGN KEY (device_id) REFERENCES devices_ont(id) ON DELETE CASCADE; ALTER TABLE alarm_history DROP CONSTRAINT IF EXISTS alarm_history_device_id_fkey; ALTER TABLE alarm_history ADD CONSTRAINT alarm_history_device_id_fkey FOREIGN KEY (device_id) REFERENCES devices_ont(id) ON DELETE CASCADE;"
 - Backfill alarms from 6 AM: run /tmp/backfill_alarms.sql
 
 ## 5. Build Docker Images
@@ -45,7 +45,7 @@
 - docker logs mojo_dashboard
 - docker logs mojo_worker_fast
 - Test login and alarm page
-- Check active_alarms count: docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database -c "SELECT COUNT(*) FROM active_alarms;"
+- Check active_alarms count: docker exec -i mojo-db psql -U mojo_db_user -d mojo_db -c "SELECT COUNT(*) FROM active_alarms;"
 
 ## Notes
 - Do not copy local data/postgres and data/redis directories to fresh VM

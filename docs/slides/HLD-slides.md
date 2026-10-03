@@ -7,7 +7,7 @@ class:
 paginate: true
 ---
 
-# MojoJojoMonitor
+# Mojo-Central
 ## High-Level Design
 
 FTTH ACS Monitoring Dashboard

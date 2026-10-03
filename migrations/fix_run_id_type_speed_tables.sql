@@ -1,5 +1,5 @@
 -- Fix run_id column type from INTEGER to TEXT in speed tables
--- Run with: Get-Content migrations\fix_run_id_type_speed_tables.sql | docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database
+-- Run with: Get-Content migrations\fix_run_id_type_speed_tables.sql | docker exec -i mojo-db psql -U mojo_db_user -d mojo_db
 
 -- Change run_id column type to TEXT in test_results_speed_upload
 ALTER TABLE test_results_speed_upload ALTER COLUMN run_id TYPE TEXT;

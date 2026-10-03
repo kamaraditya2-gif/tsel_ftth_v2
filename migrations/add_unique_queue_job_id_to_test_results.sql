@@ -9,7 +9,7 @@
 -- is fine since queue_job_id is only NULL for legacy/migrated rows.
 --
 -- Run with:
---   Get-Content migrations\add_unique_queue_job_id_to_test_results.sql | docker exec -i mojojojo_postgres psql -U mojojojo_user -d mojojojo_database
+--   Get-Content migrations\add_unique_queue_job_id_to_test_results.sql | docker exec -i mojo-db psql -U mojo_db_user -d mojo_db
 
 DO $$
 BEGIN

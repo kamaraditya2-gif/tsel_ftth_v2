@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         const sendRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: chatId, text: '✅ Test koneksi berhasil dari MojoJojoMonitor!' }),
+          body: JSON.stringify({ chat_id: chatId, text: '✅ Test koneksi berhasil dari Mojo-Central!' }),
           signal: AbortSignal.timeout(10000),
         })
         const sendData = await sendRes.json()
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       if (config.api_key) headers['Authorization'] = config.api_key
       if (config.headers) Object.assign(headers, config.headers)
 
-      let testBody: any = { message: 'Test koneksi dari MojoJojoMonitor' }
+      let testBody: any = { message: 'Test koneksi dari Mojo-Central' }
       if (config.target_number || config.target) {
         testBody.target = config.target_number || config.target
       }
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
 
       const testPayload = {
         event: 'test',
-        message: 'Test koneksi dari MojoJojoMonitor',
+        message: 'Test koneksi dari Mojo-Central',
         timestamp: new Date().toISOString(),
       }
 

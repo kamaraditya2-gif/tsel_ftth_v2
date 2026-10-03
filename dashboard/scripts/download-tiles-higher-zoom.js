@@ -113,7 +113,7 @@ function downloadTile(z, x, y) {
     const file = fs.createWriteStream(filePath);
 
     https
-      .get(url, { headers: { 'User-Agent': 'MojoJojoMonitor/1.0 (tile downloader)' } }, (response) => {
+      .get(url, { headers: { 'User-Agent': 'Mojo-Central/1.0 (tile downloader)' } }, (response) => {
         if (response.statusCode === 200) {
           response.pipe(file);
           file.on('finish', () => {

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #
-# MojoJojoMonitor - End-to-End Health Check
+# Mojo-Central - End-to-End Health Check
 # ============================================================
-# Script ini mengecek kesehatan seluruh stack MojoJojoMonitor
+# Script ini mengecek kesehatan seluruh stack Mojo-Central
 # dari sisi luar (host), mulai dari login aplikasi, koneksi API,
 # koneksi & insertion ke PostgreSQL, koneksi Redis, status worker,
 # sampai keterkaitan antar container.
 #
 # Cara pakai:
-#   1. Jalankan dari root project MojoJojoMonitor:
+#   1. Jalankan dari root project Mojo-Central:
 #        ./scripts/health-check.sh
 #
 #   2. Kalau admin password berbeda, pass sebagai argumen:
@@ -25,7 +25,7 @@
 #   - Semua password DB/Redis dibaca dari file `.env` di root project.
 #   - Nama container tidak di-hardcode secara kaku. Script mencari container
 #     berdasarkan label `com.docker.compose.service`, sehingga cocok untuk
-#     berbagai konfigurasi project name (mojojojo_* atau mojojojomonitor-*).
+#     berbagai konfigurasi project name (mojo-central-* atau mojo-central-*-1).
 #
 
 set -euo pipefail
@@ -99,7 +99,7 @@ trap 'rm -f "$COOKIE_JAR"' EXIT
 
 echo ""
 echo "============================================================"
-echo "MojoJojoMonitor Health Check"
+echo "Mojo-Central Health Check"
 echo "============================================================"
 echo "Base URL      : $BASE_URL"
 echo "Admin User    : $ADMIN_USER"
@@ -112,7 +112,7 @@ echo ""
 # Helper: cari ID container berdasarkan service label.
 # Mengapa tidak pakai nama container kaku? Karena nama container bisa
 # berbeda tergantung COMPOSE_PROJECT_NAME atau versi docker-compose
-# (contoh: mojojojo_worker_fast vs mojojojomonitor-mojo_worker_fast-1).
+# (contoh: mojo-central-worker-fast vs mojo-central-mojo_worker_fast-1).
 # ------------------------------------------------------------------
 container_id_by_service() {
   local service="$1"
@@ -171,28 +171,28 @@ echo "--- 2. Inter-Container Connectivity ---"
 
 if [[ -n "$DASHBOARD_CONTAINER" ]]; then
   # Dashboard image node:20-slim tidak punya ping/nc, gunakan bash builtin /dev/tcp.
-  if docker exec "$DASHBOARD_CONTAINER" bash -c "exec 3<>/dev/tcp/mojojojo_postgres/5432 && exec 3<&- && exec 3>&-" 2>/dev/null; then
-    pass "Dashboard dapat terhubung ke mojojojo_postgres:5432"
+  if docker exec "$DASHBOARD_CONTAINER" bash -c "exec 3<>/dev/tcp/mojo-db/5432 && exec 3<&- && exec 3>&-" 2>/dev/null; then
+    pass "Dashboard dapat terhubung ke mojo-db:5432"
   else
-    fail "Dashboard TIDAK dapat terhubung ke mojojojo_postgres:5432"
+    fail "Dashboard TIDAK dapat terhubung ke mojo-db:5432"
   fi
 
-  if docker exec "$DASHBOARD_CONTAINER" bash -c "exec 3<>/dev/tcp/mojojojo_redis/6379 && exec 3<&- && exec 3>&-" 2>/dev/null; then
-    pass "Dashboard dapat terhubung ke mojojojo_redis:6379"
+  if docker exec "$DASHBOARD_CONTAINER" bash -c "exec 3<>/dev/tcp/mojo-redis/6379 && exec 3<&- && exec 3>&-" 2>/dev/null; then
+    pass "Dashboard dapat terhubung ke mojo-redis:6379"
   else
-    fail "Dashboard TIDAK dapat terhubung ke mojojojo_redis:6379"
+    fail "Dashboard TIDAK dapat terhubung ke mojo-redis:6379"
   fi
 fi
 
 # Worker image (node:20-alpine) punya ping.
 if [[ -n "$WORKER_FAST_CONTAINER" ]]; then
-  if docker exec "$WORKER_FAST_CONTAINER" sh -c "ping -c1 -W2 mojojojo_postgres >/dev/null 2>&1"; then
+  if docker exec "$WORKER_FAST_CONTAINER" sh -c "ping -c1 -W2 mojo-db >/dev/null 2>&1"; then
     pass "Worker fast dapat menjangkau postgres"
   else
     fail "Worker fast TIDAK dapat menjangkau postgres"
   fi
 
-  if docker exec "$WORKER_FAST_CONTAINER" sh -c "ping -c1 -W2 mojojojo_redis >/dev/null 2>&1"; then
+  if docker exec "$WORKER_FAST_CONTAINER" sh -c "ping -c1 -W2 mojo-redis >/dev/null 2>&1"; then
     pass "Worker fast dapat menjangkau redis"
   else
     fail "Worker fast TIDAK dapat menjangkau redis"
@@ -261,10 +261,10 @@ fi
 echo ""
 echo "--- 6. PostgreSQL Insert/Select/Delete ---"
 
-PG_USER="${DB_USER:-${POSTGRES_USER:-mojojojo_user}}"
+PG_USER="${DB_USER:-${POSTGRES_USER:-mojo_db_user}}"
 PG_PASS="${DB_PASSWORD:-${POSTGRES_PASSWORD:-}}"
-PG_DB="${DB_NAME:-${POSTGRES_DB:-mojojojo_database}}"
-PG_HOST="${DB_HOST:-mojojojo_postgres}"
+PG_DB="${DB_NAME:-${POSTGRES_DB:-mojo_db}}"
+PG_HOST="${DB_HOST:-mojo-db}"
 
 if [[ -z "$PG_PASS" ]]; then
   fail "Password PostgreSQL tidak ditemukan di .env"

@@ -18,9 +18,9 @@ services:
       # ── Koneksi ke Database Pusat ──
       DB_HOST: 103.143.12.115      # IP VM PUSAT (GANTI sesuai IP server pusat)
       DB_PORT: 5432
-      DB_USER: mojojojo_user
+      DB_USER: mojo_db_user
       DB_PASSWORD: QG4CXVN4jbTKrjvdiiEjihOO   # Password database pusat
-      DB_NAME: mojojojo_database
+      DB_NAME: mojo_db
 
       # ── Regional Identity ──
       DOWNSTREAM_SERVER_ID: 2      # ID regional (1=Pusat, 2=SUMUT, 3=JATENG, 4=JATIM, dll)
