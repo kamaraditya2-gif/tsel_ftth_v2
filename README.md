@@ -394,15 +394,40 @@ Restart tanpa build ulang: `./deploy-central.sh --no-build`.
 
 ### 5. Nginx + HTTPS
 
-Nginx butuh `nginx/ssl/cert.pem` dan `nginx/ssl/key.pem`:
+Akses production lewat HTTPS (port 443). Port 80 hanya redirect ke HTTPS. Untuk jaringan internal (tanpa domain publik) pakai sertifikat self-signed.
+
+**1. Buat sertifikat.** Isi dengan semua IP/hostname yang dipakai browser dan mojo-edge untuk mengakses server ini. Tanpa argumen, script memakai IP utama server (`hostname -I`).
 
 ```bash
-./scripts/letsencrypt-setup.sh <domain.com> [email]   # domain publik
-# atau
-./scripts/generate-ssl-cert.sh                        # self-signed (internal)
-
-docker compose -f docker-compose-nginx.yml up -d
+cd /opt/mojo-central
+./scripts/generate-ssl-cert.sh <IP_MOJO_CENTRAL> [hostname-internal]
 ```
+
+Hasilnya `nginx/ssl/cert.pem` dan `nginx/ssl/key.pem`, berlaku 10 tahun (ubah dengan `DAYS=...`). Jika IP server berubah, generate ulang dan salin lagi ke mojo-edge.
+
+**2. Jalankan Nginx**, lalu tutup akses langsung ke port 3002:
+
+```bash
+docker compose -f docker-compose-nginx.yml up -d
+sed -i 's/^DASHBOARD_PORT=.*/DASHBOARD_PORT=127.0.0.1:3002/' .env
+docker compose -f docker-compose.yml -f docker-compose.remote-db.yml up -d mojo_dashboard
+```
+
+**3. Tes dari server lain** (misalnya server mojo-edge), setelah menyalin `cert.pem` ke sana:
+
+```bash
+curl --cacert cert.pem https://<IP_MOJO_CENTRAL>/health        # healthy
+curl -I http://<IP_MOJO_CENTRAL>:3002                          # harus gagal (port tertutup)
+```
+
+**4. Percayakan sertifikat di mojo-edge.** Salin `nginx/ssl/cert.pem` (bukan `key.pem`) ke server mojo-edge, ganti URL central ke `https://<IP_MOJO_CENTRAL>`, lalu daftarkan sertifikatnya sebagai CA:
+
+- Aplikasi Node.js: `NODE_EXTRA_CA_CERTS=/path/ke/cert.pem`
+- Sistem (curl, dsb.): salin ke `/usr/local/share/ca-certificates/mojo-central.crt` lalu `sudo update-ca-certificates`
+
+Jangan pakai `NODE_TLS_REJECT_UNAUTHORIZED=0` atau `curl -k` di mojo-edge, karena `EDGE_SYNC_TOKEN` jadi bisa disadap lewat server palsu.
+
+Browser akan menampilkan peringatan sertifikat. Bisa diterima sekali per browser, atau impor `cert.pem` ke trusted root CA di laptop pengguna.
 
 ### 6. Verifikasi
 
@@ -434,4 +459,6 @@ git pull
 | `Login ke mojo-db gagal` | IP mojo-central belum ada di `pg_hba.conf`, atau `DB_PASSWORD` salah |
 | `Could not find a production build` | `dashboard/.next` kosong; jalankan ulang `./deploy-central.sh` |
 | `mojo-edge` dapat 401 | `EDGE_SYNC_TOKEN` kosong atau berbeda di kedua sisi |
-| Nginx restart terus | `nginx/ssl/cert.pem` / `key.pem` belum ada |
+| Nginx restart terus | `nginx/ssl/cert.pem` / `key.pem` belum ada; cek `docker logs mojo-central-nginx` |
+| mojo-edge: `self signed certificate` / `unable to verify` | `cert.pem` belum didaftarkan sebagai CA di mojo-edge |
+| mojo-edge: `IP address mismatch` / `altnames` | IP di URL tidak ada di sertifikat; generate ulang dengan IP itu |
