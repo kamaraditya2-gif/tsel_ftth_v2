@@ -34,7 +34,10 @@ Server mojo-db hanya butuh Docker (dengan Compose v2) dan git:
 ```bash
 curl -fsSL https://get.docker.com | sh
 sudo apt-get install -y git
+sudo usermod -aG docker $USER    # supaya docker bisa dipakai tanpa sudo
 ```
+
+Logout lalu login lagi agar grup `docker` aktif. Cek dengan `docker ps`: jika muncul `permission denied ... docker.sock`, berarti grup itu belum aktif.
 
 Repo-nya private, jadi server perlu akses baca ke GitHub. Cara paling aman adalah **deploy key**, yaitu SSH key khusus server ini yang hanya bisa membaca satu repo:
 
@@ -57,12 +60,27 @@ ssh -T git@github.com        # balasan "successfully authenticated" berarti suda
 Ambil hanya folder `database/` (sparse checkout), karena server ini tidak butuh kode dashboard atau worker:
 
 ```bash
+sudo mkdir -p /opt/mojo-db && sudo chown $USER: /opt/mojo-db
 git clone --filter=blob:none --sparse -b fix-wahyudi-v3 \
   git@github.com:kamaraditya2-gif/tsel_ftth_v2.git /opt/mojo-db
-cd /opt/mojo-db
-git sparse-checkout set database
-cd database
+git -C /opt/mojo-db sparse-checkout set database
 ```
+
+Pastikan hasilnya benar:
+
+```bash
+git -C /opt/mojo-db branch --show-current    # fix-wahyudi-v3
+ls /opt/mojo-db/database                     # README.md  config  docker-compose.yml  env.example  migrations  scripts
+```
+
+File di root repo (`docker-compose.yml`, `install.sh`, dan lain-lain) memang selalu ikut terbawa dalam sparse checkout. Itu normal; server ini hanya memakai isi folder `database/`.
+
+Jika folder `database/` tidak ada, biasanya karena salah satu dari dua hal ini:
+
+| Gejala | Perbaikan |
+|---|---|
+| branch bukan `fix-wahyudi-v3` | `git -C /opt/mojo-db checkout fix-wahyudi-v3` |
+| `git -C /opt/mojo-db sparse-checkout list` kosong | `git -C /opt/mojo-db sparse-checkout set database` |
 
 Jika ingin clone seluruh repo, hilangkan `--filter=blob:none --sparse` dan baris `git sparse-checkout`.
 
@@ -77,14 +95,25 @@ cd database && docker compose run --rm migrate
 
 ## 2. Setup server baru
 
-Lanjutkan dari folder `/opt/mojo-db/database`:
+Semua perintah `docker compose` di bawah dijalankan dari folder `database/`, bukan dari root repo. `env.example` dan `docker-compose.yml` ada di folder ini.
 
 ```bash
-cp env.example .env              # isi POSTGRES_PASSWORD
+cd /opt/mojo-db/database
+cp env.example .env
+openssl rand -base64 24          # salin hasilnya
+nano .env                        # tempel di POSTGRES_PASSWORD=..., simpan
+```
+
+Jalankan database dan buat skema:
+
+```bash
 docker compose up -d db
+docker compose logs -f db        # tunggu "database system is ready to accept connections", lalu Ctrl+C
 docker compose run --rm migrate  # buat semua tabel + seed data referensi
 docker compose run --rm migrate status
 ```
+
+Simpan password tersebut; nilai yang sama dipakai sebagai `DB_PASSWORD` di server mojo-central (langkah 3).
 
 Container database tidak dibatasi CPU/RAM. Saat init pertama, `timescaledb-tune` membaca RAM dan CPU VM secara otomatis lalu mengatur `shared_buffers`, `effective_cache_size`, `work_mem`, dan worker paralel. Tuning ini hanya berjalan sekali, saat `PGDATA_DIR` masih kosong. Jika VM di-upgrade kemudian, atur ulang parameter itu lewat `ALTER SYSTEM SET ...` lalu restart container.
 
