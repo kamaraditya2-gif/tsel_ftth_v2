@@ -318,16 +318,22 @@ Hanya mojo-central yang memegang kredensial database.
 
 Ikuti [database/README.md](database/README.md) langkah 1–2 sampai migrasi 0001–0009 ter-apply, lalu batasi port 5432 hanya untuk IP mojo-central. Aplikasi di branch ini **tidak kompatibel** dengan skema database lama, jadi jangan arahkan ke DB lama.
 
-### 2. Prasyarat server mojo-central
+### 2. Instal di `/opt/mojo-central`
 
-- Docker + Docker Compose **v2.24+** (`docker compose version`)
-- Akses ke port 5432 server mojo-db
+Prasyarat:
+
+- Docker + Docker Compose **v2.24+** (`docker compose version`) dan git. Cara instalnya sama dengan server mojo-db ([database/README.md langkah 1](database/README.md#1-clone-repo)), termasuk `usermod -aG docker $USER`.
+- Akses baca ke repo GitHub (private). Pakai deploy key seperti di langkah yang sama, dengan nama key `mojo_central_deploy`.
+- Akses ke port 5432 server mojo-db.
 
 ```bash
-git clone git@github.com:kamaraditya2-gif/tsel_ftth_v2.git ~/mojo-central
-cd ~/mojo-central
-git checkout fix-wahyudi-v3
+sudo mkdir -p /opt/mojo-central && sudo chown $USER: /opt/mojo-central
+git clone -b fix-wahyudi-v3 \
+  git@github.com:kamaraditya2-gif/tsel_ftth_v2.git /opt/mojo-central
+cd /opt/mojo-central
 ```
+
+Folder dimiliki user deploy (bukan root), jadi `git pull` dan `./deploy-central.sh` tidak butuh `sudo`. Semua perintah di bawah dijalankan dari `/opt/mojo-central`.
 
 ### 3. Isi `.env`
 
@@ -387,6 +393,7 @@ Login dengan **admin / admin123** (seed mojo-db) dan **segera ganti password**.
 ### Update aplikasi
 
 ```bash
+cd /opt/mojo-central
 git pull
 ./deploy-central.sh
 ```
