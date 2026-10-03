@@ -323,8 +323,30 @@ Ikuti [database/README.md](database/README.md) langkah 1–2 sampai migrasi 0001
 Prasyarat:
 
 - Docker + Docker Compose **v2.24+** (`docker compose version`) dan git. Cara instalnya sama dengan server mojo-db ([database/README.md langkah 1](database/README.md#1-clone-repo)), termasuk `usermod -aG docker $USER`.
-- Akses baca ke repo GitHub (private). Pakai deploy key seperti di langkah yang sama, dengan nama key `mojo_central_deploy`.
 - Akses ke port 5432 server mojo-db.
+
+**Deploy key GitHub.** Repo-nya private, jadi server ini butuh SSH key sendiri untuk `git clone`. Tanpa key, clone gagal dengan `Permission denied (publickey)`. Key milik server mojo-db tidak bisa dipakai ulang, karena GitHub menolak public key yang sama dipasang dua kali sebagai deploy key.
+
+Jalankan sebagai user deploy (bukan root):
+
+```bash
+ssh-keygen -t ed25519 -C "mojo-central" -f ~/.ssh/mojo_central_deploy -N ""
+cat ~/.ssh/mojo_central_deploy.pub
+```
+
+Salin isi `.pub` ke GitHub: repo `kamaraditya2-gif/tsel_ftth_v2` → **Settings → Deploy keys → Add deploy key** (butuh akses admin repo). Biarkan **Allow write access** tidak dicentang. Lalu daftarkan key itu untuk github.com:
+
+```bash
+cat >> ~/.ssh/config <<'EOF'
+Host github.com
+  IdentityFile ~/.ssh/mojo_central_deploy
+  IdentitiesOnly yes
+EOF
+chmod 600 ~/.ssh/config
+ssh -T git@github.com        # jawab "yes" saat ditanya; balasan "successfully authenticated" berarti sudah bisa
+```
+
+**Clone.** Jangan pakai `sudo git clone`: SSH akan mencari key di `/root/.ssh`, bukan milik user deploy.
 
 ```bash
 sudo mkdir -p /opt/mojo-central && sudo chown $USER: /opt/mojo-central
