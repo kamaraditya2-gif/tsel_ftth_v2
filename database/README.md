@@ -27,10 +27,59 @@ database/
     └── import-legacy.sh    # pindahkan data dari database lama
 ```
 
-## 1. Setup server baru
+## 1. Clone repo
+
+Server mojo-db hanya butuh Docker (dengan Compose v2) dan git:
 
 ```bash
+curl -fsSL https://get.docker.com | sh
+sudo apt-get install -y git
+```
+
+Repo-nya private, jadi server perlu akses baca ke GitHub. Cara paling aman adalah **deploy key**, yaitu SSH key khusus server ini yang hanya bisa membaca satu repo:
+
+```bash
+ssh-keygen -t ed25519 -C "mojo-db" -f ~/.ssh/mojo_db_deploy -N ""
+cat ~/.ssh/mojo_db_deploy.pub
+```
+
+Salin isi `.pub` ke GitHub: repo `kamaraditya2-gif/tsel_ftth_v2` → **Settings → Deploy keys → Add deploy key**. Biarkan **Allow write access** tidak dicentang. Lalu daftarkan key itu untuk github.com:
+
+```bash
+cat >> ~/.ssh/config <<'EOF'
+Host github.com
+  IdentityFile ~/.ssh/mojo_db_deploy
+  IdentitiesOnly yes
+EOF
+ssh -T git@github.com        # balasan "successfully authenticated" berarti sudah bisa
+```
+
+Ambil hanya folder `database/` (sparse checkout), karena server ini tidak butuh kode dashboard atau worker:
+
+```bash
+git clone --filter=blob:none --sparse -b fix-wahyudi-v3 \
+  git@github.com:kamaraditya2-gif/tsel_ftth_v2.git /opt/mojo-db
+cd /opt/mojo-db
+git sparse-checkout set database
 cd database
+```
+
+Jika ingin clone seluruh repo, hilangkan `--filter=blob:none --sparse` dan baris `git sparse-checkout`.
+
+Untuk memperbarui kode di kemudian hari (misalnya ada migrasi baru):
+
+```bash
+cd /opt/mojo-db && git pull
+cd database && docker compose run --rm migrate
+```
+
+`.env` dan folder `data/` tidak ikut di-commit, jadi `git pull` tidak menimpa password maupun data database.
+
+## 2. Setup server baru
+
+Lanjutkan dari folder `/opt/mojo-db/database`:
+
+```bash
 cp env.example .env              # isi POSTGRES_PASSWORD
 docker compose up -d db
 docker compose run --rm migrate  # buat semua tabel + seed data referensi
@@ -43,7 +92,7 @@ Seed membuat user **admin / admin123**. Ganti password ini segera setelah login 
 
 Akses di `config/pg_hba.conf` defaultnya hanya untuk jaringan privat (10.0.0.0/8, 192.168.0.0/16). Jika server aplikasi terhubung lewat IP publik, tambahkan IP-nya sebagai `/32`. Setelah mengubah file itu, jalankan `docker compose exec db psql -U mojo_db_user -d mojo_db -c "SELECT pg_reload_conf()"`. Buka port 5432 di firewall hanya untuk IP tersebut.
 
-## 2. Arahkan aplikasi ke server ini
+## 3. Arahkan aplikasi ke server ini
 
 Di server aplikasi, set di `.env`:
 
@@ -65,9 +114,9 @@ Container `mojo-db` lama di server aplikasi bisa dihentikan setelah data dipinda
 
 > Worker dan dashboard di branch ini sudah disesuaikan dengan hypertable (`ON CONFLICT (queue_job_id, executed_at)` dan `ON CONFLICT (dedupe_key, bucket)`). Versi aplikasi lama **tidak** kompatibel dengan skema ini, begitu pula sebaliknya. Deploy keduanya bersamaan.
 
-## 3. Pindahkan data dari database lama
+## 4. Pindahkan data dari database lama
 
-Jalankan setelah langkah 1, saat dispatcher dan worker sudah dihentikan:
+Jalankan setelah langkah 2, saat dispatcher dan worker sudah dihentikan:
 
 ```bash
 cd database
@@ -83,7 +132,7 @@ Script ini:
 - melewati baris orphan (FK menunjuk data yang sudah dihapus) dan menampilkan jumlahnya;
 - menyesuaikan semua sequence `id`.
 
-## 4. Menambah migrasi
+## 5. Menambah migrasi
 
 ```bash
 ./scripts/migrate.sh new add_index_foo    # → migrations/0010_add_index_foo.sql
