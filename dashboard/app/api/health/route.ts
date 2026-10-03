@@ -126,6 +126,8 @@ export async function GET() {
     if (client) client.release()
   }
 
-  const statusCode = health.status === 'ok' ? 200 : 503
+  // 'degraded' (dispatcher idle, region tanpa ping) tetap 200 supaya healthcheck
+  // Docker tidak menandai container unhealthy; detailnya ada di body.
+  const statusCode = health.status === 'error' ? 503 : 200
   return NextResponse.json(health, { status: statusCode })
 }

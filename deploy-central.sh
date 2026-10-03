@@ -48,6 +48,10 @@ for key in DB_PASSWORD REDIS_PASSWORD SESSION_SECRET; do
   esac
 done
 [ -n "$(env_get EDGE_SYNC_TOKEN)" ] || echo "! EDGE_SYNC_TOKEN kosong: semua request dari mojo-edge akan ditolak"
+case "$(env_get REDIS_PORT)" in
+  ""|127.0.0.1:*) ;;
+  *) echo "! REDIS_PORT=$(env_get REDIS_PORT): Redis terbuka ke semua IP (Docker melewati UFW). Set REDIS_PORT=127.0.0.1:6379" ;;
+esac
 
 # --- 2. Tes koneksi ke mojo-db ------------------------------------------------
 docker run --rm postgres:16-alpine pg_isready -h "$DB_HOST" -p "$DB_PORT" -t 5 >/dev/null \
@@ -90,4 +94,7 @@ for _ in $(seq 1 30); do
 done
 echo
 $DC ps
+echo "Respons /api/health:"
+curl -sS --max-time 10 "http://localhost:$port/api/health" || true
+echo
 fail "Dashboard belum sehat setelah 90 detik. Cek: docker logs mojo-central-dashboard"

@@ -371,6 +371,7 @@ cp .env.example .env
 | `SESSION_SECRET` | `openssl rand -hex 32` |
 | `EDGE_SYNC_TOKEN` | `openssl rand -hex 32`, nilai yang sama diisi di mojo-edge |
 | `DASHBOARD_PORT` | `127.0.0.1:3002` jika semua akses lewat Nginx |
+| `REDIS_PORT` | `127.0.0.1:6379`. Nilai default `6379` di `.env.example` membuka Redis ke semua IP |
 
 `POSTGRES_*` tidak dipakai di server ini. Password jangan mengandung `#`.
 
@@ -422,7 +423,7 @@ git pull
 
 ### Catatan keamanan
 
-- Port yang dibuka Docker **melewati UFW**. Tutup port dashboard dengan `DASHBOARD_PORT=127.0.0.1:3002`, bukan dengan `ufw deny`.
+- Port yang dibuka Docker **melewati UFW**. Tutup port dashboard dan Redis dengan `DASHBOARD_PORT=127.0.0.1:3002` dan `REDIS_PORT=127.0.0.1:6379`, bukan dengan `ufw deny`.
 - Jika server ini sebelumnya menjalankan container `mojo-db` lokal, hentikan (`docker stop mojo-db`) setelah datanya dipindahkan ke mojo-db baru ([database/README.md langkah 4](database/README.md#4-pindahkan-data-dari-database-lama)).
 
 ### Troubleshooting
