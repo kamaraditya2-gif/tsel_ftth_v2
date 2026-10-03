@@ -18,6 +18,14 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SSL_DIR="$SCRIPT_DIR/../nginx/ssl"
 
 mkdir -p "$SSL_DIR"
+SSL_DIR="$(cd "$SSL_DIR" && pwd)"
+
+# Folder ini dibuat Docker sebagai root jika nginx pernah dijalankan sebelum sertifikat ada
+if [ ! -w "$SSL_DIR" ]; then
+  echo "✗ $SSL_DIR tidak bisa ditulis (pemilik: $(stat -c %U "$SSL_DIR"))." >&2
+  echo "  Perbaiki: sudo chown -R $USER: $SSL_DIR" >&2
+  exit 1
+fi
 
 DAYS=${DAYS:-3650}
 CERT_FILE="$SSL_DIR/cert.pem"
