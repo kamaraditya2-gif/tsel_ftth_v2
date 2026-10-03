@@ -1,3 +1,7 @@
+# Project terpisah dari stack aplikasi, supaya `up --remove-orphans` di
+# deploy-central.sh tidak menghapus container nginx (dan sebaliknya).
+name: mojo-central-nginx
+
 services:
   nginx:
     image: nginx:alpine
