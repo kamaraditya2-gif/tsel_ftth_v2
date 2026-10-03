@@ -115,11 +115,79 @@ docker compose run --rm migrate status
 
 Simpan password tersebut; nilai yang sama dipakai sebagai `DB_PASSWORD` di server mojo-central (langkah 3).
 
+Seed membuat user dashboard **admin / admin123**. Ganti password ini segera setelah login pertama.
+
+### WARNING saat migrasi
+
+Migrasi selesai dengan baris `✓ 9 migrasi ter-apply.` dan `migrate status` menampilkan 0001–0009. Di tengahnya muncul dua jenis WARNING. Keduanya bukan error dan tidak perlu ditindaklanjuti:
+
+| WARNING | Arti |
+|---|---|
+| `column type "timestamp without time zone" ... does not follow best practices` (juga `character varying` untuk `ip_address`) | Disengaja. Kolom waktu tetap `TIMESTAMP` seperti database lama supaya query dan jam di dashboard tidak berubah (lihat [Skema TimescaleDB](#skema-timescaledb)). |
+| `column "id" / "queue_job_id" / "dedupe_key" should be used for segmenting or ordering` | Kolom unique key tidak ikut setting kompresi. Pengecekan duplikat jadi lebih lambat **hanya** saat upsert ke chunk yang sudah dikompres (lebih tua dari 7/14 hari), misalnya retest job lama atau mojo-edge mengirim ulang data lama. Upsert tetap berhasil, dan data baru tidak terpengaruh. |
+
+### Verifikasi
+
+```bash
+# Hasil tuning otomatis: harus sesuai RAM/CPU VM (shared_buffers ≈ 25% RAM)
+docker compose exec db psql -U mojo_db_user -d mojo_db \
+  -c "SHOW shared_buffers" -c "SHOW effective_cache_size" -c "SHOW max_worker_processes"
+
+# Enam hypertable dan job kompresinya
+docker compose exec db psql -U mojo_db_user -d mojo_db \
+  -c "SELECT hypertable_name, compression_enabled FROM timescaledb_information.hypertables" \
+  -c "SELECT hypertable_name, schedule_interval FROM timescaledb_information.jobs WHERE proc_name = 'policy_compression'"
+```
+
 Container database tidak dibatasi CPU/RAM. Saat init pertama, `timescaledb-tune` membaca RAM dan CPU VM secara otomatis lalu mengatur `shared_buffers`, `effective_cache_size`, `work_mem`, dan worker paralel. Tuning ini hanya berjalan sekali, saat `PGDATA_DIR` masih kosong. Jika VM di-upgrade kemudian, atur ulang parameter itu lewat `ALTER SYSTEM SET ...` lalu restart container.
 
-Seed membuat user **admin / admin123**. Ganti password ini segera setelah login pertama.
+### Batasi akses ke port 5432
 
-Akses di `config/pg_hba.conf` defaultnya hanya untuk jaringan privat (10.0.0.0/8, 192.168.0.0/16). Jika server aplikasi terhubung lewat IP publik, tambahkan IP-nya sebagai `/32`. Setelah mengubah file itu, jalankan `docker compose exec db psql -U mojo_db_user -d mojo_db -c "SELECT pg_reload_conf()"`. Buka port 5432 di firewall hanya untuk IP tersebut.
+Hanya mojo-central yang boleh konek. mojo-edge tidak perlu akses sama sekali.
+
+**pg_hba.conf.** Defaultnya hanya jaringan privat (10.0.0.0/8, 192.168.0.0/16) yang diizinkan. Jika mojo-central terhubung lewat IP publik, tambahkan baris ini di `config/pg_hba.conf`:
+
+```
+host  mojo_db  mojo_db_user  <IP_MOJO_CENTRAL>/32  scram-sha-256
+```
+
+Lalu muat ulang konfigurasinya (tanpa restart):
+
+```bash
+docker compose exec db psql -U mojo_db_user -d mojo_db -c "SELECT pg_reload_conf()"
+```
+
+**Firewall.** Port yang dibuka Docker **melewati aturan UFW**, jadi `ufw deny 5432` tidak berpengaruh. Pilih salah satu:
+
+- Jika kedua server punya jaringan privat, isi `POSTGRES_BIND=<IP privat mojo-db>` di `.env`, lalu `docker compose up -d db`.
+- Jika lewat IP publik, blokir di chain `DOCKER-USER`. Urutannya penting: `-I` menaruh aturan di paling atas, jadi ACCEPT ditulis terakhir.
+
+  ```bash
+  sudo iptables -I DOCKER-USER -p tcp --dport 5432 -j DROP
+  sudo iptables -I DOCKER-USER -p tcp --dport 5432 -s <IP_MOJO_CENTRAL> -j ACCEPT
+  sudo apt-get install -y iptables-persistent && sudo netfilter-persistent save   # agar bertahan setelah reboot
+  ```
+
+### Tes koneksi dari mojo-central
+
+Jalankan di server mojo-central:
+
+```bash
+# 1. Port terbuka?
+docker run --rm postgres:16-alpine pg_isready -h <IP_MOJO_DB> -p 5432
+# <IP_MOJO_DB>:5432 - accepting connections
+
+# 2. Login berhasil? (pg_isready tidak mengecek pg_hba.conf maupun password)
+docker run --rm -it postgres:16-alpine psql "postgres://mojo_db_user@<IP_MOJO_DB>:5432/mojo_db" -c "SELECT version()"
+```
+
+| Hasil | Penyebab |
+|---|---|
+| `no response` | Firewall memblokir, atau container `mojo-db` mati |
+| `no pg_hba.conf entry for host "..."` | IP mojo-central belum ada di `pg_hba.conf`, atau belum `pg_reload_conf()` |
+| `password authentication failed` | `DB_PASSWORD` tidak sama dengan `POSTGRES_PASSWORD` |
+
+Pastikan juga dari IP lain (misalnya laptop atau server mojo-edge) hasil `pg_isready` adalah `no response`.
 
 ## 3. Arahkan aplikasi ke server ini
 
@@ -136,8 +204,16 @@ DB_NAME=mojo_db
 Jalankan aplikasi dengan override `docker-compose.remote-db.yml`. Override ini mematikan service `postgres` lokal dan menghapus `depends_on: postgres` di dashboard, dispatcher, dan worker (butuh Docker Compose v2.24+):
 
 ```bash
+./deploy-central.sh
+```
+
+Script ini mengecek `.env`, mengetes login ke mojo-db, build image, menyalin `.next` dari image ke `dashboard/.next`, lalu menjalankan:
+
+```bash
 docker compose -f docker-compose.yml -f docker-compose.remote-db.yml up -d
 ```
+
+Langkah salin `.next` wajib karena `docker-compose.yml` me-mount `./dashboard/.next` ke `/app/.next`. Di clone baru folder itu kosong dan menutupi hasil build di image, sehingga dashboard gagal dengan *"Could not find a production build"*. Jika menjalankan `docker compose ... build` secara manual, salin juga `.next` setelahnya.
 
 Container `mojo-db` lama di server aplikasi bisa dihentikan setelah data dipindahkan (`docker stop mojo-db`).
 
