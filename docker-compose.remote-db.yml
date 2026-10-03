@@ -1,0 +1,49 @@
+# =============================================================================
+# Override: database di server terpisah (lihat database/README.md)
+# =============================================================================
+# Postgres lokal tidak dijalankan; aplikasi konek ke DB_HOST di .env.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.remote-db.yml up -d
+#
+# Alur: mojo-edge --(API)--> mojo-central --(DB)--> mojo-db
+#
+# Butuh Docker Compose v2.24+ (untuk tag !reset / !override).
+# =============================================================================
+
+services:
+  postgres:
+    profiles: ["local-db"]
+
+  mojo_dashboard:
+    depends_on: !override
+      redis:
+        condition: service_healthy
+
+  mojo_dispatcher:
+    depends_on: !override
+      redis:
+        condition: service_healthy
+
+  mojo_worker_fast:
+    depends_on: !override
+      redis:
+        condition: service_healthy
+      mojo_dashboard:
+        condition: service_started
+
+  mojo_worker_download:
+    depends_on: !override
+      redis:
+        condition: service_healthy
+      mojo_dashboard:
+        condition: service_started
+
+  mojo_worker_upload:
+    depends_on: !override
+      redis:
+        condition: service_healthy
+      mojo_dashboard:
+        condition: service_started
+
+  mojo_direct_ping_worker:
+    depends_on: !reset {}

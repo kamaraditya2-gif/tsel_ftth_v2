@@ -1,6 +1,20 @@
 # Mojo-DB Database Server (PostgreSQL 16 + TimescaleDB)
 
-Database berdiri sendiri di VM terpisah. Dashboard, dispatcher, worker, dan worker regional terhubung lewat jaringan memakai `DB_HOST`.
+Database berdiri sendiri di server terpisah. Sistem terdiri dari tiga server:
+
+```
+mojo-edge (regional)  ──HTTPS /api/edge/*──►  mojo-central (pusat)  ──PostgreSQL 5432──►  mojo-db
+ server sendiri          Bearer EDGE_SYNC_TOKEN   dashboard, dispatcher,  DB_HOST / DB_USER       PostgreSQL 16
+                                                  worker, redis, nginx                            + TimescaleDB
+```
+
+| Dari → ke | Jalur | Yang dibuka |
+|---|---|---|
+| mojo-edge → mojo-central | HTTPS `POST /api/edge/{ping-logs,status,targets}`, `GET /api/edge/config` | port 443 di mojo-central |
+| mojo-central → mojo-db | PostgreSQL, user `mojo_db_user` | port 5432 di mojo-db, **hanya** dari IP mojo-central |
+| mojo-edge → mojo-db | tidak ada | jangan dibuka |
+
+Hanya mojo-central yang punya kredensial database. mojo-edge cukup tahu URL mojo-central dan `EDGE_SYNC_TOKEN`; dashboard yang memverifikasi token lalu menulis datanya ke mojo-db.
 
 ```
 database/
@@ -27,11 +41,11 @@ Container database tidak dibatasi CPU/RAM. Saat init pertama, `timescaledb-tune`
 
 Seed membuat user **admin / admin123**. Ganti password ini segera setelah login pertama.
 
-Batasi akses di `config/pg_hba.conf`: ganti baris `0.0.0.0/0` dengan IP server aplikasi dan regional. Setelah itu jalankan `docker compose exec db psql -U mojo_db_user -d mojo_db -c "SELECT pg_reload_conf()"`. Buka port 5432 di firewall hanya untuk IP tersebut.
+Akses di `config/pg_hba.conf` defaultnya hanya untuk jaringan privat (10.0.0.0/8, 192.168.0.0/16). Jika server aplikasi terhubung lewat IP publik, tambahkan IP-nya sebagai `/32`. Setelah mengubah file itu, jalankan `docker compose exec db psql -U mojo_db_user -d mojo_db -c "SELECT pg_reload_conf()"`. Buka port 5432 di firewall hanya untuk IP tersebut.
 
 ## 2. Arahkan aplikasi ke server ini
 
-Di server aplikasi (dan setiap regional), set di `.env`:
+Di server aplikasi, set di `.env`:
 
 ```env
 DB_HOST=<IP server database>
@@ -41,7 +55,13 @@ DB_PASSWORD=<sama dengan POSTGRES_PASSWORD>
 DB_NAME=mojo_db
 ```
 
-Service `postgres` lama di `docker-compose.yml` / `docker-compose-infra.yml` tidak perlu dijalankan lagi.
+Jalankan aplikasi dengan override `docker-compose.remote-db.yml`. Override ini mematikan service `postgres` lokal dan menghapus `depends_on: postgres` di dashboard, dispatcher, dan worker (butuh Docker Compose v2.24+):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.remote-db.yml up -d
+```
+
+Container `mojo-db` lama di server aplikasi bisa dihentikan setelah data dipindahkan (`docker stop mojo-db`).
 
 > Worker dan dashboard di branch ini sudah disesuaikan dengan hypertable (`ON CONFLICT (queue_job_id, executed_at)` dan `ON CONFLICT (dedupe_key, bucket)`). Versi aplikasi lama **tidak** kompatibel dengan skema ini, begitu pula sebaliknya. Deploy keduanya bersamaan.
 
