@@ -1,5 +1,7 @@
 # Mojo-Central — FTTH ACS Monitoring Dashboard
 
+> Deploy ke production dengan database terpisah: lihat [🚀 Deploy Production](#-deploy-production-database-terpisah).
+
 ## 📍 Landing Page (Dashboard)
 
 4 KPI cards + filters + map + advanced analytics.
@@ -293,3 +295,113 @@ Device yang gagal test ≥7 hari berturut-turut.
 | `speed_group` | Paket speed langganan |
 | `downstream_servers` | Regional server |
 | `master_cluster_nop` | Data NOP/cluster |
+
+---
+
+## 🚀 Deploy Production (Database Terpisah)
+
+Production memakai tiga server:
+
+```
+mojo-edge (regional) --(HTTPS /api/edge)--> mojo-central --(PostgreSQL 5432)--> mojo-db
+```
+
+| Server | Isi | Panduan |
+|--------|-----|---------|
+| **mojo-db** | PostgreSQL 16 + TimescaleDB | [database/README.md](database/README.md) |
+| **mojo-central** | Dashboard, dispatcher, worker, Redis, Nginx (repo ini) | bagian ini |
+| **mojo-edge** | Kirim data ke `/api/edge/*` dengan `EDGE_SYNC_TOKEN` | tidak butuh akses database |
+
+Hanya mojo-central yang memegang kredensial database.
+
+### 1. Siapkan mojo-db dulu
+
+Ikuti [database/README.md](database/README.md) langkah 1–2 sampai migrasi 0001–0009 ter-apply, lalu batasi port 5432 hanya untuk IP mojo-central. Aplikasi di branch ini **tidak kompatibel** dengan skema database lama, jadi jangan arahkan ke DB lama.
+
+### 2. Prasyarat server mojo-central
+
+- Docker + Docker Compose **v2.24+** (`docker compose version`)
+- Akses ke port 5432 server mojo-db
+
+```bash
+git clone git@github.com:kamaraditya2-gif/tsel_ftth_v2.git ~/mojo-central
+cd ~/mojo-central
+git checkout fix-wahyudi-v3
+```
+
+### 3. Isi `.env`
+
+```bash
+cp .env.example .env
+```
+
+| Variabel | Nilai |
+|----------|-------|
+| `DB_HOST` | IP server mojo-db (bukan `mojo-db`) |
+| `DB_PASSWORD` | Sama dengan `POSTGRES_PASSWORD` di server mojo-db |
+| `REDIS_PASSWORD` | `openssl rand -hex 24` |
+| `SESSION_SECRET` | `openssl rand -hex 32` |
+| `EDGE_SYNC_TOKEN` | `openssl rand -hex 32`, nilai yang sama diisi di mojo-edge |
+| `DASHBOARD_PORT` | `127.0.0.1:3002` jika semua akses lewat Nginx |
+
+`POSTGRES_*` tidak dipakai di server ini. Password jangan mengandung `#`.
+
+### 4. Deploy
+
+```bash
+./deploy-central.sh
+```
+
+Script ini:
+
+1. Mengecek versi Docker Compose dan isi `.env`.
+2. Mengetes koneksi dan login ke mojo-db. Jika gagal, berhenti sebelum ada container yang dijalankan.
+3. Build image dashboard dan worker.
+4. Menyalin hasil build Next.js dari image ke `dashboard/.next`. Folder ini di-mount ke container, dan jika kosong dashboard gagal start (*"Could not find a production build"*).
+5. Menjalankan stack tanpa Postgres lokal (`docker-compose.yml` + `docker-compose.remote-db.yml`).
+6. Menunggu `/api/health` sehat (maks. 90 detik).
+
+Restart tanpa build ulang: `./deploy-central.sh --no-build`.
+
+### 5. Nginx + HTTPS
+
+Nginx butuh `nginx/ssl/cert.pem` dan `nginx/ssl/key.pem`:
+
+```bash
+./scripts/letsencrypt-setup.sh <domain.com> [email]   # domain publik
+# atau
+./scripts/generate-ssl-cert.sh                        # self-signed (internal)
+
+docker compose -f docker-compose-nginx.yml up -d
+```
+
+### 6. Verifikasi
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.remote-db.yml ps   # tidak ada container postgres
+curl -k https://localhost/api/health
+```
+
+Login dengan **admin / admin123** (seed mojo-db) dan **segera ganti password**.
+
+### Update aplikasi
+
+```bash
+git pull
+./deploy-central.sh
+```
+
+### Catatan keamanan
+
+- Port yang dibuka Docker **melewati UFW**. Tutup port dashboard dengan `DASHBOARD_PORT=127.0.0.1:3002`, bukan dengan `ufw deny`.
+- Jika server ini sebelumnya menjalankan container `mojo-db` lokal, hentikan (`docker stop mojo-db`) setelah datanya dipindahkan ke mojo-db baru ([database/README.md langkah 4](database/README.md#4-pindahkan-data-dari-database-lama)).
+
+### Troubleshooting
+
+| Gejala | Penyebab |
+|--------|----------|
+| `mojo-db ... tidak merespons` | Firewall server mojo-db memblokir, atau container DB mati |
+| `Login ke mojo-db gagal` | IP mojo-central belum ada di `pg_hba.conf`, atau `DB_PASSWORD` salah |
+| `Could not find a production build` | `dashboard/.next` kosong; jalankan ulang `./deploy-central.sh` |
+| `mojo-edge` dapat 401 | `EDGE_SYNC_TOKEN` kosong atau berbeda di kedua sisi |
+| Nginx restart terus | `nginx/ssl/cert.pem` / `key.pem` belum ada |
